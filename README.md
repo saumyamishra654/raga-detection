@@ -149,3 +149,4 @@ For each valid row:
 * salience: accompaniment counts supporting that tonic
 	•	match_mass: fraction of melody mass on the raga’s allowed notes
 
+# I am also currently working on the notebook to do with the actual note sequences, will update the readme once there is some concrete progress on that front

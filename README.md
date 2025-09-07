@@ -1,4 +1,4 @@
-# Raga Detection Notebook — README
+# Raga Detection Notebook
 ---
 This notebook takes an audio file → separates stems (vocals / accompaniment) → extracts framewise pitch with SwiftF0 → builds cent/MIDI histograms → finds stable pitch-class peaks (cross-validated across resolutions) → converts peaks to interval patterns → looks up matching ragas in a scale database → scores & ranks raga candidates using melody + accompaniment signals.  
 

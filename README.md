@@ -15,7 +15,7 @@ This notebook takes an audio file â†’ separates stems (vocals / accompaniment) â
 
 ---
 
-## 1) What this notebook does (quick)
+## 1) What this notebook does
 - Separates an audio file into `vocals.wav` and `accompaniment.wav` using Spleeter (2 stems).  
 - Runs SwiftF0 on each stem to produce a framewise pitch **PitchResult** (CSV, optional MIDI, note segments).  
 - Builds cent histograms (folded to a single octave) at high and low resolution.  

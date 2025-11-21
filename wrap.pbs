@@ -1,0 +1,55 @@
+#!/bin/bash
+#PBS -N demucs_batch
+#PBS -q gpu
+#PBS -l select=1:ncpus=4:mem=24gb
+#PBS -l walltime=24:00:00
+#PBS -o logs/
+#PBS -e logs/
+
+# ==========================================
+# Configuration
+# ==========================================
+PROJECT_ROOT="/storage/saumya.mishra_ug25/audio_project"
+PYTHON_SCRIPT="stems.py"
+MAX_FILES=1100
+
+cd "$PBS_O_WORKDIR" || exit
+
+export PATH="/storage/saumya.mishra_ug25/audio_project/ffmpeg_tools/bin:$PATH"
+
+# load environment
+source /storage/saumya.mishra_ug25/audio_project/demucs_env/bin/activate
+
+echo "Job ID: $PBS_JOBID"
+echo "Node: $(hostname)"
+
+# DEBUG: Check if the GPU is actually visible
+echo "--- GPU STATUS ---"
+nvidia-smi
+echo "------------------"
+
+mkdir -p logs
+
+# python script
+python3 "$PYTHON_SCRIPT" \
+    --project-root "$PROJECT_ROOT" \
+    --max-files "$MAX_FILES"
+
+EXIT_CODE=$?
+
+echo "Python script exited with code: $EXIT_CODE"
+
+# ==========================================
+# Resubmission Logic
+# ==========================================
+if [ $EXIT_CODE -eq 99 ]; then
+    echo "Detected remaining files (Exit Code 99)."
+    echo "Resubmitting job..."
+    qsub wrap.pbs
+elif [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ All files processed."
+else
+    echo "❌ Script failed with error code $EXIT_CODE."
+fi
+
+exit $EXIT_CODE

@@ -1,0 +1,50 @@
+#!/bin/bash
+#PBS -N pitch_analysis
+#PBS -q cpu
+#PBS -l select=1:ncpus=10:mem=32gb
+#PBS -l walltime=04:00:00
+#PBS -o logs/
+#PBS -e logs/
+
+# ==========================================
+# Configuration
+# ==========================================
+PROJECT_ROOT="/storage/saumya.mishra_ug25/audio_project"
+PYTHON_SCRIPT="f0_hpc.py"
+# Pitch detection is faster than stem separation, so we can process more files per batch
+MAX_FILES=1000 
+
+cd "$PBS_O_WORKDIR" || exit
+
+# Load your environment (Reuse the one with SwiftF0 installed)
+source /storage/saumya.mishra_ug25/audio_project/demucs_env/bin/activate
+
+echo "Job ID: $PBS_JOBID"
+echo "Node: $(hostname)"
+
+mkdir -p logs
+
+# Run the Python script
+python3 "$PYTHON_SCRIPT" \
+    --project-root "$PROJECT_ROOT" \
+    --max-files "$MAX_FILES"
+
+EXIT_CODE=$?
+
+echo "Python script exited with code: $EXIT_CODE"
+
+# ==========================================
+# Resubmission Logic (The Infinite Loop)
+# ==========================================
+if [ $EXIT_CODE -eq 99 ]; then
+    echo "Detected remaining files (Exit Code 99)."
+    echo "Resubmitting job to PBS queue..."
+    qsub pitch.pbs
+    
+elif [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ All files processed successfully."
+else
+    echo "❌ Script failed with error code $EXIT_CODE."
+fi
+
+exit $EXIT_CODE

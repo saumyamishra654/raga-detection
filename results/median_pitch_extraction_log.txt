@@ -1,0 +1,1122 @@
+[2025-11-24 15:40:20] ============================================================
+[2025-11-24 15:40:20] Starting Median Pitch Extraction
+[2025-11-24 15:40:20] Project Root: /Volumes/Extreme SSD
+[2025-11-24 15:40:20] Output File: /Users/saumyamishra/Desktop/intern/summer25/RagaDetection/median_pitch_results.csv
+[2025-11-24 15:40:20] ============================================================
+[2025-11-24 15:40:20] Found 1086 stem directories
+[2025-11-24 15:40:20] ✅ Abhogi_1: Vocals=175.44 Hz, Accompaniment=93.24 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_10: Vocals=261.45 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_2: Vocals=171.38 Hz, Accompaniment=93.26 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_3: Vocals=185.33 Hz, Accompaniment=86.82 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_4: Vocals=247.93 Hz, Accompaniment=106.70 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_5: Vocals=159.13 Hz, Accompaniment=84.33 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_6: Vocals=168.45 Hz, Accompaniment=147.14 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_7: Vocals=174.92 Hz, Accompaniment=124.42 Hz
+[2025-11-24 15:40:20] ✅ Abhogi_8: Vocals=157.98 Hz, Accompaniment=137.35 Hz
+[2025-11-24 15:40:21] ✅ Abhogi_9: Vocals=147.37 Hz, Accompaniment=131.22 Hz
+[2025-11-24 15:40:21] ✅ Adana_1: Vocals=253.34 Hz, Accompaniment=93.21 Hz
+[2025-11-24 15:40:21] ✅ Adana_10: Vocals=362.88 Hz, Accompaniment=98.98 Hz
+[2025-11-24 15:40:21] ✅ Adana_2: Vocals=277.03 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:21] ✅ Adana_3: Vocals=235.86 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:21] ✅ Adana_4: Vocals=262.89 Hz, Accompaniment=86.69 Hz
+[2025-11-24 15:40:21] ✅ Adana_5: Vocals=261.36 Hz, Accompaniment=98.66 Hz
+[2025-11-24 15:40:21] ✅ Adana_6: Vocals=207.93 Hz, Accompaniment=138.96 Hz
+[2025-11-24 15:40:21] ✅ Adana_7: Vocals=256.33 Hz, Accompaniment=88.43 Hz
+[2025-11-24 15:40:34] ============================================================
+[2025-11-24 15:40:34] Starting Median Pitch Extraction
+[2025-11-24 15:40:34] Project Root: /Volumes/Extreme SSD
+[2025-11-24 15:40:34] Output File: /Users/saumyamishra/Desktop/intern/summer25/RagaDetection/median_pitch_results.csv
+[2025-11-24 15:40:34] ============================================================
+[2025-11-24 15:40:34] Found 1086 stem directories
+[2025-11-24 15:40:34] ✅ Abhogi_1: Vocals=175.44 Hz, Accompaniment=93.24 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_10: Vocals=261.45 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_2: Vocals=171.38 Hz, Accompaniment=93.26 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_3: Vocals=185.33 Hz, Accompaniment=86.82 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_4: Vocals=247.93 Hz, Accompaniment=106.70 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_5: Vocals=159.13 Hz, Accompaniment=84.33 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_6: Vocals=168.45 Hz, Accompaniment=147.14 Hz
+[2025-11-24 15:40:34] ✅ Abhogi_7: Vocals=174.92 Hz, Accompaniment=124.42 Hz
+[2025-11-24 15:40:35] ✅ Abhogi_8: Vocals=157.98 Hz, Accompaniment=137.35 Hz
+[2025-11-24 15:40:35] ✅ Abhogi_9: Vocals=147.37 Hz, Accompaniment=131.22 Hz
+[2025-11-24 15:40:35] ✅ Adana_1: Vocals=253.34 Hz, Accompaniment=93.21 Hz
+[2025-11-24 15:40:35] ✅ Adana_10: Vocals=362.88 Hz, Accompaniment=98.98 Hz
+[2025-11-24 15:40:35] ✅ Adana_2: Vocals=277.03 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:35] ✅ Adana_3: Vocals=235.86 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:35] ✅ Adana_4: Vocals=262.89 Hz, Accompaniment=86.69 Hz
+[2025-11-24 15:40:35] ✅ Adana_5: Vocals=261.36 Hz, Accompaniment=98.66 Hz
+[2025-11-24 15:40:35] ✅ Adana_6: Vocals=207.93 Hz, Accompaniment=138.96 Hz
+[2025-11-24 15:40:35] ✅ Adana_7: Vocals=256.33 Hz, Accompaniment=88.43 Hz
+[2025-11-24 15:40:35] ✅ Adana_8: Vocals=212.23 Hz, Accompaniment=106.50 Hz
+[2025-11-24 15:40:35] ✅ Adana_9: Vocals=340.92 Hz, Accompaniment=88.03 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_1: Vocals=194.06 Hz, Accompaniment=93.97 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_10: Vocals=185.32 Hz, Accompaniment=139.03 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_2: Vocals=266.76 Hz, Accompaniment=91.93 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_3: Vocals=147.37 Hz, Accompaniment=51.71 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_4: Vocals=146.00 Hz, Accompaniment=90.12 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_5: Vocals=147.37 Hz, Accompaniment=90.19 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_6: Vocals=160.31 Hz, Accompaniment=156.10 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_7: Vocals=275.42 Hz, Accompaniment=95.67 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_8: Vocals=156.06 Hz, Accompaniment=79.58 Hz
+[2025-11-24 15:40:35] ✅ Ahir bhairav_9: Vocals=304.12 Hz, Accompaniment=119.68 Hz
+[2025-11-24 15:40:35] ✅ Alhaiya Bilaval_1: Vocals=185.30 Hz, Accompaniment=78.34 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_10: Vocals=185.06 Hz, Accompaniment=92.58 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_2: Vocals=219.91 Hz, Accompaniment=81.62 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_3: Vocals=216.11 Hz, Accompaniment=235.88 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_4: Vocals=232.61 Hz, Accompaniment=130.20 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_5: Vocals=311.42 Hz, Accompaniment=293.94 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_6: Vocals=204.60 Hz, Accompaniment=104.80 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_7: Vocals=160.53 Hz, Accompaniment=90.57 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_8: Vocals=253.38 Hz, Accompaniment=137.28 Hz
+[2025-11-24 15:40:36] ✅ Alhaiya Bilaval_9: Vocals=321.04 Hz, Accompaniment=95.94 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_1: Vocals=165.33 Hz, Accompaniment=81.65 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_10: Vocals=224.23 Hz, Accompaniment=84.02 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_2: Vocals=111.19 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_3: Vocals=165.13 Hz, Accompaniment=132.28 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_4: Vocals=161.84 Hz, Accompaniment=79.99 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_5: Vocals=114.94 Hz, Accompaniment=131.42 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_6: Vocals=136.52 Hz, Accompaniment=138.94 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_7: Vocals=341.38 Hz, Accompaniment=98.63 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_8: Vocals=150.21 Hz, Accompaniment=155.16 Hz
+[2025-11-24 15:40:36] ✅ Asavari (komal re)_9: Vocals=147.36 Hz, Accompaniment=112.58 Hz
+[2025-11-24 15:40:36] ✅ Bageshri_1: Vocals=249.15 Hz, Accompaniment=147.44 Hz
+[2025-11-24 15:40:36] ✅ Bageshri_10: Vocals=188.62 Hz, Accompaniment=88.01 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_2: Vocals=196.41 Hz, Accompaniment=93.03 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_3: Vocals=163.64 Hz, Accompaniment=97.60 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_4: Vocals=147.33 Hz, Accompaniment=119.52 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_5: Vocals=261.33 Hz, Accompaniment=196.69 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_6: Vocals=165.26 Hz, Accompaniment=94.30 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_7: Vocals=147.37 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_8: Vocals=171.43 Hz, Accompaniment=138.99 Hz
+[2025-11-24 15:40:37] ✅ Bageshri_9: Vocals=246.86 Hz, Accompaniment=111.60 Hz
+[2025-11-24 15:40:37] ✅ Bahar_1: Vocals=275.80 Hz, Accompaniment=115.91 Hz
+[2025-11-24 15:40:37] ✅ Bahar_10: Vocals=232.63 Hz, Accompaniment=117.16 Hz
+[2025-11-24 15:40:37] ✅ Bahar_2: Vocals=276.74 Hz, Accompaniment=85.03 Hz
+[2025-11-24 15:40:37] ✅ Bahar_3: Vocals=271.29 Hz, Accompaniment=81.16 Hz
+[2025-11-24 15:40:37] ✅ Bahar_4: Vocals=271.45 Hz, Accompaniment=115.97 Hz
+[2025-11-24 15:40:37] ✅ Bahar_5: Vocals=287.94 Hz, Accompaniment=104.35 Hz
+[2025-11-24 15:40:37] ✅ Bahar_6: Vocals=413.12 Hz, Accompaniment=136.52 Hz
+[2025-11-24 15:40:37] ✅ Bahar_7: Vocals=251.91 Hz, Accompaniment=108.41 Hz
+[2025-11-24 15:40:37] ✅ Bahar_8: Vocals=245.68 Hz, Accompaniment=109.04 Hz
+[2025-11-24 15:40:37] ✅ Bahar_9: Vocals=256.92 Hz, Accompaniment=98.42 Hz
+[2025-11-24 15:40:37] ✅ Bairagi Todi_1: Vocals=310.21 Hz, Accompaniment=117.19 Hz
+[2025-11-24 15:40:37] ✅ Bairagi Todi_2: Vocals=246.36 Hz, Accompaniment=84.40 Hz
+[2025-11-24 15:40:37] ✅ Bairagi Todi_3: Vocals=324.16 Hz, Accompaniment=83.05 Hz
+[2025-11-24 15:40:38] ✅ Bairagi Todi_4: Vocals=233.37 Hz, Accompaniment=233.04 Hz
+[2025-11-24 15:40:38] ✅ Bairagi Todi_5: Vocals=149.88 Hz, Accompaniment=98.93 Hz
+[2025-11-24 15:40:38] ✅ Bairagi Todi_6: Vocals=209.66 Hz, Accompaniment=98.68 Hz
+[2025-11-24 15:40:38] ✅ Bairagi Todi_7: Vocals=246.67 Hz, Accompaniment=116.66 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_1: Vocals=160.56 Hz, Accompaniment=74.21 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_10: Vocals=156.27 Hz, Accompaniment=147.45 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_2: Vocals=246.50 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_3: Vocals=165.28 Hz, Accompaniment=104.53 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_4: Vocals=283.47 Hz, Accompaniment=162.12 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_5: Vocals=147.38 Hz, Accompaniment=72.75 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_6: Vocals=162.69 Hz, Accompaniment=102.34 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_7: Vocals=142.00 Hz, Accompaniment=103.72 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_8: Vocals=159.02 Hz, Accompaniment=139.13 Hz
+[2025-11-24 15:40:38] ✅ Bairagi_9: Vocals=159.07 Hz, Accompaniment=147.47 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_1: Vocals=181.06 Hz, Accompaniment=90.52 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_2: Vocals=168.52 Hz, Accompaniment=117.30 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_3: Vocals=178.44 Hz, Accompaniment=165.26 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_4: Vocals=308.15 Hz, Accompaniment=83.21 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_5: Vocals=152.96 Hz, Accompaniment=100.52 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_6: Vocals=299.24 Hz, Accompaniment=115.37 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_7: Vocals=185.32 Hz, Accompaniment=73.52 Hz
+[2025-11-24 15:40:38] ✅ Basant Mukhari_8: Vocals=207.75 Hz, Accompaniment=154.40 Hz
+[2025-11-24 15:40:39] ✅ Basant Mukhari_9: Vocals=207.78 Hz, Accompaniment=261.32 Hz
+[2025-11-24 15:40:39] ✅ Basant_1: Vocals=255.23 Hz, Accompaniment=98.41 Hz
+[2025-11-24 15:40:39] ✅ Basant_10: Vocals=266.35 Hz, Accompaniment=92.96 Hz
+[2025-11-24 15:40:39] ✅ Basant_2: Vocals=347.61 Hz, Accompaniment=230.47 Hz
+[2025-11-24 15:40:39] ✅ Basant_3: Vocals=238.00 Hz, Accompaniment=240.63 Hz
+[2025-11-24 15:40:39] ✅ Basant_4: Vocals=208.01 Hz, Accompaniment=139.14 Hz
+[2025-11-24 15:40:39] ✅ Basant_5: Vocals=328.60 Hz, Accompaniment=110.16 Hz
+[2025-11-24 15:40:39] ✅ Basant_6: Vocals=322.66 Hz, Accompaniment=108.39 Hz
+[2025-11-24 15:40:39] ✅ Basant_7: Vocals=342.05 Hz, Accompaniment=231.83 Hz
+[2025-11-24 15:40:39] ✅ Basant_8: Vocals=212.01 Hz, Accompaniment=82.20 Hz
+[2025-11-24 15:40:39] ✅ Basant_9: Vocals=223.78 Hz, Accompaniment=98.01 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_1: Vocals=276.84 Hz, Accompaniment=110.21 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_10: Vocals=147.37 Hz, Accompaniment=90.27 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_2: Vocals=207.44 Hz, Accompaniment=92.65 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_3: Vocals=147.38 Hz, Accompaniment=92.15 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_4: Vocals=199.75 Hz, Accompaniment=97.75 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_5: Vocals=203.92 Hz, Accompaniment=92.98 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_6: Vocals=156.21 Hz, Accompaniment=147.13 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_7: Vocals=219.82 Hz, Accompaniment=100.75 Hz
+[2025-11-24 15:40:39] ✅ Bhairav_8: Vocals=225.24 Hz, Accompaniment=178.37 Hz
+[2025-11-24 15:40:40] ✅ Bhairav_9: Vocals=224.14 Hz, Accompaniment=89.17 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_1: Vocals=355.36 Hz, Accompaniment=97.14 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_10: Vocals=220.19 Hz, Accompaniment=88.02 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_2: Vocals=348.09 Hz, Accompaniment=235.41 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_3: Vocals=231.05 Hz, Accompaniment=232.57 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_4: Vocals=354.64 Hz, Accompaniment=91.35 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_5: Vocals=228.74 Hz, Accompaniment=98.12 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_6: Vocals=236.09 Hz, Accompaniment=116.59 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_7: Vocals=293.03 Hz, Accompaniment=293.02 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_8: Vocals=367.50 Hz, Accompaniment=142.55 Hz
+[2025-11-24 15:40:40] ✅ Bhairavi_9: Vocals=256.07 Hz, Accompaniment=276.04 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_1: Vocals=207.91 Hz, Accompaniment=124.08 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_10: Vocals=230.86 Hz, Accompaniment=103.40 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_2: Vocals=199.62 Hz, Accompaniment=105.51 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_3: Vocals=199.83 Hz, Accompaniment=104.52 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_4: Vocals=156.85 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_5: Vocals=246.93 Hz, Accompaniment=175.05 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_6: Vocals=156.12 Hz, Accompaniment=155.90 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_7: Vocals=136.61 Hz, Accompaniment=92.59 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_8: Vocals=220.86 Hz, Accompaniment=82.69 Hz
+[2025-11-24 15:40:40] ✅ Bhatiyar_9: Vocals=347.96 Hz, Accompaniment=88.94 Hz
+[2025-11-24 15:40:40] ✅ Bheem_1: Vocals=220.15 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:40:41] ✅ Bheem_2: Vocals=333.34 Hz, Accompaniment=93.19 Hz
+[2025-11-24 15:40:41] ✅ Bheem_3: Vocals=203.89 Hz, Accompaniment=165.25 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_1: Vocals=276.50 Hz, Accompaniment=93.27 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_2: Vocals=233.08 Hz, Accompaniment=104.51 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_3: Vocals=175.33 Hz, Accompaniment=80.32 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_4: Vocals=346.52 Hz, Accompaniment=87.92 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_5: Vocals=147.37 Hz, Accompaniment=147.34 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_6: Vocals=326.88 Hz, Accompaniment=174.99 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_7: Vocals=156.06 Hz, Accompaniment=131.47 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_8: Vocals=165.28 Hz, Accompaniment=91.29 Hz
+[2025-11-24 15:40:41] ✅ Bhimpalasi_9: Vocals=165.10 Hz, Accompaniment=92.89 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_1: Vocals=293.21 Hz, Accompaniment=96.91 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_2: Vocals=175.00 Hz, Accompaniment=88.02 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_3: Vocals=177.46 Hz, Accompaniment=93.17 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_4: Vocals=139.14 Hz, Accompaniment=139.16 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_5: Vocals=327.80 Hz, Accompaniment=88.02 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_6: Vocals=164.25 Hz, Accompaniment=137.69 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_7: Vocals=147.38 Hz, Accompaniment=83.24 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_8: Vocals=341.81 Hz, Accompaniment=110.60 Hz
+[2025-11-24 15:40:41] ✅ Bhupali Todi_9: Vocals=232.23 Hz, Accompaniment=147.57 Hz
+[2025-11-24 15:40:41] ✅ Bhupali_1: Vocals=196.19 Hz, Accompaniment=98.79 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_10: Vocals=165.30 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_2: Vocals=165.47 Hz, Accompaniment=83.56 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_3: Vocals=266.76 Hz, Accompaniment=99.43 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_4: Vocals=261.35 Hz, Accompaniment=100.85 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_5: Vocals=237.52 Hz, Accompaniment=99.96 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_6: Vocals=265.48 Hz, Accompaniment=99.95 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_7: Vocals=173.92 Hz, Accompaniment=107.80 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_8: Vocals=175.34 Hz, Accompaniment=98.70 Hz
+[2025-11-24 15:40:42] ✅ Bhupali_9: Vocals=240.89 Hz, Accompaniment=120.23 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_1: Vocals=293.06 Hz, Accompaniment=276.16 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_2: Vocals=220.38 Hz, Accompaniment=92.95 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_3: Vocals=245.32 Hz, Accompaniment=233.04 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_4: Vocals=290.71 Hz, Accompaniment=117.13 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_5: Vocals=243.22 Hz, Accompaniment=89.15 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_6: Vocals=257.83 Hz, Accompaniment=104.35 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_7: Vocals=201.85 Hz, Accompaniment=95.04 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_8: Vocals=196.30 Hz, Accompaniment=100.39 Hz
+[2025-11-24 15:40:42] ✅ Bibhas_9: Vocals=261.34 Hz, Accompaniment=104.51 Hz
+[2025-11-24 15:40:42] ✅ Bihag_1: Vocals=218.30 Hz, Accompaniment=88.06 Hz
+[2025-11-24 15:40:42] ✅ Bihag_10: Vocals=156.05 Hz, Accompaniment=156.03 Hz
+[2025-11-24 15:40:42] ✅ Bihag_2: Vocals=256.75 Hz, Accompaniment=88.36 Hz
+[2025-11-24 15:40:42] ✅ Bihag_3: Vocals=185.12 Hz, Accompaniment=92.37 Hz
+[2025-11-24 15:40:42] ✅ Bihag_4: Vocals=192.79 Hz, Accompaniment=98.70 Hz
+[2025-11-24 15:40:43] ✅ Bihag_5: Vocals=193.48 Hz, Accompaniment=104.21 Hz
+[2025-11-24 15:40:43] ✅ Bihag_6: Vocals=131.31 Hz, Accompaniment=165.28 Hz
+[2025-11-24 15:40:43] ✅ Bihag_7: Vocals=167.95 Hz, Accompaniment=92.93 Hz
+[2025-11-24 15:40:43] ✅ Bihag_8: Vocals=147.37 Hz, Accompaniment=74.86 Hz
+[2025-11-24 15:40:43] ✅ Bihag_9: Vocals=227.28 Hz, Accompaniment=85.50 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_1: Vocals=233.42 Hz, Accompaniment=155.84 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_2: Vocals=293.03 Hz, Accompaniment=232.95 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_3: Vocals=295.05 Hz, Accompaniment=94.34 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_4: Vocals=260.39 Hz, Accompaniment=93.05 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_5: Vocals=207.81 Hz, Accompaniment=85.25 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_6: Vocals=350.09 Hz, Accompaniment=90.51 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_7: Vocals=335.73 Hz, Accompaniment=128.99 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_8: Vocals=196.24 Hz, Accompaniment=78.50 Hz
+[2025-11-24 15:40:43] ✅ Bihagda_9: Vocals=193.82 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:43] ✅ Bihari_1: Vocals=220.05 Hz, Accompaniment=91.44 Hz
+[2025-11-24 15:40:43] ✅ Bihari_2: Vocals=246.86 Hz, Accompaniment=220.07 Hz
+[2025-11-24 15:40:43] ✅ Bihari_3: Vocals=261.16 Hz, Accompaniment=232.80 Hz
+[2025-11-24 15:40:43] ✅ Bihari_4: Vocals=287.75 Hz, Accompaniment=235.09 Hz
+[2025-11-24 15:40:43] ✅ Bihari_5: Vocals=147.37 Hz, Accompaniment=72.81 Hz
+[2025-11-24 15:40:43] ✅ Bihari_6: Vocals=230.12 Hz, Accompaniment=108.18 Hz
+[2025-11-24 15:40:43] ✅ Bihari_7: Vocals=175.00 Hz, Accompaniment=78.51 Hz
+[2025-11-24 15:40:44] ✅ Bihari_8: Vocals=327.50 Hz, Accompaniment=247.71 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_1: Vocals=197.36 Hz, Accompaniment=131.74 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_10: Vocals=236.57 Hz, Accompaniment=224.08 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_2: Vocals=152.34 Hz, Accompaniment=108.49 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_3: Vocals=159.08 Hz, Accompaniment=148.39 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_4: Vocals=181.87 Hz, Accompaniment=117.70 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_5: Vocals=172.73 Hz, Accompaniment=100.73 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_6: Vocals=246.76 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_7: Vocals=224.83 Hz, Accompaniment=83.42 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_8: Vocals=147.50 Hz, Accompaniment=139.49 Hz
+[2025-11-24 15:40:44] ✅ Bilaskhani Todi_9: Vocals=165.26 Hz, Accompaniment=85.82 Hz
+[2025-11-24 15:40:44] ✅ Bilawal_1: Vocals=199.75 Hz, Accompaniment=137.28 Hz
+[2025-11-24 15:40:44] ✅ Bilawal_2: Vocals=175.00 Hz, Accompaniment=93.23 Hz
+[2025-11-24 15:40:44] ✅ Bilawal_3: Vocals=436.70 Hz, Accompaniment=333.66 Hz
+[2025-11-24 15:40:44] ✅ Bilawal_4: Vocals=207.69 Hz, Accompaniment=82.99 Hz
+[2025-11-24 15:40:44] ✅ Bilawal_5: Vocals=341.36 Hz, Accompaniment=84.76 Hz
+[2025-11-24 15:40:44] ✅ Bilawal_6: Vocals=281.58 Hz, Accompaniment=343.01 Hz
+[2025-11-24 15:40:44] ✅ Champakali_Vachaspati_1: Vocals=197.68 Hz, Accompaniment=102.82 Hz
+[2025-11-24 15:40:44] ✅ Champakali_Vachaspati_10: Vocals=413.20 Hz, Accompaniment=293.03 Hz
+[2025-11-24 15:40:44] ✅ Champakali_Vachaspati_2: Vocals=463.32 Hz, Accompaniment=92.92 Hz
+[2025-11-24 15:40:44] ✅ Champakali_Vachaspati_3: Vocals=156.03 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:45] ✅ Champakali_Vachaspati_4: Vocals=271.81 Hz, Accompaniment=72.74 Hz
+[2025-11-24 15:40:45] ✅ Champakali_Vachaspati_5: Vocals=368.53 Hz, Accompaniment=437.44 Hz
+[2025-11-24 15:40:45] ✅ Champakali_Vachaspati_6: Vocals=207.17 Hz, Accompaniment=437.53 Hz
+[2025-11-24 15:40:45] ✅ Champakali_Vachaspati_7: Vocals=324.73 Hz, Accompaniment=119.10 Hz
+[2025-11-24 15:40:45] ✅ Champakali_Vachaspati_8: Vocals=185.16 Hz, Accompaniment=136.06 Hz
+[2025-11-24 15:40:45] ✅ Champakali_Vachaspati_9: Vocals=298.56 Hz, Accompaniment=117.18 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_1: Vocals=338.68 Hz, Accompaniment=120.96 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_10: Vocals=354.35 Hz, Accompaniment=279.09 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_11: Vocals=150.72 Hz, Accompaniment=99.85 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_12: Vocals=438.02 Hz, Accompaniment=87.97 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_13: Vocals=115.22 Hz, Accompaniment=121.96 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_14: Vocals=154.15 Hz, Accompaniment=131.42 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_15: Vocals=196.63 Hz, Accompaniment=93.69 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_2: Vocals=338.87 Hz, Accompaniment=110.67 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_3: Vocals=437.62 Hz, Accompaniment=91.05 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_4: Vocals=165.24 Hz, Accompaniment=185.32 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_5: Vocals=147.42 Hz, Accompaniment=96.68 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_6: Vocals=361.79 Hz, Accompaniment=95.42 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_7: Vocals=341.47 Hz, Accompaniment=85.45 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_8: Vocals=277.79 Hz, Accompaniment=233.09 Hz
+[2025-11-24 15:40:45] ✅ Chandrakauns_9: Vocals=294.97 Hz, Accompaniment=83.51 Hz
+[2025-11-24 15:40:45] ✅ Chandranandan_1: Vocals=207.74 Hz, Accompaniment=232.22 Hz
+[2025-11-24 15:40:45] ✅ Chandranandan_2: Vocals=303.59 Hz, Accompaniment=95.46 Hz
+[2025-11-24 15:40:46] ✅ Chandranandan_3: Vocals=370.56 Hz, Accompaniment=293.00 Hz
+[2025-11-24 15:40:46] ✅ Chandranandan_4: Vocals=293.65 Hz, Accompaniment=266.25 Hz
+[2025-11-24 15:40:46] ✅ Chandranandan_5: Vocals=247.77 Hz, Accompaniment=85.81 Hz
+[2025-11-24 15:40:46] ✅ Chandranandan_6: Vocals=239.74 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_1: Vocals=295.59 Hz, Accompaniment=87.82 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_10: Vocals=183.87 Hz, Accompaniment=98.73 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_2: Vocals=145.76 Hz, Accompaniment=144.57 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_3: Vocals=183.08 Hz, Accompaniment=98.85 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_4: Vocals=271.46 Hz, Accompaniment=266.65 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_5: Vocals=348.61 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_6: Vocals=352.91 Hz, Accompaniment=275.44 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_7: Vocals=207.01 Hz, Accompaniment=104.30 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_8: Vocals=377.93 Hz, Accompaniment=83.58 Hz
+[2025-11-24 15:40:46] ✅ Charukeshi_9: Vocals=426.58 Hz, Accompaniment=266.36 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_1: Vocals=183.56 Hz, Accompaniment=84.60 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_2: Vocals=185.22 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_3: Vocals=341.08 Hz, Accompaniment=134.05 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_4: Vocals=196.25 Hz, Accompaniment=79.14 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_5: Vocals=203.91 Hz, Accompaniment=99.39 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_6: Vocals=185.22 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:40:46] ✅ Chhayanat_7: Vocals=259.08 Hz, Accompaniment=83.15 Hz
+[2025-11-24 15:40:47] ✅ Chhayanat_8: Vocals=190.60 Hz, Accompaniment=92.56 Hz
+[2025-11-24 15:40:47] ✅ Chhayanat_9: Vocals=242.43 Hz, Accompaniment=108.58 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_1: Vocals=165.27 Hz, Accompaniment=92.55 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_10: Vocals=161.91 Hz, Accompaniment=92.38 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_2: Vocals=141.89 Hz, Accompaniment=124.11 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_3: Vocals=154.49 Hz, Accompaniment=276.41 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_4: Vocals=155.59 Hz, Accompaniment=92.78 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_5: Vocals=155.74 Hz, Accompaniment=111.21 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_6: Vocals=164.80 Hz, Accompaniment=88.05 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_7: Vocals=156.09 Hz, Accompaniment=118.14 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_8: Vocals=156.99 Hz, Accompaniment=156.19 Hz
+[2025-11-24 15:40:47] ✅ Darbari Kanada_9: Vocals=139.14 Hz, Accompaniment=139.17 Hz
+[2025-11-24 15:40:47] ✅ Desh_1: Vocals=185.31 Hz, Accompaniment=104.62 Hz
+[2025-11-24 15:40:47] ✅ Desh_10: Vocals=276.12 Hz, Accompaniment=87.75 Hz
+[2025-11-24 15:40:47] ✅ Desh_2: Vocals=206.28 Hz, Accompaniment=100.23 Hz
+[2025-11-24 15:40:47] ✅ Desh_3: Vocals=147.89 Hz, Accompaniment=131.43 Hz
+[2025-11-24 15:40:47] ✅ Desh_4: Vocals=229.15 Hz, Accompaniment=95.89 Hz
+[2025-11-24 15:40:47] ✅ Desh_5: Vocals=347.97 Hz, Accompaniment=117.25 Hz
+[2025-11-24 15:40:47] ✅ Desh_6: Vocals=203.88 Hz, Accompaniment=96.73 Hz
+[2025-11-24 15:40:47] ✅ Desh_7: Vocals=217.56 Hz, Accompaniment=100.07 Hz
+[2025-11-24 15:40:48] ✅ Desh_8: Vocals=199.67 Hz, Accompaniment=100.59 Hz
+[2025-11-24 15:40:48] ✅ Desh_9: Vocals=191.80 Hz, Accompaniment=104.52 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_1: Vocals=230.84 Hz, Accompaniment=78.52 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_10: Vocals=230.76 Hz, Accompaniment=139.18 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_2: Vocals=357.87 Hz, Accompaniment=92.92 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_3: Vocals=225.53 Hz, Accompaniment=84.73 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_4: Vocals=347.92 Hz, Accompaniment=105.58 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_5: Vocals=276.88 Hz, Accompaniment=139.16 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_6: Vocals=369.43 Hz, Accompaniment=123.84 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_7: Vocals=279.37 Hz, Accompaniment=100.84 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_8: Vocals=227.98 Hz, Accompaniment=437.51 Hz
+[2025-11-24 15:40:48] ✅ Deshkar_9: Vocals=224.31 Hz, Accompaniment=112.96 Hz
+[2025-11-24 15:40:48] ✅ Desi_1: Vocals=175.06 Hz, Accompaniment=92.57 Hz
+[2025-11-24 15:40:48] ✅ Desi_2: Vocals=183.50 Hz, Accompaniment=156.77 Hz
+[2025-11-24 15:40:48] ✅ Desi_3: Vocals=225.96 Hz, Accompaniment=175.00 Hz
+[2025-11-24 15:40:48] ✅ Desi_4: Vocals=246.42 Hz, Accompaniment=219.71 Hz
+[2025-11-24 15:40:48] ✅ Desi_5: Vocals=175.04 Hz, Accompaniment=78.55 Hz
+[2025-11-24 15:40:48] ✅ Desi_6: Vocals=328.75 Hz, Accompaniment=162.12 Hz
+[2025-11-24 15:40:48] ✅ Desi_7: Vocals=257.45 Hz, Accompaniment=112.86 Hz
+[2025-11-24 15:40:48] ✅ Desi_8: Vocals=178.75 Hz, Accompaniment=158.95 Hz
+[2025-11-24 15:40:48] ✅ Desi_9: Vocals=156.09 Hz, Accompaniment=156.18 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_1: Vocals=207.97 Hz, Accompaniment=100.96 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_2: Vocals=229.53 Hz, Accompaniment=345.12 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_3: Vocals=310.30 Hz, Accompaniment=233.01 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_4: Vocals=331.50 Hz, Accompaniment=328.67 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_5: Vocals=207.81 Hz, Accompaniment=101.88 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_6: Vocals=292.55 Hz, Accompaniment=139.20 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_7: Vocals=199.38 Hz, Accompaniment=120.59 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_8: Vocals=261.32 Hz, Accompaniment=84.88 Hz
+[2025-11-24 15:40:49] ✅ Dev Gandhar_9: Vocals=196.24 Hz, Accompaniment=88.01 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_1: Vocals=275.71 Hz, Accompaniment=110.68 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_10: Vocals=174.60 Hz, Accompaniment=138.75 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_2: Vocals=258.94 Hz, Accompaniment=89.26 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_3: Vocals=174.98 Hz, Accompaniment=139.12 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_4: Vocals=310.30 Hz, Accompaniment=124.04 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_5: Vocals=413.15 Hz, Accompaniment=313.50 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_6: Vocals=261.07 Hz, Accompaniment=82.85 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_7: Vocals=176.84 Hz, Accompaniment=110.58 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_8: Vocals=146.20 Hz, Accompaniment=120.77 Hz
+[2025-11-24 15:40:49] ✅ Devgiri Bilawal_9: Vocals=236.50 Hz, Accompaniment=93.02 Hz
+[2025-11-24 15:40:49] ✅ Dhanashree_1: Vocals=192.98 Hz, Accompaniment=79.38 Hz
+[2025-11-24 15:40:49] ✅ Dhanashree_2: Vocals=276.46 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:40:49] ✅ Dhani_1: Vocals=288.79 Hz, Accompaniment=233.01 Hz
+[2025-11-24 15:40:49] ✅ Dhani_2: Vocals=178.13 Hz, Accompaniment=86.66 Hz
+[2025-11-24 15:40:49] ✅ Dhani_3: Vocals=239.02 Hz, Accompaniment=105.17 Hz
+[2025-11-24 15:40:50] ✅ Dhani_4: Vocals=312.30 Hz, Accompaniment=90.88 Hz
+[2025-11-24 15:40:50] ✅ Dhani_5: Vocals=282.67 Hz, Accompaniment=96.81 Hz
+[2025-11-24 15:40:50] ✅ Dhani_6: Vocals=197.88 Hz, Accompaniment=96.87 Hz
+[2025-11-24 15:40:50] ✅ Dhani_7: Vocals=187.04 Hz, Accompaniment=104.85 Hz
+[2025-11-24 15:40:50] ✅ Dhani_8: Vocals=175.00 Hz, Accompaniment=72.72 Hz
+[2025-11-24 15:40:50] ✅ Dhani_9: Vocals=316.05 Hz, Accompaniment=117.48 Hz
+[2025-11-24 15:40:50] ✅ Durga_1: Vocals=237.53 Hz, Accompaniment=87.75 Hz
+[2025-11-24 15:40:50] ✅ Durga_10: Vocals=310.15 Hz, Accompaniment=117.16 Hz
+[2025-11-24 15:40:50] ✅ Durga_2: Vocals=233.00 Hz, Accompaniment=232.89 Hz
+[2025-11-24 15:40:50] ✅ Durga_3: Vocals=310.31 Hz, Accompaniment=131.17 Hz
+[2025-11-24 15:40:50] ✅ Durga_4: Vocals=194.91 Hz, Accompaniment=131.42 Hz
+[2025-11-24 15:40:50] ✅ Durga_5: Vocals=245.93 Hz, Accompaniment=89.51 Hz
+[2025-11-24 15:40:50] ✅ Durga_6: Vocals=207.81 Hz, Accompaniment=120.66 Hz
+[2025-11-24 15:40:50] ✅ Durga_7: Vocals=237.13 Hz, Accompaniment=125.19 Hz
+[2025-11-24 15:40:50] ✅ Durga_8: Vocals=356.75 Hz, Accompaniment=86.82 Hz
+[2025-11-24 15:40:50] ✅ Durga_9: Vocals=335.49 Hz, Accompaniment=165.60 Hz
+[2025-11-24 15:40:50] ✅ Gaud Malhar_1: Vocals=246.81 Hz, Accompaniment=110.83 Hz
+[2025-11-24 15:40:50] ✅ Gaud Malhar_10: Vocals=199.99 Hz, Accompaniment=153.79 Hz
+[2025-11-24 15:40:50] ✅ Gaud Malhar_2: Vocals=299.50 Hz, Accompaniment=119.46 Hz
+[2025-11-24 15:40:50] ✅ Gaud Malhar_3: Vocals=302.88 Hz, Accompaniment=119.46 Hz
+[2025-11-24 15:40:50] ✅ Gaud Malhar_4: Vocals=355.18 Hz, Accompaniment=91.08 Hz
+[2025-11-24 15:40:51] ✅ Gaud Malhar_5: Vocals=348.18 Hz, Accompaniment=90.30 Hz
+[2025-11-24 15:40:51] ✅ Gaud Malhar_6: Vocals=293.03 Hz, Accompaniment=110.59 Hz
+[2025-11-24 15:40:51] ✅ Gaud Malhar_7: Vocals=168.98 Hz, Accompaniment=84.97 Hz
+[2025-11-24 15:40:51] ✅ Gaud Malhar_8: Vocals=190.52 Hz, Accompaniment=104.60 Hz
+[2025-11-24 15:40:51] ✅ Gaud Malhar_9: Vocals=280.90 Hz, Accompaniment=91.38 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_1: Vocals=205.50 Hz, Accompaniment=103.55 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_10: Vocals=207.82 Hz, Accompaniment=84.70 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_2: Vocals=175.47 Hz, Accompaniment=165.26 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_3: Vocals=276.72 Hz, Accompaniment=142.11 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_4: Vocals=232.92 Hz, Accompaniment=88.68 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_5: Vocals=185.29 Hz, Accompaniment=98.70 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_6: Vocals=220.09 Hz, Accompaniment=88.09 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_7: Vocals=368.78 Hz, Accompaniment=83.01 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_8: Vocals=201.10 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:40:51] ✅ Gaud Sarang_9: Vocals=202.12 Hz, Accompaniment=462.80 Hz
+[2025-11-24 15:40:51] ✅ Gauri_1: Vocals=264.88 Hz, Accompaniment=116.03 Hz
+[2025-11-24 15:40:51] ✅ Gauri_2: Vocals=269.70 Hz, Accompaniment=106.61 Hz
+[2025-11-24 15:40:51] ✅ Gauri_3: Vocals=180.92 Hz, Accompaniment=93.45 Hz
+[2025-11-24 15:40:51] ✅ Gauri_4: Vocals=175.94 Hz, Accompaniment=93.20 Hz
+[2025-11-24 15:40:51] ✅ Gauri_5: Vocals=171.94 Hz, Accompaniment=83.15 Hz
+[2025-11-24 15:40:51] ✅ Gauri_6: Vocals=282.15 Hz, Accompaniment=112.23 Hz
+[2025-11-24 15:40:51] ✅ Gauri_7: Vocals=173.59 Hz, Accompaniment=94.11 Hz
+[2025-11-24 15:40:51] ✅ Gauri_8: Vocals=220.02 Hz, Accompaniment=127.66 Hz
+[2025-11-24 15:40:52] ✅ Gauri_9: Vocals=236.75 Hz, Accompaniment=117.21 Hz
+[2025-11-24 15:40:52] ✅ Gavati_1: Vocals=194.67 Hz, Accompaniment=155.89 Hz
+[2025-11-24 15:40:52] ✅ Gavati_10: Vocals=242.36 Hz, Accompaniment=117.78 Hz
+[2025-11-24 15:40:52] ✅ Gavati_2: Vocals=328.74 Hz, Accompaniment=196.24 Hz
+[2025-11-24 15:40:52] ✅ Gavati_3: Vocals=233.82 Hz, Accompaniment=120.77 Hz
+[2025-11-24 15:40:52] ✅ Gavati_4: Vocals=260.69 Hz, Accompaniment=102.86 Hz
+[2025-11-24 15:40:52] ✅ Gavati_5: Vocals=123.28 Hz, Accompaniment=138.79 Hz
+[2025-11-24 15:40:52] ✅ Gavati_6: Vocals=215.25 Hz, Accompaniment=108.07 Hz
+[2025-11-24 15:40:52] ✅ Gavati_7: Vocals=328.59 Hz, Accompaniment=124.11 Hz
+[2025-11-24 15:40:52] ✅ Gavati_8: Vocals=260.09 Hz, Accompaniment=127.57 Hz
+[2025-11-24 15:40:52] ✅ Gavati_9: Vocals=261.33 Hz, Accompaniment=233.04 Hz
+[2025-11-24 15:40:52] ✅ Gopika Basant_1: Vocals=293.04 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:40:52] ✅ Gopika Basant_2: Vocals=191.36 Hz, Accompaniment=131.42 Hz
+[2025-11-24 15:40:52] ✅ Gopika Basant_3: Vocals=205.82 Hz, Accompaniment=138.45 Hz
+[2025-11-24 15:40:52] ✅ Gopika Basant_4: Vocals=356.15 Hz, Accompaniment=99.17 Hz
+[2025-11-24 15:40:52] ✅ Gopika Basant_5: Vocals=208.61 Hz, Accompaniment=139.16 Hz
+[2025-11-24 15:40:52] ✅ Gopika Basant_6: Vocals=205.88 Hz, Accompaniment=138.48 Hz
+[2025-11-24 15:40:52] ✅ Gorakh Kalyan_1: Vocals=147.37 Hz, Accompaniment=98.70 Hz
+[2025-11-24 15:40:52] ✅ Gorakh Kalyan_2: Vocals=293.05 Hz, Accompaniment=261.31 Hz
+[2025-11-24 15:40:52] ✅ Gorakh Kalyan_3: Vocals=211.88 Hz, Accompaniment=104.15 Hz
+[2025-11-24 15:40:53] ✅ Gorakh Kalyan_4: Vocals=233.60 Hz, Accompaniment=232.95 Hz
+[2025-11-24 15:40:53] ✅ Gorakh Kalyan_5: Vocals=339.29 Hz, Accompaniment=185.32 Hz
+[2025-11-24 15:40:53] ✅ Gorakh Kalyan_6: Vocals=174.99 Hz, Accompaniment=139.19 Hz
+[2025-11-24 15:40:53] ✅ Gorakh Kalyan_7: Vocals=293.04 Hz, Accompaniment=95.40 Hz
+[2025-11-24 15:40:53] ✅ Gorakh Kalyan_8: Vocals=282.06 Hz, Accompaniment=102.87 Hz
+[2025-11-24 15:40:53] ✅ Gorakh Kalyan_9: Vocals=251.41 Hz, Accompaniment=117.32 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_1: Vocals=293.53 Hz, Accompaniment=110.67 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_10: Vocals=181.88 Hz, Accompaniment=103.52 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_2: Vocals=322.44 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_3: Vocals=207.81 Hz, Accompaniment=207.87 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_4: Vocals=333.13 Hz, Accompaniment=109.35 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_5: Vocals=156.03 Hz, Accompaniment=146.86 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_6: Vocals=326.57 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_7: Vocals=293.03 Hz, Accompaniment=110.67 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_8: Vocals=168.02 Hz, Accompaniment=93.03 Hz
+[2025-11-24 15:40:53] ✅ Gunakri_9: Vocals=184.53 Hz, Accompaniment=101.39 Hz
+[2025-11-24 15:40:53] ✅ Gurjari Todi_1: Vocals=148.38 Hz, Accompaniment=104.07 Hz
+[2025-11-24 15:40:53] ✅ Gurjari Todi_2: Vocals=159.94 Hz, Accompaniment=98.81 Hz
+[2025-11-24 15:40:53] ✅ Gurjari Todi_3: Vocals=333.29 Hz, Accompaniment=92.95 Hz
+[2025-11-24 15:40:53] ✅ Gurjari Todi_4: Vocals=261.31 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:40:54] ✅ Gurjari Todi_5: Vocals=246.77 Hz, Accompaniment=116.49 Hz
+[2025-11-24 15:40:54] ✅ Gurjari Todi_6: Vocals=170.00 Hz, Accompaniment=83.50 Hz
+[2025-11-24 15:40:54] ✅ Gurjari Todi_7: Vocals=163.94 Hz, Accompaniment=97.87 Hz
+[2025-11-24 15:40:54] ✅ Gurjari Todi_8: Vocals=292.54 Hz, Accompaniment=291.53 Hz
+[2025-11-24 15:40:54] ✅ Gurjari Todi_9: Vocals=220.09 Hz, Accompaniment=78.92 Hz
+[2025-11-24 15:40:54] ✅ Hameer_1: Vocals=232.97 Hz, Accompaniment=276.46 Hz
+[2025-11-24 15:40:54] ✅ Hameer_10: Vocals=198.45 Hz, Accompaniment=100.30 Hz
+[2025-11-24 15:40:54] ✅ Hameer_2: Vocals=189.30 Hz, Accompaniment=144.15 Hz
+[2025-11-24 15:40:54] ✅ Hameer_3: Vocals=233.04 Hz, Accompaniment=80.21 Hz
+[2025-11-24 15:40:54] ✅ Hameer_4: Vocals=207.82 Hz, Accompaniment=92.66 Hz
+[2025-11-24 15:40:54] ✅ Hameer_5: Vocals=229.50 Hz, Accompaniment=88.13 Hz
+[2025-11-24 15:40:54] ✅ Hameer_6: Vocals=310.30 Hz, Accompaniment=104.51 Hz
+[2025-11-24 15:40:54] ✅ Hameer_7: Vocals=237.44 Hz, Accompaniment=110.61 Hz
+[2025-11-24 15:40:54] ✅ Hameer_8: Vocals=216.37 Hz, Accompaniment=82.93 Hz
+[2025-11-24 15:40:54] ✅ Hameer_9: Vocals=227.30 Hz, Accompaniment=82.50 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_1: Vocals=159.46 Hz, Accompaniment=105.84 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_10: Vocals=173.77 Hz, Accompaniment=92.51 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_2: Vocals=293.04 Hz, Accompaniment=237.21 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_3: Vocals=299.30 Hz, Accompaniment=110.33 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_4: Vocals=267.37 Hz, Accompaniment=108.48 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_5: Vocals=165.51 Hz, Accompaniment=98.12 Hz
+[2025-11-24 15:40:54] ✅ Hansadhwani_6: Vocals=174.17 Hz, Accompaniment=78.48 Hz
+[2025-11-24 15:40:55] ✅ Hansadhwani_7: Vocals=156.53 Hz, Accompaniment=78.50 Hz
+[2025-11-24 15:40:55] ✅ Hansadhwani_8: Vocals=233.14 Hz, Accompaniment=155.89 Hz
+[2025-11-24 15:40:55] ✅ Hansadhwani_9: Vocals=162.20 Hz, Accompaniment=97.45 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_1: Vocals=368.86 Hz, Accompaniment=347.97 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_2: Vocals=287.25 Hz, Accompaniment=226.06 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_3: Vocals=244.03 Hz, Accompaniment=98.69 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_4: Vocals=188.30 Hz, Accompaniment=89.44 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_5: Vocals=310.32 Hz, Accompaniment=124.06 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_6: Vocals=362.08 Hz, Accompaniment=293.03 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_7: Vocals=224.95 Hz, Accompaniment=90.03 Hz
+[2025-11-24 15:40:55] ✅ Hanskinki_8: Vocals=340.99 Hz, Accompaniment=110.77 Hz
+[2025-11-24 15:40:55] ✅ Hari Kauns_1: Vocals=184.78 Hz, Accompaniment=155.50 Hz
+[2025-11-24 15:40:55] ✅ Hari Kauns_2: Vocals=246.41 Hz, Accompaniment=110.94 Hz
+[2025-11-24 15:40:55] ✅ Hari Kauns_3: Vocals=192.48 Hz, Accompaniment=131.43 Hz
+[2025-11-24 15:40:55] ✅ Hari Kauns_4: Vocals=235.05 Hz, Accompaniment=247.06 Hz
+[2025-11-24 15:40:55] ✅ Hari Kauns_5: Vocals=261.33 Hz, Accompaniment=93.18 Hz
+[2025-11-24 15:40:55] ✅ Hari Kauns_6: Vocals=241.22 Hz, Accompaniment=97.97 Hz
+[2025-11-24 15:40:55] ✅ Hem Bihag_1: Vocals=175.54 Hz, Accompaniment=139.17 Hz
+[2025-11-24 15:40:55] ✅ Hem Bihag_2: Vocals=261.41 Hz, Accompaniment=78.49 Hz
+[2025-11-24 15:40:55] ✅ Hem Bihag_3: Vocals=270.39 Hz, Accompaniment=136.55 Hz
+[2025-11-24 15:40:55] ✅ Hem Bihag_4: Vocals=367.15 Hz, Accompaniment=266.91 Hz
+[2025-11-24 15:40:56] ✅ Hem Bihag_5: Vocals=346.30 Hz, Accompaniment=101.05 Hz
+[2025-11-24 15:40:56] ✅ Hemant_1: Vocals=290.45 Hz, Accompaniment=276.50 Hz
+[2025-11-24 15:40:56] ✅ Hemant_10: Vocals=338.73 Hz, Accompaniment=83.12 Hz
+[2025-11-24 15:40:56] ✅ Hemant_2: Vocals=310.30 Hz, Accompaniment=232.94 Hz
+[2025-11-24 15:40:56] ✅ Hemant_3: Vocals=250.06 Hz, Accompaniment=249.89 Hz
+[2025-11-24 15:40:56] ✅ Hemant_4: Vocals=310.32 Hz, Accompaniment=170.20 Hz
+[2025-11-24 15:40:56] ✅ Hemant_5: Vocals=328.41 Hz, Accompaniment=328.32 Hz
+[2025-11-24 15:40:56] ✅ Hemant_6: Vocals=307.78 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:40:56] ✅ Hemant_7: Vocals=165.91 Hz, Accompaniment=147.20 Hz
+[2025-11-24 15:40:56] ✅ Hemant_8: Vocals=433.70 Hz, Accompaniment=93.03 Hz
+[2025-11-24 15:40:56] ✅ Hemant_9: Vocals=N/A, Accompaniment=265.91 Hz
+[2025-11-24 15:40:56] ✅ Hemshri_1: Vocals=188.09 Hz, Accompaniment=141.86 Hz
+[2025-11-24 15:40:56] ✅ Hemshri_2: Vocals=276.59 Hz, Accompaniment=250.93 Hz
+[2025-11-24 15:40:56] ✅ Hemshri_3: Vocals=210.57 Hz, Accompaniment=140.06 Hz
+[2025-11-24 15:40:56] ✅ Hindol_1: Vocals=207.79 Hz, Accompaniment=147.32 Hz
+[2025-11-24 15:40:56] ✅ Hindol_2: Vocals=235.91 Hz, Accompaniment=76.04 Hz
+[2025-11-24 15:40:56] ✅ Hindol_3: Vocals=321.95 Hz, Accompaniment=242.32 Hz
+[2025-11-24 15:40:56] ✅ Hindol_4: Vocals=293.03 Hz, Accompaniment=230.79 Hz
+[2025-11-24 15:40:56] ✅ Hindol_5: Vocals=282.19 Hz, Accompaniment=104.51 Hz
+[2025-11-24 15:40:56] ✅ Hindol_6: Vocals=413.20 Hz, Accompaniment=327.33 Hz
+[2025-11-24 15:40:56] ✅ Hindol_7: Vocals=238.98 Hz, Accompaniment=97.25 Hz
+[2025-11-24 15:40:56] ✅ Hindol_8: Vocals=187.49 Hz, Accompaniment=88.71 Hz
+[2025-11-24 15:40:56] ✅ Hindol_9: Vocals=208.82 Hz, Accompaniment=150.20 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_1: Vocals=196.27 Hz, Accompaniment=92.58 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_10: Vocals=165.48 Hz, Accompaniment=93.19 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_2: Vocals=379.61 Hz, Accompaniment=107.56 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_3: Vocals=298.22 Hz, Accompaniment=83.12 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_4: Vocals=276.70 Hz, Accompaniment=207.94 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_5: Vocals=277.86 Hz, Accompaniment=99.65 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_6: Vocals=220.06 Hz, Accompaniment=131.31 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_7: Vocals=336.29 Hz, Accompaniment=99.05 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_8: Vocals=223.80 Hz, Accompaniment=89.84 Hz
+[2025-11-24 15:40:57] ✅ Jaijaiwanti_9: Vocals=181.80 Hz, Accompaniment=156.74 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_1: Vocals=200.03 Hz, Accompaniment=200.60 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_2: Vocals=276.72 Hz, Accompaniment=155.65 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_3: Vocals=218.12 Hz, Accompaniment=303.91 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_4: Vocals=220.07 Hz, Accompaniment=107.27 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_5: Vocals=217.77 Hz, Accompaniment=91.92 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_6: Vocals=214.38 Hz, Accompaniment=104.19 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_7: Vocals=267.17 Hz, Accompaniment=270.92 Hz
+[2025-11-24 15:40:57] ✅ Jaldhar Kedar_8: Vocals=252.23 Hz, Accompaniment=83.99 Hz
+[2025-11-24 15:40:57] ✅ Jaunpuri_1: Vocals=233.01 Hz, Accompaniment=78.56 Hz
+[2025-11-24 15:40:57] ✅ Jaunpuri_2: Vocals=348.05 Hz, Accompaniment=234.26 Hz
+[2025-11-24 15:40:57] ✅ Jaunpuri_3: Vocals=224.37 Hz, Accompaniment=92.17 Hz
+[2025-11-24 15:40:58] ✅ Jaunpuri_4: Vocals=274.88 Hz, Accompaniment=233.00 Hz
+[2025-11-24 15:40:58] ✅ Jaunpuri_5: Vocals=233.67 Hz, Accompaniment=91.25 Hz
+[2025-11-24 15:40:58] ✅ Jaunpuri_6: Vocals=156.01 Hz, Accompaniment=155.88 Hz
+[2025-11-24 15:40:58] ✅ Jaunpuri_7: Vocals=293.03 Hz, Accompaniment=293.03 Hz
+[2025-11-24 15:40:58] ✅ Jaunpuri_8: Vocals=281.28 Hz, Accompaniment=277.35 Hz
+[2025-11-24 15:40:58] ✅ Jaunpuri_9: Vocals=262.74 Hz, Accompaniment=83.24 Hz
+[2025-11-24 15:40:58] ✅ Jayat_1: Vocals=232.13 Hz, Accompaniment=182.91 Hz
+[2025-11-24 15:40:58] ✅ Jayat_2: Vocals=211.35 Hz, Accompaniment=83.34 Hz
+[2025-11-24 15:40:58] ✅ Jayat_3: Vocals=328.57 Hz, Accompaniment=261.28 Hz
+[2025-11-24 15:40:58] ✅ Jayat_4: Vocals=229.23 Hz, Accompaniment=93.20 Hz
+[2025-11-24 15:40:58] ✅ Jayat_5: Vocals=354.64 Hz, Accompaniment=335.06 Hz
+[2025-11-24 15:40:58] ✅ Jayat_6: Vocals=283.74 Hz, Accompaniment=106.58 Hz
+[2025-11-24 15:40:58] ✅ Jayat_7: Vocals=141.87 Hz, Accompaniment=78.21 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_1: Vocals=196.24 Hz, Accompaniment=117.16 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_10: Vocals=213.87 Hz, Accompaniment=108.78 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_2: Vocals=156.28 Hz, Accompaniment=84.45 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_3: Vocals=287.30 Hz, Accompaniment=116.32 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_4: Vocals=242.03 Hz, Accompaniment=89.94 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_5: Vocals=276.68 Hz, Accompaniment=110.67 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_6: Vocals=190.06 Hz, Accompaniment=94.31 Hz
+[2025-11-24 15:40:58] ✅ Jhinjoti_7: Vocals=221.16 Hz, Accompaniment=84.13 Hz
+[2025-11-24 15:40:59] ✅ Jhinjoti_8: Vocals=315.96 Hz, Accompaniment=90.91 Hz
+[2025-11-24 15:40:59] ✅ Jhinjoti_9: Vocals=215.88 Hz, Accompaniment=111.44 Hz
+[2025-11-24 15:40:59] ✅ Jog_10: Vocals=260.90 Hz, Accompaniment=207.84 Hz
+[2025-11-24 15:40:59] ✅ Jog_2: Vocals=131.19 Hz, Accompaniment=78.48 Hz
+[2025-11-24 15:40:59] ✅ Jog_3: Vocals=199.99 Hz, Accompaniment=72.31 Hz
+[2025-11-24 15:40:59] ✅ Jog_4: Vocals=131.30 Hz, Accompaniment=64.85 Hz
+[2025-11-24 15:40:59] ✅ Jog_5: Vocals=147.38 Hz, Accompaniment=72.72 Hz
+[2025-11-24 15:40:59] ✅ Jog_6: Vocals=194.80 Hz, Accompaniment=88.57 Hz
+[2025-11-24 15:40:59] ✅ Jog_7: Vocals=185.28 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:40:59] ✅ Jog_8: Vocals=147.37 Hz, Accompaniment=72.72 Hz
+[2025-11-24 15:40:59] ✅ Jog_9: Vocals=181.70 Hz, Accompaniment=90.88 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_1: Vocals=155.90 Hz, Accompaniment=153.98 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_10: Vocals=172.58 Hz, Accompaniment=144.58 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_2: Vocals=200.44 Hz, Accompaniment=104.17 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_3: Vocals=185.32 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_4: Vocals=184.56 Hz, Accompaniment=147.38 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_5: Vocals=207.80 Hz, Accompaniment=97.60 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_6: Vocals=271.49 Hz, Accompaniment=104.21 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_7: Vocals=328.53 Hz, Accompaniment=98.93 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_8: Vocals=155.62 Hz, Accompaniment=117.15 Hz
+[2025-11-24 15:40:59] ✅ Jogkauns_9: Vocals=261.85 Hz, Accompaniment=104.52 Hz
+[2025-11-24 15:41:00] ✅ Kafi_1: Vocals=232.10 Hz, Accompaniment=120.82 Hz
+[2025-11-24 15:41:00] ✅ Kafi_10: Vocals=235.29 Hz, Accompaniment=112.28 Hz
+[2025-11-24 15:41:00] ✅ Kafi_2: Vocals=255.44 Hz, Accompaniment=185.39 Hz
+[2025-11-24 15:41:00] ✅ Kafi_3: Vocals=347.97 Hz, Accompaniment=328.02 Hz
+[2025-11-24 15:41:00] ✅ Kafi_4: Vocals=335.12 Hz, Accompaniment=84.67 Hz
+[2025-11-24 15:41:00] ✅ Kafi_5: Vocals=293.03 Hz, Accompaniment=293.29 Hz
+[2025-11-24 15:41:00] ✅ Kafi_6: Vocals=310.24 Hz, Accompaniment=88.10 Hz
+[2025-11-24 15:41:00] ✅ Kafi_7: Vocals=235.84 Hz, Accompaniment=93.09 Hz
+[2025-11-24 15:41:00] ✅ Kafi_8: Vocals=156.50 Hz, Accompaniment=104.46 Hz
+[2025-11-24 15:41:00] ✅ Kafi_9: Vocals=243.14 Hz, Accompaniment=89.12 Hz
+[2025-11-24 15:41:00] ✅ Kamod_1: Vocals=218.40 Hz, Accompaniment=124.25 Hz
+[2025-11-24 15:41:00] ✅ Kamod_10: Vocals=198.10 Hz, Accompaniment=87.85 Hz
+[2025-11-24 15:41:00] ✅ Kamod_2: Vocals=212.04 Hz, Accompaniment=147.38 Hz
+[2025-11-24 15:41:00] ✅ Kamod_3: Vocals=188.96 Hz, Accompaniment=82.74 Hz
+[2025-11-24 15:41:00] ✅ Kamod_4: Vocals=225.16 Hz, Accompaniment=84.70 Hz
+[2025-11-24 15:41:00] ✅ Kamod_5: Vocals=196.22 Hz, Accompaniment=84.19 Hz
+[2025-11-24 15:41:00] ✅ Kamod_6: Vocals=202.91 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:00] ✅ Kamod_7: Vocals=203.88 Hz, Accompaniment=92.33 Hz
+[2025-11-24 15:41:00] ✅ Kamod_8: Vocals=272.18 Hz, Accompaniment=207.79 Hz
+[2025-11-24 15:41:00] ✅ Kamod_9: Vocals=265.95 Hz, Accompaniment=97.80 Hz
+[2025-11-24 15:41:00] ✅ Kaunsi Kanada_1: Vocals=193.33 Hz, Accompaniment=147.23 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_10: Vocals=256.24 Hz, Accompaniment=199.99 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_2: Vocals=191.69 Hz, Accompaniment=137.85 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_3: Vocals=265.76 Hz, Accompaniment=83.27 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_4: Vocals=320.28 Hz, Accompaniment=141.87 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_5: Vocals=345.09 Hz, Accompaniment=83.11 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_6: Vocals=246.86 Hz, Accompaniment=104.58 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_7: Vocals=276.71 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_8: Vocals=251.55 Hz, Accompaniment=189.87 Hz
+[2025-11-24 15:41:01] ✅ Kaunsi Kanada_9: Vocals=179.82 Hz, Accompaniment=138.77 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_1: Vocals=197.30 Hz, Accompaniment=103.51 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_10: Vocals=176.16 Hz, Accompaniment=139.17 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_2: Vocals=233.90 Hz, Accompaniment=93.15 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_3: Vocals=309.74 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_4: Vocals=247.55 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_5: Vocals=185.36 Hz, Accompaniment=92.74 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_6: Vocals=327.19 Hz, Accompaniment=100.97 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_7: Vocals=262.48 Hz, Accompaniment=100.48 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_8: Vocals=311.17 Hz, Accompaniment=98.98 Hz
+[2025-11-24 15:41:01] ✅ Kaushik Dhwani_9: Vocals=182.85 Hz, Accompaniment=126.04 Hz
+[2025-11-24 15:41:01] ✅ Kedar_1: Vocals=217.03 Hz, Accompaniment=145.96 Hz
+[2025-11-24 15:41:01] ✅ Kedar_10: Vocals=180.64 Hz, Accompaniment=92.99 Hz
+[2025-11-24 15:41:02] ✅ Kedar_2: Vocals=216.92 Hz, Accompaniment=85.24 Hz
+[2025-11-24 15:41:02] ✅ Kedar_3: Vocals=202.73 Hz, Accompaniment=104.20 Hz
+[2025-11-24 15:41:02] ✅ Kedar_4: Vocals=182.79 Hz, Accompaniment=138.46 Hz
+[2025-11-24 15:41:02] ✅ Kedar_5: Vocals=228.33 Hz, Accompaniment=104.50 Hz
+[2025-11-24 15:41:02] ✅ Kedar_6: Vocals=204.88 Hz, Accompaniment=103.74 Hz
+[2025-11-24 15:41:02] ✅ Kedar_7: Vocals=207.84 Hz, Accompaniment=104.26 Hz
+[2025-11-24 15:41:02] ✅ Kedar_8: Vocals=188.90 Hz, Accompaniment=93.19 Hz
+[2025-11-24 15:41:02] ✅ Kedar_9: Vocals=196.22 Hz, Accompaniment=147.38 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_1: Vocals=200.20 Hz, Accompaniment=112.52 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_10: Vocals=168.85 Hz, Accompaniment=139.08 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_2: Vocals=192.91 Hz, Accompaniment=93.40 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_3: Vocals=171.86 Hz, Accompaniment=131.42 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_4: Vocals=211.36 Hz, Accompaniment=93.11 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_5: Vocals=196.04 Hz, Accompaniment=91.36 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_6: Vocals=226.56 Hz, Accompaniment=139.62 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_7: Vocals=176.52 Hz, Accompaniment=104.67 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_8: Vocals=207.12 Hz, Accompaniment=104.33 Hz
+[2025-11-24 15:41:02] ✅ Khamaj_9: Vocals=231.77 Hz, Accompaniment=104.20 Hz
+[2025-11-24 15:41:02] ✅ Khambhavati_1: Vocals=211.40 Hz, Accompaniment=104.85 Hz
+[2025-11-24 15:41:02] ✅ Khambhavati_2: Vocals=203.88 Hz, Accompaniment=78.58 Hz
+[2025-11-24 15:41:02] ✅ Khambhavati_3: Vocals=266.50 Hz, Accompaniment=235.69 Hz
+[2025-11-24 15:41:02] ✅ Khambhavati_4: Vocals=398.52 Hz, Accompaniment=101.64 Hz
+[2025-11-24 15:41:03] ✅ Khambhavati_5: Vocals=309.43 Hz, Accompaniment=101.42 Hz
+[2025-11-24 15:41:03] ✅ Khambhavati_6: Vocals=204.58 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:03] ✅ Khambhavati_7: Vocals=216.02 Hz, Accompaniment=91.00 Hz
+[2025-11-24 15:41:03] ✅ Khambhavati_8: Vocals=311.81 Hz, Accompaniment=117.11 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_1: Vocals=232.83 Hz, Accompaniment=348.20 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_10: Vocals=330.32 Hz, Accompaniment=88.01 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_2: Vocals=369.08 Hz, Accompaniment=123.93 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_3: Vocals=174.97 Hz, Accompaniment=144.96 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_4: Vocals=210.22 Hz, Accompaniment=139.01 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_5: Vocals=162.13 Hz, Accompaniment=114.98 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_6: Vocals=347.97 Hz, Accompaniment=117.18 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_7: Vocals=235.13 Hz, Accompaniment=147.41 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_8: Vocals=240.87 Hz, Accompaniment=175.00 Hz
+[2025-11-24 15:41:03] ✅ Kirwani_9: Vocals=215.94 Hz, Accompaniment=106.53 Hz
+[2025-11-24 15:41:03] ✅ Lalit_1: Vocals=182.86 Hz, Accompaniment=84.02 Hz
+[2025-11-24 15:41:03] ✅ Lalit_10: Vocals=175.00 Hz, Accompaniment=141.82 Hz
+[2025-11-24 15:41:03] ✅ Lalit_2: Vocals=314.85 Hz, Accompaniment=93.31 Hz
+[2025-11-24 15:41:03] ✅ Lalit_3: Vocals=310.64 Hz, Accompaniment=90.15 Hz
+[2025-11-24 15:41:03] ✅ Lalit_4: Vocals=264.35 Hz, Accompaniment=173.64 Hz
+[2025-11-24 15:41:03] ✅ Lalit_5: Vocals=180.36 Hz, Accompaniment=178.38 Hz
+[2025-11-24 15:41:03] ✅ Lalit_6: Vocals=175.01 Hz, Accompaniment=94.76 Hz
+[2025-11-24 15:41:03] ✅ Lalit_7: Vocals=178.71 Hz, Accompaniment=113.57 Hz
+[2025-11-24 15:41:04] ✅ Lalit_8: Vocals=156.74 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:04] ✅ Lalit_9: Vocals=156.06 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_1: Vocals=241.87 Hz, Accompaniment=107.66 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_2: Vocals=242.08 Hz, Accompaniment=106.54 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_3: Vocals=199.05 Hz, Accompaniment=92.03 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_4: Vocals=178.38 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_5: Vocals=174.75 Hz, Accompaniment=271.50 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_6: Vocals=368.55 Hz, Accompaniment=83.11 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_7: Vocals=272.84 Hz, Accompaniment=267.75 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_8: Vocals=254.66 Hz, Accompaniment=382.88 Hz
+[2025-11-24 15:41:04] ✅ Lanka Dahan Sarang_9: Vocals=381.59 Hz, Accompaniment=83.33 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_1: Vocals=319.96 Hz, Accompaniment=94.70 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_10: Vocals=204.02 Hz, Accompaniment=292.97 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_2: Vocals=147.38 Hz, Accompaniment=147.44 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_3: Vocals=347.96 Hz, Accompaniment=233.04 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_4: Vocals=328.61 Hz, Accompaniment=232.80 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_5: Vocals=217.74 Hz, Accompaniment=78.95 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_6: Vocals=200.00 Hz, Accompaniment=140.16 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_7: Vocals=237.47 Hz, Accompaniment=237.26 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_8: Vocals=315.78 Hz, Accompaniment=110.58 Hz
+[2025-11-24 15:41:04] ✅ Madhukauns_9: Vocals=256.91 Hz, Accompaniment=223.98 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_1: Vocals=353.72 Hz, Accompaniment=93.94 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_10: Vocals=233.20 Hz, Accompaniment=218.91 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_2: Vocals=167.69 Hz, Accompaniment=104.48 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_3: Vocals=238.38 Hz, Accompaniment=93.13 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_4: Vocals=171.25 Hz, Accompaniment=147.38 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_5: Vocals=233.10 Hz, Accompaniment=104.51 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_6: Vocals=266.88 Hz, Accompaniment=118.79 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_7: Vocals=188.71 Hz, Accompaniment=83.34 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_8: Vocals=228.61 Hz, Accompaniment=115.09 Hz
+[2025-11-24 15:41:05] ✅ Madhumand Sarang_9: Vocals=316.53 Hz, Accompaniment=278.60 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_1: Vocals=140.89 Hz, Accompaniment=105.01 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_10: Vocals=321.45 Hz, Accompaniment=92.68 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_2: Vocals=246.82 Hz, Accompaniment=110.67 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_3: Vocals=187.81 Hz, Accompaniment=78.59 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_4: Vocals=141.28 Hz, Accompaniment=104.78 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_5: Vocals=139.86 Hz, Accompaniment=105.33 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_6: Vocals=141.44 Hz, Accompaniment=139.60 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_7: Vocals=300.05 Hz, Accompaniment=102.38 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_8: Vocals=220.14 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:41:05] ✅ Madhuvanti_9: Vocals=271.58 Hz, Accompaniment=94.87 Hz
+[2025-11-24 15:41:05] ✅ Malgunji_1: Vocals=314.68 Hz, Accompaniment=95.87 Hz
+[2025-11-24 15:41:05] ✅ Malgunji_2: Vocals=256.38 Hz, Accompaniment=104.50 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_3: Vocals=276.72 Hz, Accompaniment=84.48 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_4: Vocals=194.44 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_5: Vocals=198.81 Hz, Accompaniment=150.09 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_6: Vocals=361.93 Hz, Accompaniment=242.08 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_7: Vocals=304.81 Hz, Accompaniment=232.81 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_8: Vocals=159.27 Hz, Accompaniment=101.01 Hz
+[2025-11-24 15:41:06] ✅ Malgunji_9: Vocals=207.68 Hz, Accompaniment=88.01 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_1: Vocals=320.87 Hz, Accompaniment=389.63 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_10: Vocals=140.09 Hz, Accompaniment=139.27 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_2: Vocals=278.87 Hz, Accompaniment=185.32 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_3: Vocals=266.43 Hz, Accompaniment=149.16 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_4: Vocals=142.62 Hz, Accompaniment=156.00 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_5: Vocals=157.48 Hz, Accompaniment=156.09 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_6: Vocals=141.84 Hz, Accompaniment=93.42 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_7: Vocals=171.50 Hz, Accompaniment=93.05 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_8: Vocals=224.43 Hz, Accompaniment=110.94 Hz
+[2025-11-24 15:41:06] ✅ Malkauns_9: Vocals=147.26 Hz, Accompaniment=292.96 Hz
+[2025-11-24 15:41:06] ✅ Mand_1: Vocals=209.42 Hz, Accompaniment=139.22 Hz
+[2025-11-24 15:41:06] ✅ Mand_2: Vocals=550.21 Hz, Accompaniment=94.65 Hz
+[2025-11-24 15:41:06] ✅ Mand_3: Vocals=413.21 Hz, Accompaniment=88.33 Hz
+[2025-11-24 15:41:06] ✅ Mand_4: Vocals=327.68 Hz, Accompaniment=145.43 Hz
+[2025-11-24 15:41:07] ✅ Mand_5: Vocals=445.12 Hz, Accompaniment=110.86 Hz
+[2025-11-24 15:41:07] ✅ Mand_6: Vocals=412.51 Hz, Accompaniment=130.89 Hz
+[2025-11-24 15:41:07] ✅ Mand_7: Vocals=357.01 Hz, Accompaniment=72.79 Hz
+[2025-11-24 15:41:07] ✅ Mand_8: Vocals=261.51 Hz, Accompaniment=196.22 Hz
+[2025-11-24 15:41:07] ✅ Mand_9: Vocals=412.88 Hz, Accompaniment=99.06 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_1: Vocals=347.97 Hz, Accompaniment=98.32 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_10: Vocals=252.02 Hz, Accompaniment=142.05 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_2: Vocals=219.44 Hz, Accompaniment=83.23 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_3: Vocals=196.43 Hz, Accompaniment=98.65 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_4: Vocals=171.72 Hz, Accompaniment=88.02 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_5: Vocals=370.20 Hz, Accompaniment=98.70 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_6: Vocals=321.63 Hz, Accompaniment=211.62 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_7: Vocals=293.10 Hz, Accompaniment=292.49 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_8: Vocals=413.20 Hz, Accompaniment=83.98 Hz
+[2025-11-24 15:41:07] ✅ Manj Khamaj_9: Vocals=390.20 Hz, Accompaniment=83.43 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_1: Vocals=178.29 Hz, Accompaniment=93.70 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_10: Vocals=185.32 Hz, Accompaniment=139.16 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_2: Vocals=200.02 Hz, Accompaniment=99.81 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_3: Vocals=175.00 Hz, Accompaniment=140.19 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_4: Vocals=293.06 Hz, Accompaniment=233.04 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_5: Vocals=258.12 Hz, Accompaniment=237.21 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_6: Vocals=156.15 Hz, Accompaniment=100.40 Hz
+[2025-11-24 15:41:07] ✅ Maru Bihag_7: Vocals=160.96 Hz, Accompaniment=98.24 Hz
+[2025-11-24 15:41:08] ✅ Maru Bihag_8: Vocals=233.03 Hz, Accompaniment=233.04 Hz
+[2025-11-24 15:41:08] ✅ Maru Bihag_9: Vocals=328.38 Hz, Accompaniment=232.26 Hz
+[2025-11-24 15:41:08] ✅ Marva_1: Vocals=156.05 Hz, Accompaniment=246.63 Hz
+[2025-11-24 15:41:08] ✅ Marva_10: Vocals=276.52 Hz, Accompaniment=104.35 Hz
+[2025-11-24 15:41:08] ✅ Marva_2: Vocals=175.93 Hz, Accompaniment=79.40 Hz
+[2025-11-24 15:41:08] ✅ Marva_3: Vocals=146.35 Hz, Accompaniment=121.91 Hz
+[2025-11-24 15:41:08] ✅ Marva_4: Vocals=168.32 Hz, Accompaniment=107.69 Hz
+[2025-11-24 15:41:08] ✅ Marva_5: Vocals=139.17 Hz, Accompaniment=117.32 Hz
+[2025-11-24 15:41:08] ✅ Marva_6: Vocals=152.97 Hz, Accompaniment=126.65 Hz
+[2025-11-24 15:41:08] ✅ Marva_7: Vocals=165.26 Hz, Accompaniment=97.64 Hz
+[2025-11-24 15:41:08] ✅ Marva_8: Vocals=189.99 Hz, Accompaniment=88.00 Hz
+[2025-11-24 15:41:08] ✅ Marva_9: Vocals=160.91 Hz, Accompaniment=156.30 Hz
+[2025-11-24 15:41:08] ✅ Megh Malhar_1: Vocals=158.52 Hz, Accompaniment=101.18 Hz
+[2025-11-24 15:41:08] ✅ Megh Malhar_2: Vocals=260.48 Hz, Accompaniment=117.19 Hz
+[2025-11-24 15:41:08] ✅ Megh Malhar_3: Vocals=266.72 Hz, Accompaniment=92.87 Hz
+[2025-11-24 15:41:08] ✅ Megh Malhar_4: Vocals=281.56 Hz, Accompaniment=107.03 Hz
+[2025-11-24 15:41:08] ✅ Megh Malhar_5: Vocals=261.33 Hz, Accompaniment=116.05 Hz
+[2025-11-24 15:41:08] ✅ Megh Malhar_6: Vocals=154.57 Hz, Accompaniment=83.70 Hz
+[2025-11-24 15:41:08] ✅ Megh_1: Vocals=261.47 Hz, Accompaniment=235.48 Hz
+[2025-11-24 15:41:08] ✅ Megh_10: Vocals=221.23 Hz, Accompaniment=68.67 Hz
+[2025-11-24 15:41:08] ✅ Megh_2: Vocals=139.17 Hz, Accompaniment=96.46 Hz
+[2025-11-24 15:41:08] ✅ Megh_3: Vocals=230.64 Hz, Accompaniment=83.05 Hz
+[2025-11-24 15:41:08] ✅ Megh_4: Vocals=216.77 Hz, Accompaniment=92.38 Hz
+[2025-11-24 15:41:09] ✅ Megh_5: Vocals=233.03 Hz, Accompaniment=175.01 Hz
+[2025-11-24 15:41:09] ✅ Megh_6: Vocals=165.24 Hz, Accompaniment=82.93 Hz
+[2025-11-24 15:41:09] ✅ Megh_7: Vocals=233.02 Hz, Accompaniment=175.03 Hz
+[2025-11-24 15:41:09] ✅ Megh_8: Vocals=236.76 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:41:09] ✅ Megh_9: Vocals=177.19 Hz, Accompaniment=88.86 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_1: Vocals=136.06 Hz, Accompaniment=124.59 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_10: Vocals=139.03 Hz, Accompaniment=104.48 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_2: Vocals=164.30 Hz, Accompaniment=161.74 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_3: Vocals=201.56 Hz, Accompaniment=178.40 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_4: Vocals=275.24 Hz, Accompaniment=85.98 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_5: Vocals=141.86 Hz, Accompaniment=133.40 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_6: Vocals=227.88 Hz, Accompaniment=234.34 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_7: Vocals=147.76 Hz, Accompaniment=107.74 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_8: Vocals=139.21 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:09] ✅ Miyan ki Malhar_9: Vocals=147.46 Hz, Accompaniment=72.89 Hz
+[2025-11-24 15:41:09] ✅ Multani_1: Vocals=244.35 Hz, Accompaniment=91.89 Hz
+[2025-11-24 15:41:09] ✅ Multani_10: Vocals=256.39 Hz, Accompaniment=92.01 Hz
+[2025-11-24 15:41:09] ✅ Multani_2: Vocals=147.43 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:09] ✅ Multani_3: Vocals=341.26 Hz, Accompaniment=114.77 Hz
+[2025-11-24 15:41:09] ✅ Multani_4: Vocals=316.02 Hz, Accompaniment=92.47 Hz
+[2025-11-24 15:41:09] ✅ Multani_5: Vocals=156.06 Hz, Accompaniment=87.75 Hz
+[2025-11-24 15:41:10] ✅ Multani_6: Vocals=253.04 Hz, Accompaniment=126.07 Hz
+[2025-11-24 15:41:10] ✅ Multani_7: Vocals=330.22 Hz, Accompaniment=116.54 Hz
+[2025-11-24 15:41:10] ✅ Multani_8: Vocals=188.88 Hz, Accompaniment=157.43 Hz
+[2025-11-24 15:41:10] ✅ Multani_9: Vocals=189.51 Hz, Accompaniment=103.87 Hz
+[2025-11-24 15:41:10] ✅ Nand_1: Vocals=158.92 Hz, Accompaniment=84.00 Hz
+[2025-11-24 15:41:10] ✅ Nand_10: Vocals=293.04 Hz, Accompaniment=81.08 Hz
+[2025-11-24 15:41:10] ✅ Nand_11: Vocals=196.24 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:10] ✅ Nand_2: Vocals=234.94 Hz, Accompaniment=92.56 Hz
+[2025-11-24 15:41:10] ✅ Nand_3: Vocals=321.25 Hz, Accompaniment=93.12 Hz
+[2025-11-24 15:41:10] ✅ Nand_4: Vocals=186.56 Hz, Accompaniment=139.10 Hz
+[2025-11-24 15:41:10] ✅ Nand_5: Vocals=236.31 Hz, Accompaniment=102.60 Hz
+[2025-11-24 15:41:10] ✅ Nand_6: Vocals=203.88 Hz, Accompaniment=154.78 Hz
+[2025-11-24 15:41:10] ✅ Nand_7: Vocals=193.83 Hz, Accompaniment=147.38 Hz
+[2025-11-24 15:41:10] ✅ Nand_8: Vocals=276.82 Hz, Accompaniment=110.69 Hz
+[2025-11-24 15:41:10] ✅ Nand_9: Vocals=259.18 Hz, Accompaniment=91.71 Hz
+[2025-11-24 15:41:10] ✅ Narayani_1: Vocals=327.31 Hz, Accompaniment=84.53 Hz
+[2025-11-24 15:41:10] ✅ Narayani_2: Vocals=271.00 Hz, Accompaniment=230.37 Hz
+[2025-11-24 15:41:10] ✅ Narayani_3: Vocals=195.74 Hz, Accompaniment=138.43 Hz
+[2025-11-24 15:41:10] ✅ Narayani_4: Vocals=256.08 Hz, Accompaniment=187.91 Hz
+[2025-11-24 15:41:10] ✅ Narayani_5: Vocals=334.97 Hz, Accompaniment=72.76 Hz
+[2025-11-24 15:41:10] ✅ Narayani_6: Vocals=172.95 Hz, Accompaniment=146.22 Hz
+[2025-11-24 15:41:10] ✅ Narayani_7: Vocals=204.64 Hz, Accompaniment=232.75 Hz
+[2025-11-24 15:41:11] ✅ Narayani_8: Vocals=207.83 Hz, Accompaniment=138.97 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_1: Vocals=181.94 Hz, Accompaniment=138.98 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_10: Vocals=288.84 Hz, Accompaniment=98.09 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_2: Vocals=203.87 Hz, Accompaniment=98.65 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_3: Vocals=276.72 Hz, Accompaniment=261.71 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_4: Vocals=184.30 Hz, Accompaniment=72.85 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_5: Vocals=316.93 Hz, Accompaniment=236.26 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_6: Vocals=174.60 Hz, Accompaniment=111.25 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_7: Vocals=178.39 Hz, Accompaniment=160.94 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_8: Vocals=330.16 Hz, Accompaniment=83.14 Hz
+[2025-11-24 15:41:11] ✅ Nat Bhairav_9: Vocals=388.21 Hz, Accompaniment=95.07 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_1: Vocals=181.85 Hz, Accompaniment=83.03 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_2: Vocals=220.36 Hz, Accompaniment=83.28 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_3: Vocals=260.59 Hz, Accompaniment=207.81 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_4: Vocals=177.90 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_5: Vocals=292.87 Hz, Accompaniment=86.02 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_6: Vocals=286.52 Hz, Accompaniment=116.79 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_7: Vocals=312.48 Hz, Accompaniment=234.17 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_8: Vocals=196.15 Hz, Accompaniment=117.32 Hz
+[2025-11-24 15:41:11] ✅ Nayaki Kanada_9: Vocals=276.70 Hz, Accompaniment=104.51 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_1: Vocals=315.88 Hz, Accompaniment=232.78 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_10: Vocals=395.63 Hz, Accompaniment=140.86 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_2: Vocals=209.95 Hz, Accompaniment=139.16 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_3: Vocals=233.12 Hz, Accompaniment=328.60 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_4: Vocals=316.35 Hz, Accompaniment=92.44 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_5: Vocals=192.32 Hz, Accompaniment=198.31 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_6: Vocals=393.87 Hz, Accompaniment=199.66 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_7: Vocals=241.96 Hz, Accompaniment=98.75 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_8: Vocals=397.57 Hz, Accompaniment=437.52 Hz
+[2025-11-24 15:41:12] ✅ Pahadi_9: Vocals=217.33 Hz, Accompaniment=93.20 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_1: Vocals=322.98 Hz, Accompaniment=115.40 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_2: Vocals=173.26 Hz, Accompaniment=293.02 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_3: Vocals=258.12 Hz, Accompaniment=193.68 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_4: Vocals=156.02 Hz, Accompaniment=87.60 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_5: Vocals=244.60 Hz, Accompaniment=147.35 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_6: Vocals=446.98 Hz, Accompaniment=80.31 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_7: Vocals=255.03 Hz, Accompaniment=260.58 Hz
+[2025-11-24 15:41:12] ✅ Parameshwari_8: Vocals=196.01 Hz, Accompaniment=147.38 Hz
+[2025-11-24 15:41:12] ✅ Patdeep_1: Vocals=243.94 Hz, Accompaniment=96.29 Hz
+[2025-11-24 15:41:12] ✅ Patdeep_10: Vocals=207.82 Hz, Accompaniment=86.98 Hz
+[2025-11-24 15:41:12] ✅ Patdeep_2: Vocals=276.57 Hz, Accompaniment=110.51 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_3: Vocals=242.20 Hz, Accompaniment=240.13 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_4: Vocals=254.84 Hz, Accompaniment=78.51 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_5: Vocals=220.09 Hz, Accompaniment=174.89 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_6: Vocals=347.45 Hz, Accompaniment=91.70 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_7: Vocals=334.92 Hz, Accompaniment=83.14 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_8: Vocals=489.04 Hz, Accompaniment=107.74 Hz
+[2025-11-24 15:41:13] ✅ Patdeep_9: Vocals=347.96 Hz, Accompaniment=138.66 Hz
+[2025-11-24 15:41:13] ✅ Pilu_1: Vocals=332.19 Hz, Accompaniment=322.90 Hz
+[2025-11-24 15:41:13] ✅ Pilu_2: Vocals=194.26 Hz, Accompaniment=156.04 Hz
+[2025-11-24 15:41:13] ✅ Pilu_3: Vocals=139.17 Hz, Accompaniment=139.17 Hz
+[2025-11-24 15:41:13] ✅ Pilu_4: Vocals=347.97 Hz, Accompaniment=310.30 Hz
+[2025-11-24 15:41:13] ✅ Pilu_5: Vocals=303.88 Hz, Accompaniment=86.61 Hz
+[2025-11-24 15:41:13] ✅ Pilu_6: Vocals=235.51 Hz, Accompaniment=237.09 Hz
+[2025-11-24 15:41:13] ✅ Pilu_7: Vocals=136.25 Hz, Accompaniment=78.71 Hz
+[2025-11-24 15:41:13] ✅ Poorvi_1: Vocals=192.66 Hz, Accompaniment=196.22 Hz
+[2025-11-24 15:41:13] ✅ Poorvi_10: Vocals=198.67 Hz, Accompaniment=119.86 Hz
+[2025-11-24 15:41:13] ✅ Poorvi_2: Vocals=223.15 Hz, Accompaniment=79.55 Hz
+[2025-11-24 15:41:13] ✅ Poorvi_3: Vocals=207.46 Hz, Accompaniment=84.62 Hz
+[2025-11-24 15:41:13] ✅ Poorvi_4: Vocals=174.82 Hz, Accompaniment=139.17 Hz
+[2025-11-24 15:41:13] ✅ Poorvi_5: Vocals=246.42 Hz, Accompaniment=233.02 Hz
+[2025-11-24 15:41:14] ✅ Poorvi_6: Vocals=192.31 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:14] ✅ Poorvi_7: Vocals=255.26 Hz, Accompaniment=242.17 Hz
+[2025-11-24 15:41:14] ✅ Poorvi_8: Vocals=260.44 Hz, Accompaniment=104.55 Hz
+[2025-11-24 15:41:14] ✅ Poorvi_9: Vocals=275.39 Hz, Accompaniment=220.05 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_1: Vocals=220.75 Hz, Accompaniment=154.76 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_10: Vocals=311.04 Hz, Accompaniment=106.71 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_2: Vocals=220.76 Hz, Accompaniment=103.59 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_3: Vocals=168.45 Hz, Accompaniment=92.52 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_4: Vocals=280.21 Hz, Accompaniment=107.79 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_5: Vocals=200.67 Hz, Accompaniment=78.49 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_6: Vocals=175.10 Hz, Accompaniment=93.05 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_7: Vocals=173.57 Hz, Accompaniment=100.44 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_8: Vocals=278.77 Hz, Accompaniment=106.61 Hz
+[2025-11-24 15:41:14] ✅ Puriya Dhanashri_9: Vocals=299.61 Hz, Accompaniment=106.68 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_1: Vocals=324.63 Hz, Accompaniment=83.11 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_10: Vocals=246.77 Hz, Accompaniment=117.23 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_2: Vocals=203.78 Hz, Accompaniment=117.63 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_3: Vocals=207.48 Hz, Accompaniment=83.12 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_4: Vocals=338.46 Hz, Accompaniment=254.42 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_5: Vocals=161.76 Hz, Accompaniment=149.99 Hz
+[2025-11-24 15:41:14] ✅ Puriya Kalyan_6: Vocals=182.46 Hz, Accompaniment=174.99 Hz
+[2025-11-24 15:41:15] ✅ Puriya Kalyan_7: Vocals=306.75 Hz, Accompaniment=110.66 Hz
+[2025-11-24 15:41:15] ✅ Puriya Kalyan_8: Vocals=220.06 Hz, Accompaniment=110.68 Hz
+[2025-11-24 15:41:15] ✅ Puriya Kalyan_9: Vocals=303.85 Hz, Accompaniment=99.15 Hz
+[2025-11-24 15:41:15] ✅ Puriya_1: Vocals=276.82 Hz, Accompaniment=277.03 Hz
+[2025-11-24 15:41:15] ✅ Puriya_10: Vocals=200.93 Hz, Accompaniment=83.77 Hz
+[2025-11-24 15:41:15] ✅ Puriya_2: Vocals=160.38 Hz, Accompaniment=99.38 Hz
+[2025-11-24 15:41:15] ✅ Puriya_3: Vocals=280.24 Hz, Accompaniment=413.12 Hz
+[2025-11-24 15:41:15] ✅ Puriya_4: Vocals=147.37 Hz, Accompaniment=82.77 Hz
+[2025-11-24 15:41:15] ✅ Puriya_5: Vocals=150.16 Hz, Accompaniment=78.49 Hz
+[2025-11-24 15:41:15] ✅ Puriya_6: Vocals=137.63 Hz, Accompaniment=144.75 Hz
+[2025-11-24 15:41:15] ✅ Puriya_7: Vocals=150.15 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:15] ✅ Puriya_8: Vocals=215.90 Hz, Accompaniment=205.25 Hz
+[2025-11-24 15:41:15] ✅ Puriya_9: Vocals=150.12 Hz, Accompaniment=110.77 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_1: Vocals=224.30 Hz, Accompaniment=107.95 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_10: Vocals=175.78 Hz, Accompaniment=93.18 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_2: Vocals=175.00 Hz, Accompaniment=93.22 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_3: Vocals=183.42 Hz, Accompaniment=93.34 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_4: Vocals=147.38 Hz, Accompaniment=102.08 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_5: Vocals=233.03 Hz, Accompaniment=232.34 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_6: Vocals=236.61 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_7: Vocals=279.03 Hz, Accompaniment=93.09 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_8: Vocals=301.35 Hz, Accompaniment=91.32 Hz
+[2025-11-24 15:41:15] ✅ Rageshri_9: Vocals=139.16 Hz, Accompaniment=139.04 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_1: Vocals=233.15 Hz, Accompaniment=131.25 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_10: Vocals=322.62 Hz, Accompaniment=83.17 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_2: Vocals=156.84 Hz, Accompaniment=101.30 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_3: Vocals=296.56 Hz, Accompaniment=117.16 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_4: Vocals=136.35 Hz, Accompaniment=130.63 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_5: Vocals=208.51 Hz, Accompaniment=97.79 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_6: Vocals=277.22 Hz, Accompaniment=116.18 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_7: Vocals=185.84 Hz, Accompaniment=83.40 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_8: Vocals=310.08 Hz, Accompaniment=92.67 Hz
+[2025-11-24 15:41:16] ✅ Ramdasi Malhar_9: Vocals=188.49 Hz, Accompaniment=101.33 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_1: Vocals=200.03 Hz, Accompaniment=72.73 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_2: Vocals=220.07 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_3: Vocals=178.41 Hz, Accompaniment=95.80 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_4: Vocals=192.56 Hz, Accompaniment=72.72 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_5: Vocals=328.87 Hz, Accompaniment=108.93 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_6: Vocals=193.19 Hz, Accompaniment=155.77 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_7: Vocals=234.59 Hz, Accompaniment=106.80 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_8: Vocals=187.07 Hz, Accompaniment=156.04 Hz
+[2025-11-24 15:41:16] ✅ Ramkali_9: Vocals=309.88 Hz, Accompaniment=78.75 Hz
+[2025-11-24 15:41:16] ✅ Salagavarali_1: Vocals=238.26 Hz, Accompaniment=93.29 Hz
+[2025-11-24 15:41:16] ✅ Salagavarali_10: Vocals=166.73 Hz, Accompaniment=122.86 Hz
+[2025-11-24 15:41:16] ✅ Salagavarali_2: Vocals=164.89 Hz, Accompaniment=156.14 Hz
+[2025-11-24 15:41:16] ✅ Salagavarali_3: Vocals=147.14 Hz, Accompaniment=70.50 Hz
+[2025-11-24 15:41:17] ✅ Salagavarali_4: Vocals=310.31 Hz, Accompaniment=104.47 Hz
+[2025-11-24 15:41:17] ✅ Salagavarali_5: Vocals=285.54 Hz, Accompaniment=117.56 Hz
+[2025-11-24 15:41:17] ✅ Salagavarali_6: Vocals=323.24 Hz, Accompaniment=76.45 Hz
+[2025-11-24 15:41:17] ✅ Salagavarali_7: Vocals=316.28 Hz, Accompaniment=221.71 Hz
+[2025-11-24 15:41:17] ✅ Salagavarali_8: Vocals=171.20 Hz, Accompaniment=88.65 Hz
+[2025-11-24 15:41:17] ✅ Salagavarali_9: Vocals=268.96 Hz, Accompaniment=64.92 Hz
+[2025-11-24 15:41:17] ✅ Sarang_1: Vocals=147.37 Hz, Accompaniment=146.18 Hz
+[2025-11-24 15:41:17] ✅ Sarang_10: Vocals=161.56 Hz, Accompaniment=106.41 Hz
+[2025-11-24 15:41:17] ✅ Sarang_2: Vocals=261.23 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:41:17] ✅ Sarang_3: Vocals=374.11 Hz, Accompaniment=122.03 Hz
+[2025-11-24 15:41:17] ✅ Sarang_4: Vocals=242.67 Hz, Accompaniment=92.91 Hz
+[2025-11-24 15:41:17] ✅ Sarang_5: Vocals=233.11 Hz, Accompaniment=117.19 Hz
+[2025-11-24 15:41:17] ✅ Sarang_7: Vocals=233.50 Hz, Accompaniment=93.21 Hz
+[2025-11-24 15:41:17] ✅ Sarang_8: Vocals=232.69 Hz, Accompaniment=102.46 Hz
+[2025-11-24 15:41:17] ✅ Sarang_9: Vocals=139.17 Hz, Accompaniment=106.06 Hz
+[2025-11-24 15:41:17] ✅ Saraswati_1: Vocals=228.64 Hz, Accompaniment=175.00 Hz
+[2025-11-24 15:41:17] ✅ Saraswati_10: Vocals=212.70 Hz, Accompaniment=146.51 Hz
+[2025-11-24 15:41:17] ✅ Saraswati_2: Vocals=245.16 Hz, Accompaniment=101.50 Hz
+[2025-11-24 15:41:17] ✅ Saraswati_4: Vocals=141.87 Hz, Accompaniment=117.92 Hz
+[2025-11-24 15:41:17] ✅ Saraswati_5: Vocals=207.70 Hz, Accompaniment=119.38 Hz
+[2025-11-24 15:41:18] ✅ Saraswati_6: Vocals=156.17 Hz, Accompaniment=156.18 Hz
+[2025-11-24 15:41:18] ✅ Saraswati_7: Vocals=218.63 Hz, Accompaniment=77.30 Hz
+[2025-11-24 15:41:18] ✅ Saraswati_8: Vocals=319.28 Hz, Accompaniment=83.08 Hz
+[2025-11-24 15:41:18] ✅ Saraswati_9: Vocals=216.51 Hz, Accompaniment=139.08 Hz
+[2025-11-24 15:41:18] ✅ Shahana_1: Vocals=329.65 Hz, Accompaniment=310.28 Hz
+[2025-11-24 15:41:18] ✅ Shahana_2: Vocals=224.08 Hz, Accompaniment=175.01 Hz
+[2025-11-24 15:41:18] ✅ Shahana_3: Vocals=251.57 Hz, Accompaniment=95.06 Hz
+[2025-11-24 15:41:18] ✅ Shahana_4: Vocals=216.83 Hz, Accompaniment=86.93 Hz
+[2025-11-24 15:41:18] ✅ Shahana_5: Vocals=465.60 Hz, Accompaniment=91.43 Hz
+[2025-11-24 15:41:18] ✅ Shahana_6: Vocals=216.21 Hz, Accompaniment=84.26 Hz
+[2025-11-24 15:41:18] ✅ Shahana_7: Vocals=368.48 Hz, Accompaniment=102.88 Hz
+[2025-11-24 15:41:18] ✅ Shahana_8: Vocals=261.72 Hz, Accompaniment=91.92 Hz
+[2025-11-24 15:41:18] ✅ Shankara_1: Vocals=206.79 Hz, Accompaniment=104.92 Hz
+[2025-11-24 15:41:18] ✅ Shankara_2: Vocals=293.04 Hz, Accompaniment=293.03 Hz
+[2025-11-24 15:41:18] ✅ Shankara_3: Vocals=196.67 Hz, Accompaniment=127.21 Hz
+[2025-11-24 15:41:18] ✅ Shankara_4: Vocals=413.09 Hz, Accompaniment=84.47 Hz
+[2025-11-24 15:41:18] ✅ Shankara_5: Vocals=284.26 Hz, Accompaniment=111.54 Hz
+[2025-11-24 15:41:18] ✅ Shankara_6: Vocals=223.72 Hz, Accompaniment=361.76 Hz
+[2025-11-24 15:41:18] ✅ Shankara_7: Vocals=195.81 Hz, Accompaniment=139.15 Hz
+[2025-11-24 15:41:18] ✅ Shankara_8: Vocals=174.93 Hz, Accompaniment=139.17 Hz
+[2025-11-24 15:41:18] ✅ Shankara_9: Vocals=202.13 Hz, Accompaniment=69.73 Hz
+[2025-11-24 15:41:18] ✅ Shivranjani_1: Vocals=280.60 Hz, Accompaniment=83.11 Hz
+[2025-11-24 15:41:18] ✅ Shivranjani_2: Vocals=184.15 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:41:19] ✅ Shivranjani_3: Vocals=273.72 Hz, Accompaniment=93.23 Hz
+[2025-11-24 15:41:19] ✅ Shivranjani_4: Vocals=381.95 Hz, Accompaniment=110.06 Hz
+[2025-11-24 15:41:19] ✅ Shivranjani_5: Vocals=328.70 Hz, Accompaniment=293.03 Hz
+[2025-11-24 15:41:19] ✅ Shivranjani_6: Vocals=175.57 Hz, Accompaniment=114.39 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_1: Vocals=354.33 Hz, Accompaniment=87.82 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_2: Vocals=184.81 Hz, Accompaniment=277.31 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_3: Vocals=201.50 Hz, Accompaniment=131.00 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_4: Vocals=185.28 Hz, Accompaniment=129.41 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_5: Vocals=219.20 Hz, Accompaniment=156.07 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_6: Vocals=390.07 Hz, Accompaniment=103.61 Hz
+[2025-11-24 15:41:19] ✅ Shobhawari_7: Vocals=413.63 Hz, Accompaniment=165.27 Hz
+[2025-11-24 15:41:19] ✅ Shri_1: Vocals=180.91 Hz, Accompaniment=143.55 Hz
+[2025-11-24 15:41:19] ✅ Shri_10: Vocals=159.06 Hz, Accompaniment=147.42 Hz
+[2025-11-24 15:41:19] ✅ Shri_2: Vocals=168.27 Hz, Accompaniment=117.22 Hz
+[2025-11-24 15:41:19] ✅ Shri_3: Vocals=226.59 Hz, Accompaniment=99.56 Hz
+[2025-11-24 15:41:19] ✅ Shri_4: Vocals=168.45 Hz, Accompaniment=227.80 Hz
+[2025-11-24 15:41:19] ✅ Shri_5: Vocals=156.04 Hz, Accompaniment=110.64 Hz
+[2025-11-24 15:41:19] ✅ Shri_6: Vocals=171.73 Hz, Accompaniment=101.76 Hz
+[2025-11-24 15:41:19] ✅ Shri_7: Vocals=161.46 Hz, Accompaniment=153.13 Hz
+[2025-11-24 15:41:19] ✅ Shri_8: Vocals=156.04 Hz, Accompaniment=140.59 Hz
+[2025-11-24 15:41:19] ✅ Shri_9: Vocals=156.06 Hz, Accompaniment=141.61 Hz
+[2025-11-24 15:41:19] ✅ Shuddh Sarang_1: Vocals=162.06 Hz, Accompaniment=123.07 Hz
+[2025-11-24 15:41:19] ✅ Shuddh Sarang_10: Vocals=162.49 Hz, Accompaniment=139.16 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_2: Vocals=242.54 Hz, Accompaniment=252.93 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_3: Vocals=271.16 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_4: Vocals=155.93 Hz, Accompaniment=96.49 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_5: Vocals=178.46 Hz, Accompaniment=109.02 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_6: Vocals=167.76 Hz, Accompaniment=110.67 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_7: Vocals=165.26 Hz, Accompaniment=146.79 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_8: Vocals=203.59 Hz, Accompaniment=147.35 Hz
+[2025-11-24 15:41:20] ✅ Shuddh Sarang_9: Vocals=212.15 Hz, Accompaniment=101.61 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_1: Vocals=413.33 Hz, Accompaniment=310.26 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_2: Vocals=328.72 Hz, Accompaniment=165.23 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_3: Vocals=316.10 Hz, Accompaniment=293.02 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_4: Vocals=233.96 Hz, Accompaniment=194.36 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_5: Vocals=245.00 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_6: Vocals=225.16 Hz, Accompaniment=91.11 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_7: Vocals=239.40 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_8: Vocals=218.08 Hz, Accompaniment=154.24 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Basant_9: Vocals=220.08 Hz, Accompaniment=149.68 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Kalyan_1: Vocals=156.58 Hz, Accompaniment=156.24 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Kalyan_10: Vocals=157.78 Hz, Accompaniment=157.44 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Kalyan_2: Vocals=261.39 Hz, Accompaniment=174.87 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Kalyan_3: Vocals=293.03 Hz, Accompaniment=293.03 Hz
+[2025-11-24 15:41:20] ✅ Shuddha Kalyan_4: Vocals=168.40 Hz, Accompaniment=147.37 Hz
+[2025-11-24 15:41:21] ✅ Shuddha Kalyan_5: Vocals=181.75 Hz, Accompaniment=146.46 Hz
+[2025-11-24 15:41:21] ✅ Shuddha Kalyan_6: Vocals=237.71 Hz, Accompaniment=92.19 Hz
+[2025-11-24 15:41:21] ✅ Shuddha Kalyan_7: Vocals=165.25 Hz, Accompaniment=110.81 Hz
+[2025-11-24 15:41:21] ✅ Shuddha Kalyan_8: Vocals=237.12 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:41:21] ✅ Shuddha Kalyan_9: Vocals=233.26 Hz, Accompaniment=234.19 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_1: Vocals=171.72 Hz, Accompaniment=104.96 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_10: Vocals=165.26 Hz, Accompaniment=72.72 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_2: Vocals=203.51 Hz, Accompaniment=114.69 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_3: Vocals=316.21 Hz, Accompaniment=129.81 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_4: Vocals=276.73 Hz, Accompaniment=267.11 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_5: Vocals=276.72 Hz, Accompaniment=246.73 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_6: Vocals=281.49 Hz, Accompaniment=71.39 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_7: Vocals=314.60 Hz, Accompaniment=117.09 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_8: Vocals=232.98 Hz, Accompaniment=233.03 Hz
+[2025-11-24 15:41:21] ✅ Shyam Kalyan_9: Vocals=249.99 Hz, Accompaniment=156.05 Hz
+[2025-11-24 15:41:21] ✅ Sindhura_1: Vocals=221.39 Hz, Accompaniment=89.16 Hz
+[2025-11-24 15:41:21] ✅ Sindhura_2: Vocals=307.69 Hz, Accompaniment=93.20 Hz
+[2025-11-24 15:41:21] ✅ Sindhura_3: Vocals=247.22 Hz, Accompaniment=93.15 Hz
+[2025-11-24 15:41:21] ✅ Sindhura_4: Vocals=278.50 Hz, Accompaniment=435.31 Hz
+[2025-11-24 15:41:21] ✅ Sindhura_5: Vocals=282.31 Hz, Accompaniment=104.13 Hz
+[2025-11-24 15:41:21] ✅ Sindhura_6: Vocals=308.52 Hz, Accompaniment=103.07 Hz
+[2025-11-24 15:41:22] ✅ Sindhura_7: Vocals=310.47 Hz, Accompaniment=463.35 Hz
+[2025-11-24 15:41:22] ✅ Sindhura_8: Vocals=328.59 Hz, Accompaniment=110.68 Hz
+[2025-11-24 15:41:22] ✅ Sindhura_9: Vocals=326.10 Hz, Accompaniment=276.77 Hz
+[2025-11-24 15:41:22] ✅ Sohini_1: Vocals=271.47 Hz, Accompaniment=100.70 Hz
+[2025-11-24 15:41:22] ✅ Sohini_2: Vocals=297.23 Hz, Accompaniment=88.01 Hz
+[2025-11-24 15:41:22] ✅ Sohini_3: Vocals=429.98 Hz, Accompaniment=83.17 Hz
+[2025-11-24 15:41:22] ✅ Sohini_4: Vocals=262.98 Hz, Accompaniment=138.86 Hz
+[2025-11-24 15:41:22] ✅ Sohini_5: Vocals=322.16 Hz, Accompaniment=83.12 Hz
+[2025-11-24 15:41:22] ✅ Sohini_6: Vocals=413.33 Hz, Accompaniment=88.39 Hz
+[2025-11-24 15:41:22] ✅ Sohini_7: Vocals=440.62 Hz, Accompaniment=98.39 Hz
+[2025-11-24 15:41:22] ✅ Sohini_8: Vocals=429.46 Hz, Accompaniment=104.92 Hz
+[2025-11-24 15:41:22] ✅ Sohini_9: Vocals=292.96 Hz, Accompaniment=98.73 Hz
+[2025-11-24 15:41:22] ✅ Sundarkali_1: Vocals=203.85 Hz, Accompaniment=49.84 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_1: Vocals=242.00 Hz, Accompaniment=144.34 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_10: Vocals=233.32 Hz, Accompaniment=84.94 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_2: Vocals=233.69 Hz, Accompaniment=83.31 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_3: Vocals=261.51 Hz, Accompaniment=84.92 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_4: Vocals=235.03 Hz, Accompaniment=155.37 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_5: Vocals=376.32 Hz, Accompaniment=184.32 Hz
+[2025-11-24 15:41:22] ✅ Surdasi Malhar_6: Vocals=352.57 Hz, Accompaniment=93.09 Hz
+[2025-11-24 15:41:23] ✅ Surdasi Malhar_7: Vocals=224.66 Hz, Accompaniment=108.87 Hz
+[2025-11-24 15:41:23] ✅ Surdasi Malhar_8: Vocals=216.95 Hz, Accompaniment=83.14 Hz
+[2025-11-24 15:41:23] ✅ Surdasi Malhar_9: Vocals=221.68 Hz, Accompaniment=92.41 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_1: Vocals=207.87 Hz, Accompaniment=88.16 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_2: Vocals=248.06 Hz, Accompaniment=93.05 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_3: Vocals=193.00 Hz, Accompaniment=154.11 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_4: Vocals=195.68 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_5: Vocals=582.62 Hz, Accompaniment=145.99 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_6: Vocals=211.76 Hz, Accompaniment=157.30 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_7: Vocals=286.37 Hz, Accompaniment=286.50 Hz
+[2025-11-24 15:41:23] ✅ Tilak Kamod_8: Vocals=481.35 Hz, Accompaniment=86.69 Hz
+[2025-11-24 15:41:23] ✅ Tilang Bahar_1: Vocals=297.72 Hz, Accompaniment=99.71 Hz
+[2025-11-24 15:41:23] ✅ Tilang Bahar_2: Vocals=249.45 Hz, Accompaniment=99.98 Hz
+[2025-11-24 15:41:23] ✅ Tilang Bahar_3: Vocals=241.17 Hz, Accompaniment=160.62 Hz
+[2025-11-24 15:41:23] ✅ Tilang Bahar_4: Vocals=324.04 Hz, Accompaniment=107.87 Hz
+[2025-11-24 15:41:23] ✅ Tilang_1: Vocals=504.53 Hz, Accompaniment=218.71 Hz
+[2025-11-24 15:41:23] ✅ Tilang_2: Vocals=347.60 Hz, Accompaniment=147.14 Hz
+[2025-11-24 15:41:23] ✅ Tilang_3: Vocals=293.04 Hz, Accompaniment=98.70 Hz
+[2025-11-24 15:41:23] ✅ Tilang_4: Vocals=292.97 Hz, Accompaniment=276.99 Hz
+[2025-11-24 15:41:23] ✅ Tilang_5: Vocals=276.72 Hz, Accompaniment=205.81 Hz
+[2025-11-24 15:41:23] ✅ Tilang_6: Vocals=239.88 Hz, Accompaniment=93.33 Hz
+[2025-11-24 15:41:23] ✅ Tilang_7: Vocals=220.01 Hz, Accompaniment=112.66 Hz
+[2025-11-24 15:41:24] ✅ Tilang_8: Vocals=228.48 Hz, Accompaniment=98.60 Hz
+[2025-11-24 15:41:24] ✅ Tilang_9: Vocals=196.06 Hz, Accompaniment=107.67 Hz
+[2025-11-24 15:41:24] ✅ Todi_1: Vocals=166.55 Hz, Accompaniment=156.06 Hz
+[2025-11-24 15:41:24] ✅ Todi_10: Vocals=164.84 Hz, Accompaniment=114.96 Hz
+[2025-11-24 15:41:24] ✅ Todi_2: Vocals=185.32 Hz, Accompaniment=88.38 Hz
+[2025-11-24 15:41:24] ✅ Todi_3: Vocals=241.50 Hz, Accompaniment=117.15 Hz
+[2025-11-24 15:41:24] ✅ Todi_4: Vocals=156.12 Hz, Accompaniment=78.49 Hz
+[2025-11-24 15:41:24] ✅ Todi_5: Vocals=199.80 Hz, Accompaniment=139.09 Hz
+[2025-11-24 15:41:24] ✅ Todi_6: Vocals=276.75 Hz, Accompaniment=244.70 Hz
+[2025-11-24 15:41:24] ✅ Todi_7: Vocals=246.81 Hz, Accompaniment=233.19 Hz
+[2025-11-24 15:41:24] ✅ Todi_8: Vocals=153.24 Hz, Accompaniment=148.19 Hz
+[2025-11-24 15:41:24] ✅ Todi_9: Vocals=185.35 Hz, Accompaniment=276.68 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_1: Vocals=192.40 Hz, Accompaniment=100.64 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_10: Vocals=196.24 Hz, Accompaniment=138.94 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_2: Vocals=157.95 Hz, Accompaniment=93.19 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_3: Vocals=196.19 Hz, Accompaniment=80.83 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_4: Vocals=181.83 Hz, Accompaniment=142.78 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_5: Vocals=271.50 Hz, Accompaniment=110.60 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_6: Vocals=139.55 Hz, Accompaniment=131.34 Hz
+[2025-11-24 15:41:24] ✅ Yaman Kalyan_7: Vocals=262.11 Hz, Accompaniment=117.20 Hz
+[2025-11-24 15:41:25] ✅ Yaman Kalyan_8: Vocals=192.53 Hz, Accompaniment=145.22 Hz
+[2025-11-24 15:41:25] ✅ Yaman Kalyan_9: Vocals=278.45 Hz, Accompaniment=220.06 Hz
+[2025-11-24 15:41:25] ✅ Zila Kafi_1: Vocals=293.03 Hz, Accompaniment=145.32 Hz
+[2025-11-24 15:41:25] ============================================================
+[2025-11-24 15:41:25] ✅ Results saved to: /Users/saumyamishra/Desktop/intern/summer25/RagaDetection/median_pitch_results.csv
+[2025-11-24 15:41:25] Total tracks processed: 1086
+[2025-11-24 15:41:25] Vocals - Mean: 238.59 Hz, Median: 227.88 Hz
+[2025-11-24 15:41:25] Accompaniment - Mean: 135.59 Hz, Median: 110.62 Hz
+[2025-11-24 15:41:25] ============================================================

@@ -1,0 +1,56 @@
+File: Khambhavati_1
+GT Raga: Khambhavati
+Top-1 Pred: gavati (Score: 2.13)
+Correct Raga Rank: 1
+Correct Raga Score: 2.13
+✅ CORRECT
+------------------------------
+File: Khambhavati_2
+GT Raga: Khambhavati
+Top-1 Pred: tilang (Score: 2.71)
+Correct Raga Rank: 4
+Correct Raga Score: 1.40
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Khambhavati_3
+GT Raga: Khambhavati
+Top-1 Pred: rageshri (Score: 4.26)
+Correct Raga Rank: 2
+Correct Raga Score: 3.59
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Khambhavati_4
+GT Raga: Khambhavati
+Top-1 Pred: rageshri (Score: 1.40)
+Correct Raga Rank: 5
+Correct Raga Score: 1.22
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Khambhavati_5
+GT Raga: Khambhavati
+Top-1 Pred: kaushik dhwani (Score: 4.61)
+Correct Raga Rank: 13
+Correct Raga Score: -0.41
+❌ MISCLASSIFIED (Confused with kaushik dhwani)
+------------------------------
+File: Khambhavati_6
+GT Raga: Khambhavati
+Top-1 Pred: rageshri (Score: 4.39)
+Correct Raga Rank: 4
+Correct Raga Score: 1.53
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Khambhavati_7
+GT Raga: Khambhavati
+Top-1 Pred: gavati (Score: 2.15)
+Correct Raga Rank: 1
+Correct Raga Score: 2.15
+✅ CORRECT
+------------------------------
+File: Khambhavati_8
+GT Raga: Khambhavati
+Top-1 Pred: tilang (Score: 3.46)
+Correct Raga Rank: 17
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------

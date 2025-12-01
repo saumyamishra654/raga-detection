@@ -1,0 +1,315 @@
+File: Chhayanat_1
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.22)
+Correct Raga Rank: 3
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_2
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.47)
+Correct Raga Rank: 3
+Correct Raga Score: 0.16
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_3
+GT Raga: Chhayanat
+Top-1 Pred: jogkauns (Score: 0.35)
+Correct Raga Rank: 13
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Chhayanat_4
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.30)
+Correct Raga Rank: 2
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_5
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.33)
+Correct Raga Rank: 3
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_6
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.47)
+Correct Raga Rank: 3
+Correct Raga Score: 0.16
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_7
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.52)
+Correct Raga Rank: 5
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_8
+GT Raga: Chhayanat
+Top-1 Pred: hansadhwani (Score: 0.19)
+Correct Raga Rank: 6
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Chhayanat_9
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 0.26)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_1
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Chhayanat_2
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Chhayanat_3
+GT Raga: Chhayanat
+Top-1 Pred: jogkauns (Score: 0.17)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Chhayanat_4
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Chhayanat_5
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Chhayanat_6
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Chhayanat_7
+GT Raga: Chhayanat
+Top-1 Pred: alhaiya bilawal (Score: 0.53)
+Correct Raga Rank: 4
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Chhayanat_8
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Chhayanat_9
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Chhayanat_1
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Chhayanat_2
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Chhayanat_3
+GT Raga: Chhayanat
+Top-1 Pred: jogkauns (Score: 0.17)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Chhayanat_4
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Chhayanat_5
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Chhayanat_6
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Chhayanat_7
+GT Raga: Chhayanat
+Top-1 Pred: alhaiya bilawal (Score: 0.53)
+Correct Raga Rank: 4
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Chhayanat_8
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Chhayanat_9
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Chhayanat_1
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Chhayanat_2
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.30)
+Correct Raga Rank: 1
+Correct Raga Score: 0.30
+✅ CORRECT
+------------------------------
+File: Chhayanat_3
+GT Raga: Chhayanat
+Top-1 Pred: jogkauns (Score: 0.15)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Chhayanat_4
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Chhayanat_5
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Chhayanat_6
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.30)
+Correct Raga Rank: 1
+Correct Raga Score: 0.30
+✅ CORRECT
+------------------------------
+File: Chhayanat_7
+GT Raga: Chhayanat
+Top-1 Pred: alhaiya bilawal (Score: 0.56)
+Correct Raga Rank: 4
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Chhayanat_8
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.06)
+Correct Raga Rank: 1
+Correct Raga Score: 0.06
+✅ CORRECT
+------------------------------
+File: Chhayanat_9
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------
+File: Chhayanat_1
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Chhayanat_2
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.30)
+Correct Raga Rank: 1
+Correct Raga Score: 0.30
+✅ CORRECT
+------------------------------
+File: Chhayanat_3
+GT Raga: Chhayanat
+Top-1 Pred: jogkauns (Score: 0.15)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Chhayanat_4
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Chhayanat_5
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Chhayanat_6
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.30)
+Correct Raga Rank: 1
+Correct Raga Score: 0.30
+✅ CORRECT
+------------------------------
+File: Chhayanat_7
+GT Raga: Chhayanat
+Top-1 Pred: alhaiya bilawal (Score: 0.56)
+Correct Raga Rank: 4
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Chhayanat_8
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.06)
+Correct Raga Rank: 1
+Correct Raga Score: 0.06
+✅ CORRECT
+------------------------------
+File: Chhayanat_9
+GT Raga: Chhayanat
+Top-1 Pred: bihag (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------

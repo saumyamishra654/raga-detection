@@ -1,0 +1,315 @@
+File: Ramkali_1
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.41)
+Correct Raga Rank: 10
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_2
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.13)
+Correct Raga Rank: 5
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_3
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.48)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_4
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.46)
+Correct Raga Rank: 8
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_5
+GT Raga: Ramkali
+Top-1 Pred: bibhas (Score: 0.42)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bibhas)
+------------------------------
+File: Ramkali_6
+GT Raga: Ramkali
+Top-1 Pred: gunakri (Score: 0.03)
+Correct Raga Rank: 3
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gunakri)
+------------------------------
+File: Ramkali_7
+GT Raga: Ramkali
+Top-1 Pred: basant (Score: 0.01)
+Correct Raga Rank: 11
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Ramkali_8
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.51)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_9
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.47)
+Correct Raga Rank: 7
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_1
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_2
+GT Raga: Ramkali
+Top-1 Pred: basant mukhari (Score: 0.13)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with basant mukhari)
+------------------------------
+File: Ramkali_3
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.27)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_4
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.16)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_5
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Ramkali_6
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.19)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_7
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Ramkali_8
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.33)
+Correct Raga Rank: 5
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_9
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.09)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_1
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_2
+GT Raga: Ramkali
+Top-1 Pred: basant mukhari (Score: 0.13)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with basant mukhari)
+------------------------------
+File: Ramkali_3
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.27)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_4
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.16)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_5
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Ramkali_6
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.19)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_7
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Ramkali_8
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.33)
+Correct Raga Rank: 5
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_9
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.09)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_1
+GT Raga: Ramkali
+Top-1 Pred: basant mukhari (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with basant mukhari)
+------------------------------
+File: Ramkali_2
+GT Raga: Ramkali
+Top-1 Pred: basant mukhari (Score: 0.18)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with basant mukhari)
+------------------------------
+File: Ramkali_3
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.25)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_4
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.15)
+Correct Raga Rank: 4
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_5
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Ramkali_6
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.21)
+Correct Raga Rank: 2
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_7
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Ramkali_8
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.34)
+Correct Raga Rank: 5
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_9
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.10)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_1
+GT Raga: Ramkali
+Top-1 Pred: basant mukhari (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with basant mukhari)
+------------------------------
+File: Ramkali_2
+GT Raga: Ramkali
+Top-1 Pred: basant mukhari (Score: 0.18)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with basant mukhari)
+------------------------------
+File: Ramkali_3
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.25)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_4
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.15)
+Correct Raga Rank: 4
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_5
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Ramkali_6
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.21)
+Correct Raga Rank: 2
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Ramkali_7
+GT Raga: Ramkali
+Top-1 Pred: ramkali (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Ramkali_8
+GT Raga: Ramkali
+Top-1 Pred: bhairav (Score: 0.34)
+Correct Raga Rank: 5
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bhairav)
+------------------------------
+File: Ramkali_9
+GT Raga: Ramkali
+Top-1 Pred: poorvi (Score: 0.10)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------

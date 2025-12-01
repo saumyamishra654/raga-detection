@@ -1,0 +1,63 @@
+File: Jog_2
+GT Raga: Jog
+Top-1 Pred: jog (Score: 1.84)
+Correct Raga Rank: 1
+Correct Raga Score: 1.84
+✅ CORRECT
+------------------------------
+File: Jog_3
+GT Raga: Jog
+Top-1 Pred: jog (Score: 2.26)
+Correct Raga Rank: 1
+Correct Raga Score: 2.26
+✅ CORRECT
+------------------------------
+File: Jog_4
+GT Raga: Jog
+Top-1 Pred: tilang (Score: 1.19)
+Correct Raga Rank: 20
+Correct Raga Score: -0.57
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Jog_5
+GT Raga: Jog
+Top-1 Pred: jog (Score: 3.66)
+Correct Raga Rank: 1
+Correct Raga Score: 3.66
+✅ CORRECT
+------------------------------
+File: Jog_6
+GT Raga: Jog
+Top-1 Pred: tilang (Score: 2.76)
+Correct Raga Rank: 2
+Correct Raga Score: 2.37
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Jog_7
+GT Raga: Jog
+Top-1 Pred: tilang (Score: 2.98)
+Correct Raga Rank: 16
+Correct Raga Score: -0.30
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Jog_8
+GT Raga: Jog
+Top-1 Pred: jog (Score: 3.39)
+Correct Raga Rank: 1
+Correct Raga Score: 3.39
+✅ CORRECT
+------------------------------
+File: Jog_9
+GT Raga: Jog
+Top-1 Pred: jog (Score: 4.20)
+Correct Raga Rank: 1
+Correct Raga Score: 4.20
+✅ CORRECT
+------------------------------
+File: Jog_10
+GT Raga: Jog
+Top-1 Pred: jog (Score: 3.42)
+Correct Raga Rank: 1
+Correct Raga Score: 3.42
+✅ CORRECT
+------------------------------

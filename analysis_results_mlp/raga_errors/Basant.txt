@@ -1,0 +1,350 @@
+File: Basant_1
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Basant_2
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.22)
+Correct Raga Rank: 1
+Correct Raga Score: 0.22
+✅ CORRECT
+------------------------------
+File: Basant_3
+GT Raga: Basant
+Top-1 Pred: gunakri (Score: 0.15)
+Correct Raga Rank: 4
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with gunakri)
+------------------------------
+File: Basant_4
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.26)
+Correct Raga Rank: 1
+Correct Raga Score: 0.26
+✅ CORRECT
+------------------------------
+File: Basant_5
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Basant_6
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.45)
+Correct Raga Rank: 2
+Correct Raga Score: 0.42
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_7
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.56)
+Correct Raga Rank: 1
+Correct Raga Score: 0.56
+✅ CORRECT
+------------------------------
+File: Basant_8
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.57)
+Correct Raga Rank: 2
+Correct Raga Score: 0.27
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_9
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.26)
+Correct Raga Rank: 2
+Correct Raga Score: 0.18
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_10
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Basant_1
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.64)
+Correct Raga Rank: 1
+Correct Raga Score: 0.64
+✅ CORRECT
+------------------------------
+File: Basant_2
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.13)
+Correct Raga Rank: 2
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_3
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.12)
+Correct Raga Rank: 8
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_4
+GT Raga: Basant
+Top-1 Pred: bihag (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Basant_5
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.26)
+Correct Raga Rank: 1
+Correct Raga Score: 0.26
+✅ CORRECT
+------------------------------
+File: Basant_6
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------
+File: Basant_7
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.40
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_8
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.26)
+Correct Raga Rank: 5
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_9
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.25)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_10
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.29)
+Correct Raga Rank: 1
+Correct Raga Score: 0.29
+✅ CORRECT
+------------------------------
+File: Basant_1
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.64)
+Correct Raga Rank: 1
+Correct Raga Score: 0.64
+✅ CORRECT
+------------------------------
+File: Basant_2
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.13)
+Correct Raga Rank: 2
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_3
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.12)
+Correct Raga Rank: 8
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_4
+GT Raga: Basant
+Top-1 Pred: bihag (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Basant_5
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.26)
+Correct Raga Rank: 1
+Correct Raga Score: 0.26
+✅ CORRECT
+------------------------------
+File: Basant_6
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------
+File: Basant_7
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.40
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_8
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.26)
+Correct Raga Rank: 5
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_9
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.25)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_10
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.29)
+Correct Raga Rank: 1
+Correct Raga Score: 0.29
+✅ CORRECT
+------------------------------
+File: Basant_1
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.65)
+Correct Raga Rank: 1
+Correct Raga Score: 0.65
+✅ CORRECT
+------------------------------
+File: Basant_2
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.15)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_3
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.18)
+Correct Raga Rank: 6
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_4
+GT Raga: Basant
+Top-1 Pred: bihag (Score: 0.11)
+Correct Raga Rank: 3
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Basant_5
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Basant_6
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.21)
+Correct Raga Rank: 1
+Correct Raga Score: 0.21
+✅ CORRECT
+------------------------------
+File: Basant_7
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.39)
+Correct Raga Rank: 2
+Correct Raga Score: 0.38
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_8
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.31)
+Correct Raga Rank: 4
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_9
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.32)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_10
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Basant_1
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.65)
+Correct Raga Rank: 1
+Correct Raga Score: 0.65
+✅ CORRECT
+------------------------------
+File: Basant_2
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.15)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_3
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.18)
+Correct Raga Rank: 6
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_4
+GT Raga: Basant
+Top-1 Pred: bihag (Score: 0.11)
+Correct Raga Rank: 3
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Basant_5
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Basant_6
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.21)
+Correct Raga Rank: 1
+Correct Raga Score: 0.21
+✅ CORRECT
+------------------------------
+File: Basant_7
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.39)
+Correct Raga Rank: 2
+Correct Raga Score: 0.38
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_8
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.31)
+Correct Raga Rank: 4
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_9
+GT Raga: Basant
+Top-1 Pred: poorvi (Score: 0.32)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Basant_10
+GT Raga: Basant
+Top-1 Pred: basant (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------

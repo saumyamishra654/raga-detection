@@ -1,0 +1,42 @@
+File: Pahadi_1
+GT Raga: Pahadi
+Top-1 Pred: bilawal (Score: 3.21)
+Correct Raga Rank: 2
+Correct Raga Score: 2.08
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Pahadi_2
+GT Raga: Pahadi
+Top-1 Pred: gavati (Score: 2.43)
+Correct Raga Rank: 7
+Correct Raga Score: 0.72
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Pahadi_4
+GT Raga: Pahadi
+Top-1 Pred: gavati (Score: 2.37)
+Correct Raga Rank: 21
+Correct Raga Score: -0.82
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Pahadi_5
+GT Raga: Pahadi
+Top-1 Pred: durga (Score: 2.81)
+Correct Raga Rank: 30
+Correct Raga Score: -1.42
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------
+File: Pahadi_7
+GT Raga: Pahadi
+Top-1 Pred: deshkar (Score: 2.61)
+Correct Raga Rank: 2
+Correct Raga Score: 2.23
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Pahadi_9
+GT Raga: Pahadi
+Top-1 Pred: deshkar (Score: 2.69)
+Correct Raga Rank: 2
+Correct Raga Score: 2.64
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------

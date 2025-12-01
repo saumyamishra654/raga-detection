@@ -1,0 +1,350 @@
+File: Salagavarali_1
+GT Raga: Salagavarali
+Top-1 Pred: bairagi todi (Score: 0.06)
+Correct Raga Rank: 2
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bairagi todi)
+------------------------------
+File: Salagavarali_2
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Salagavarali_3
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Salagavarali_4
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Salagavarali_5
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Salagavarali_6
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.09)
+Correct Raga Rank: 1
+Correct Raga Score: 0.09
+✅ CORRECT
+------------------------------
+File: Salagavarali_7
+GT Raga: Salagavarali
+Top-1 Pred: jogiya (Score: 0.42)
+Correct Raga Rank: 53
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogiya)
+------------------------------
+File: Salagavarali_8
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.41)
+Correct Raga Rank: 1
+Correct Raga Score: 0.41
+✅ CORRECT
+------------------------------
+File: Salagavarali_9
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.21)
+Correct Raga Rank: 1
+Correct Raga Score: 0.21
+✅ CORRECT
+------------------------------
+File: Salagavarali_10
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Salagavarali_1
+GT Raga: Salagavarali
+Top-1 Pred: bairagi todi (Score: 0.06)
+Correct Raga Rank: 2
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bairagi todi)
+------------------------------
+File: Salagavarali_2
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Salagavarali_3
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Salagavarali_4
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Salagavarali_5
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Salagavarali_6
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Salagavarali_7
+GT Raga: Salagavarali
+Top-1 Pred: jogiya (Score: 0.30)
+Correct Raga Rank: 28
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogiya)
+------------------------------
+File: Salagavarali_8
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Salagavarali_9
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Salagavarali_10
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Salagavarali_1
+GT Raga: Salagavarali
+Top-1 Pred: bairagi todi (Score: 0.06)
+Correct Raga Rank: 2
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bairagi todi)
+------------------------------
+File: Salagavarali_2
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Salagavarali_3
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Salagavarali_4
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Salagavarali_5
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Salagavarali_6
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Salagavarali_7
+GT Raga: Salagavarali
+Top-1 Pred: jogiya (Score: 0.30)
+Correct Raga Rank: 28
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogiya)
+------------------------------
+File: Salagavarali_8
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Salagavarali_9
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Salagavarali_10
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Salagavarali_1
+GT Raga: Salagavarali
+Top-1 Pred: bairagi todi (Score: 0.07)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bairagi todi)
+------------------------------
+File: Salagavarali_2
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Salagavarali_3
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Salagavarali_4
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Salagavarali_5
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.22)
+Correct Raga Rank: 1
+Correct Raga Score: 0.22
+✅ CORRECT
+------------------------------
+File: Salagavarali_6
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Salagavarali_7
+GT Raga: Salagavarali
+Top-1 Pred: jogiya (Score: 0.20)
+Correct Raga Rank: 25
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogiya)
+------------------------------
+File: Salagavarali_8
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Salagavarali_9
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Salagavarali_10
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Salagavarali_1
+GT Raga: Salagavarali
+Top-1 Pred: bairagi todi (Score: 0.07)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bairagi todi)
+------------------------------
+File: Salagavarali_2
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Salagavarali_3
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Salagavarali_4
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Salagavarali_5
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.22)
+Correct Raga Rank: 1
+Correct Raga Score: 0.22
+✅ CORRECT
+------------------------------
+File: Salagavarali_6
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Salagavarali_7
+GT Raga: Salagavarali
+Top-1 Pred: jogiya (Score: 0.20)
+Correct Raga Rank: 25
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogiya)
+------------------------------
+File: Salagavarali_8
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Salagavarali_9
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Salagavarali_10
+GT Raga: Salagavarali
+Top-1 Pred: salagavarali (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------

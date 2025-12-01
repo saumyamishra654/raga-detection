@@ -1,0 +1,63 @@
+File: Kirwani_1
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 3.78)
+Correct Raga Rank: 1
+Correct Raga Score: 3.78
+✅ CORRECT
+------------------------------
+File: Kirwani_3
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 4.05)
+Correct Raga Rank: 1
+Correct Raga Score: 4.05
+✅ CORRECT
+------------------------------
+File: Kirwani_4
+GT Raga: Kirwani
+Top-1 Pred: bageshri (Score: 2.53)
+Correct Raga Rank: 15
+Correct Raga Score: 0.91
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Kirwani_5
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 3.52)
+Correct Raga Rank: 1
+Correct Raga Score: 3.52
+✅ CORRECT
+------------------------------
+File: Kirwani_6
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 4.22)
+Correct Raga Rank: 1
+Correct Raga Score: 4.22
+✅ CORRECT
+------------------------------
+File: Kirwani_7
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 3.76)
+Correct Raga Rank: 1
+Correct Raga Score: 3.76
+✅ CORRECT
+------------------------------
+File: Kirwani_8
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 3.60)
+Correct Raga Rank: 1
+Correct Raga Score: 3.60
+✅ CORRECT
+------------------------------
+File: Kirwani_9
+GT Raga: Kirwani
+Top-1 Pred: kirwani (Score: 1.25)
+Correct Raga Rank: 1
+Correct Raga Score: 1.25
+✅ CORRECT
+------------------------------
+File: Kirwani_10
+GT Raga: Kirwani
+Top-1 Pred: megh malhar (Score: 3.52)
+Correct Raga Rank: 2
+Correct Raga Score: 2.42
+❌ MISCLASSIFIED (Confused with megh malhar)
+------------------------------

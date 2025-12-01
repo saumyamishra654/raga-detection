@@ -1,0 +1,42 @@
+File: Shobhawari_1
+GT Raga: Shobhawari
+Top-1 Pred: shivranjani (Score: 4.31)
+Correct Raga Rank: 37
+Correct Raga Score: -2.78
+❌ MISCLASSIFIED (Confused with shivranjani)
+------------------------------
+File: Shobhawari_2
+GT Raga: Shobhawari
+Top-1 Pred: shobhawari (Score: 4.90)
+Correct Raga Rank: 1
+Correct Raga Score: 4.90
+✅ CORRECT
+------------------------------
+File: Shobhawari_3
+GT Raga: Shobhawari
+Top-1 Pred: shobhawari (Score: 4.74)
+Correct Raga Rank: 1
+Correct Raga Score: 4.74
+✅ CORRECT
+------------------------------
+File: Shobhawari_4
+GT Raga: Shobhawari
+Top-1 Pred: shobhawari (Score: 4.91)
+Correct Raga Rank: 1
+Correct Raga Score: 4.91
+✅ CORRECT
+------------------------------
+File: Shobhawari_5
+GT Raga: Shobhawari
+Top-1 Pred: shobhawari (Score: 5.09)
+Correct Raga Rank: 1
+Correct Raga Score: 5.09
+✅ CORRECT
+------------------------------
+File: Shobhawari_6
+GT Raga: Shobhawari
+Top-1 Pred: durga (Score: 6.10)
+Correct Raga Rank: 2
+Correct Raga Score: 4.87
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------

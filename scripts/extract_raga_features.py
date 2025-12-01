@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import librosa
+import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
 from sklearn.mixture import GaussianMixture
@@ -28,9 +29,9 @@ except ImportError:
 # ============================================================================
 # CONFIGURATION DEFAULTS
 # ============================================================================
-DEFAULT_PROJECT_ROOT = '/storage/saumya.mishra_ug25/audio_project'
-DEFAULT_RAGA_DB = '/storage/saumya.mishra_ug25/audio_project/db/raga_list_final.csv'
-DEFAULT_MAX_FILES = 50
+DEFAULT_PROJECT_ROOT = '/Volumes/Extreme SSD'
+DEFAULT_RAGA_DB = '/Users/saumyamishra/Desktop/intern/summer25/RagaDetection/raga-detection/main notebooks/raga_list_final.csv'
+DEFAULT_MAX_FILES = 5000
 
 # Feature Extraction Constants
 EPS = 1e-12
@@ -197,7 +198,7 @@ def detect_final_peaks(H_mel_100, bin_edges_100, H_mel_33, bin_edges_33, smoothe
     dist_low = 1
     
     peak_tolerance_cents = 45
-    tolerance_cents = 35
+    tolerance_cents = 50
     note_centers = np.arange(0, 1200, 100)
 
     # High-res peaks
@@ -267,8 +268,8 @@ def compute_gmm_vector(smoothed_H_100, bin_centers_100, peak_indices):
             gmm = GaussianMixture(n_components=1, random_state=42)
             gmm.fit(X)
             
-            mu = float(gmm.means_[0][0])
-            sigma = float(np.sqrt(gmm.covariances_[0][0]))
+            mu = float(gmm.means_.ravel()[0])
+            sigma = float(np.sqrt(gmm.covariances_.ravel()[0]))
             peak_height = float(smoothed_norm[peak_idx])
             
             # Map to nearest note
@@ -403,17 +404,73 @@ def extract_raga_features(p_pc, raga_df):
             
     return candidates
 
+def save_analysis_plots(output_dir, stem_name, acc_vector, p_pc_v, 
+                       H_mel_100, bin_edges_100, 
+                       H_mel_33, bin_edges_33, 
+                       smoothed_H_100, 
+                       final_peak_indices, bin_centers_100):
+    
+    # 1. Accompaniment & Melody Distributions (Side by Side)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    x = np.arange(12)
+    
+    # Accompaniment
+    ax1.bar(x, acc_vector, color='skyblue')
+    ax1.set_xticks(x, labels=notes)
+    ax1.set_title(f'Accompaniment Salience\n{stem_name}')
+    ax1.set_ylim(0, 1.1)
+    
+    # Melody
+    ax2.bar(x, p_pc_v, color='salmon')
+    ax2.set_xticks(x, labels=notes)
+    ax2.set_title(f'Melody Pitch Class Distribution\n{stem_name}')
+    ax2.set_ylim(0, max(p_pc_v) * 1.1 if max(p_pc_v) > 0 else 1)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'pitch_distributions.png'))
+    plt.close()
+
+    # 2. Histograms (Fine, Coarse, Smoothed)
+    if H_mel_100 is not None:
+        plt.figure(figsize=(12, 6))
+        
+        # Fine (100 bins)
+        plt.stairs(H_mel_100, bin_edges_100, color='lightgray', fill=True, label='Fine (100 bins)', alpha=0.5)
+        
+        # Coarse (33 bins)
+        plt.stairs(H_mel_33, bin_edges_33, color='orange', linewidth=1.5, label='Coarse (33 bins)')
+        
+        # Smoothed
+        bin_centers = (bin_edges_100[:-1] + bin_edges_100[1:]) / 2
+        plt.plot(bin_centers, smoothed_H_100, color='blue', linewidth=2, label='Smoothed')
+        
+        # Peaks
+        if final_peak_indices is not None and len(final_peak_indices) > 0:
+            peak_cents = bin_centers_100[final_peak_indices]
+            peak_vals = smoothed_H_100[final_peak_indices]
+            plt.scatter(peak_cents, peak_vals, color='red', zorder=5, label='Detected Peaks')
+            
+        plt.xlim(0, 1200)
+        plt.xlabel('Cents')
+        plt.ylabel('Weighted Frequency')
+        plt.title(f'Melody Histograms & Peaks - {stem_name}')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        plt.savefig(os.path.join(output_dir, 'histograms_analysis.png'))
+        plt.close()
+
 # ============================================================================
 # MAIN PROCESSING
 # ============================================================================
 
 def process_stem_directory(stem_dir, raga_df):
     dir_name = os.path.basename(stem_dir)
-    output_json = os.path.join(stem_dir, 'raga_features.json')
-    
-    if os.path.exists(output_json):
-        log_message(f"⏭️  Skipping (features exist): {dir_name}")
-        return True
+    output_dir = os.path.join(stem_dir, 'raga_features')
+    os.makedirs(output_dir, exist_ok=True)
+    output_json = os.path.join(output_dir, 'raga_features.json')
 
     try:
         log_message(f"📊 Processing: {dir_name}")
@@ -428,6 +485,10 @@ def process_stem_directory(stem_dir, raga_df):
         # Process Vocals
         freqs_v, weights_v = get_valid_frequencies(pr_v)
         p_pc_v = compute_pitch_distribution(freqs_v, weights_v)
+        
+        # Initialize plot vars
+        H_mel_100 = bin_edges_100 = H_mel_33 = bin_edges_33 = smoothed_H_100 = None
+        final_peak_indices = bin_centers_100 = None
         
         # Compute GMM Vector
         gmm_vector = None
@@ -451,6 +512,11 @@ def process_stem_directory(stem_dir, raga_df):
 
         # Extract Features
         candidates = extract_raga_features(p_pc_v, raga_df)
+        
+        # Save Plots
+        save_analysis_plots(output_dir, dir_name, acc_vector, p_pc_v, 
+                          H_mel_100, bin_edges_100, H_mel_33, bin_edges_33, 
+                          smoothed_H_100, final_peak_indices, bin_centers_100)
         
         # Save Result
         result_data = {
@@ -525,14 +591,13 @@ def main():
             progress_data['failed'].append({'path': stem_dir, 'time': str(datetime.now())})
             save_progress(progress_data)
 
-    # Exit code for HPC
+    # Final status
     remaining = len([p for p in stem_dirs if p not in set(load_progress()['processed'])])
     if remaining > 0:
-        log_message(f"⚠️  {remaining} remaining. Exiting 99.")
-        sys.exit(99)
-    else:
-        log_message("✅ Job Complete.")
-        sys.exit(0)
+        log_message(f"⚠️  {remaining} remaining.")
+    
+    log_message("✅ Job Complete.")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

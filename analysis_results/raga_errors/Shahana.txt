@@ -1,0 +1,35 @@
+File: Shahana_2
+GT Raga: Shahana
+Top-1 Pred: gorakh kalyan (Score: 2.44)
+Correct Raga Rank: 3
+Correct Raga Score: 2.13
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Shahana_3
+GT Raga: Shahana
+Top-1 Pred: kalavati (Score: 1.70)
+Correct Raga Rank: 9
+Correct Raga Score: 0.68
+❌ MISCLASSIFIED (Confused with kalavati)
+------------------------------
+File: Shahana_4
+GT Raga: Shahana
+Top-1 Pred: jogeshwari pancham (Score: 1.78)
+Correct Raga Rank: 13
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with jogeshwari pancham)
+------------------------------
+File: Shahana_6
+GT Raga: Shahana
+Top-1 Pred: kalavati (Score: 1.99)
+Correct Raga Rank: 11
+Correct Raga Score: 0.67
+❌ MISCLASSIFIED (Confused with kalavati)
+------------------------------
+File: Shahana_7
+GT Raga: Shahana
+Top-1 Pred: durga (Score: 3.80)
+Correct Raga Rank: 3
+Correct Raga Score: 3.34
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------

@@ -1,0 +1,210 @@
+File: Manj Khamaj_1
+GT Raga: Manj Khamaj
+Top-1 Pred: bilawal (Score: 0.36)
+Correct Raga Rank: 6
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Manj Khamaj_2
+GT Raga: Manj Khamaj
+Top-1 Pred: jogeshwari pancham (Score: 0.04)
+Correct Raga Rank: 5
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with jogeshwari pancham)
+------------------------------
+File: Manj Khamaj_3
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.11)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_4
+GT Raga: Manj Khamaj
+Top-1 Pred: shuddha kalyan (Score: 0.36)
+Correct Raga Rank: 6
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Manj Khamaj_9
+GT Raga: Manj Khamaj
+Top-1 Pred: alhaiya bilawal (Score: 0.18)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Manj Khamaj_10
+GT Raga: Manj Khamaj
+Top-1 Pred: kaushik dhwani (Score: 0.05)
+Correct Raga Rank: 3
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with kaushik dhwani)
+------------------------------
+File: Manj Khamaj_1
+GT Raga: Manj Khamaj
+Top-1 Pred: bilawal (Score: 0.40)
+Correct Raga Rank: 4
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Manj Khamaj_2
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.37)
+Correct Raga Rank: 2
+Correct Raga Score: 0.21
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_3
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.52)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_4
+GT Raga: Manj Khamaj
+Top-1 Pred: bihag (Score: 0.50)
+Correct Raga Rank: 3
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Manj Khamaj_9
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.73)
+Correct Raga Rank: 5
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_10
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.14)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_1
+GT Raga: Manj Khamaj
+Top-1 Pred: bilawal (Score: 0.40)
+Correct Raga Rank: 4
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Manj Khamaj_2
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.37)
+Correct Raga Rank: 2
+Correct Raga Score: 0.21
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_3
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.52)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_4
+GT Raga: Manj Khamaj
+Top-1 Pred: bihag (Score: 0.50)
+Correct Raga Rank: 3
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Manj Khamaj_9
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.73)
+Correct Raga Rank: 5
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_10
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.14)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_1
+GT Raga: Manj Khamaj
+Top-1 Pred: bilawal (Score: 0.45)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Manj Khamaj_2
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.32)
+Correct Raga Rank: 2
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_3
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.38)
+Correct Raga Rank: 2
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_4
+GT Raga: Manj Khamaj
+Top-1 Pred: bihag (Score: 0.52)
+Correct Raga Rank: 2
+Correct Raga Score: 0.17
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Manj Khamaj_9
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.55)
+Correct Raga Rank: 3
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_10
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.09)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_1
+GT Raga: Manj Khamaj
+Top-1 Pred: bilawal (Score: 0.45)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Manj Khamaj_2
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.32)
+Correct Raga Rank: 2
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_3
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.38)
+Correct Raga Rank: 2
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_4
+GT Raga: Manj Khamaj
+Top-1 Pred: bihag (Score: 0.52)
+Correct Raga Rank: 2
+Correct Raga Score: 0.17
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Manj Khamaj_9
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.55)
+Correct Raga Rank: 3
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Manj Khamaj_10
+GT Raga: Manj Khamaj
+Top-1 Pred: gavati (Score: 0.09)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------

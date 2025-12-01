@@ -1,0 +1,70 @@
+File: Bilaskhani Todi_1
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhairavi (Score: 1.53)
+Correct Raga Rank: 1
+Correct Raga Score: 1.53
+✅ CORRECT
+------------------------------
+File: Bilaskhani Todi_2
+GT Raga: Bilaskhani Todi
+Top-1 Pred: pilu (Score: -1.07)
+Correct Raga Rank: 6
+Correct Raga Score: -2.21
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Bilaskhani Todi_3
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 1.89)
+Correct Raga Rank: 2
+Correct Raga Score: 1.43
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_4
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 3.52)
+Correct Raga Rank: 2
+Correct Raga Score: 2.19
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_5
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 2.11)
+Correct Raga Rank: 2
+Correct Raga Score: 1.97
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_6
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 2.73)
+Correct Raga Rank: 3
+Correct Raga Score: 1.00
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_7
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: -0.18)
+Correct Raga Rank: 3
+Correct Raga Score: -0.56
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_8
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 4.12)
+Correct Raga Rank: 2
+Correct Raga Score: 2.24
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_9
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 4.35)
+Correct Raga Rank: 2
+Correct Raga Score: 2.49
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bilaskhani Todi_10
+GT Raga: Bilaskhani Todi
+Top-1 Pred: bhupali todi (Score: 4.56)
+Correct Raga Rank: 3
+Correct Raga Score: 2.14
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------

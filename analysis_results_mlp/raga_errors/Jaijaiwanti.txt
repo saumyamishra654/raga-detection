@@ -1,0 +1,245 @@
+File: Jaijaiwanti_1
+GT Raga: Jaijaiwanti
+Top-1 Pred: ramkali (Score: 0.00)
+Correct Raga Rank: 10
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Jaijaiwanti_4
+GT Raga: Jaijaiwanti
+Top-1 Pred: bheem (Score: 0.04)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Jaijaiwanti_5
+GT Raga: Jaijaiwanti
+Top-1 Pred: bilawal (Score: 0.33)
+Correct Raga Rank: 10
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Jaijaiwanti_6
+GT Raga: Jaijaiwanti
+Top-1 Pred: bahar (Score: 0.02)
+Correct Raga Rank: 11
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Jaijaiwanti_8
+GT Raga: Jaijaiwanti
+Top-1 Pred: shankara (Score: 0.04)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with shankara)
+------------------------------
+File: Jaijaiwanti_9
+GT Raga: Jaijaiwanti
+Top-1 Pred: mohankauns (Score: 0.09)
+Correct Raga Rank: 21
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with mohankauns)
+------------------------------
+File: Jaijaiwanti_10
+GT Raga: Jaijaiwanti
+Top-1 Pred: bilawal (Score: 0.47)
+Correct Raga Rank: 8
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Jaijaiwanti_1
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_4
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.17)
+Correct Raga Rank: 1
+Correct Raga Score: 0.17
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_5
+GT Raga: Jaijaiwanti
+Top-1 Pred: alhaiya bilawal (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Jaijaiwanti_6
+GT Raga: Jaijaiwanti
+Top-1 Pred: megh malhar (Score: 0.02)
+Correct Raga Rank: 12
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with megh malhar)
+------------------------------
+File: Jaijaiwanti_8
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.21)
+Correct Raga Rank: 1
+Correct Raga Score: 0.21
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_9
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.25)
+Correct Raga Rank: 1
+Correct Raga Score: 0.25
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_10
+GT Raga: Jaijaiwanti
+Top-1 Pred: gavati (Score: 0.25)
+Correct Raga Rank: 5
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Jaijaiwanti_1
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_4
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.17)
+Correct Raga Rank: 1
+Correct Raga Score: 0.17
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_5
+GT Raga: Jaijaiwanti
+Top-1 Pred: alhaiya bilawal (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Jaijaiwanti_6
+GT Raga: Jaijaiwanti
+Top-1 Pred: megh malhar (Score: 0.02)
+Correct Raga Rank: 12
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with megh malhar)
+------------------------------
+File: Jaijaiwanti_8
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.21)
+Correct Raga Rank: 1
+Correct Raga Score: 0.21
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_9
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.25)
+Correct Raga Rank: 1
+Correct Raga Score: 0.25
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_10
+GT Raga: Jaijaiwanti
+Top-1 Pred: gavati (Score: 0.25)
+Correct Raga Rank: 5
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Jaijaiwanti_1
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.37)
+Correct Raga Rank: 1
+Correct Raga Score: 0.37
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_4
+GT Raga: Jaijaiwanti
+Top-1 Pred: alhaiya bilawal (Score: 0.24)
+Correct Raga Rank: 2
+Correct Raga Score: 0.22
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Jaijaiwanti_5
+GT Raga: Jaijaiwanti
+Top-1 Pred: alhaiya bilawal (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Jaijaiwanti_6
+GT Raga: Jaijaiwanti
+Top-1 Pred: bahar (Score: 0.03)
+Correct Raga Rank: 12
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Jaijaiwanti_8
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_9
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_10
+GT Raga: Jaijaiwanti
+Top-1 Pred: gavati (Score: 0.29)
+Correct Raga Rank: 4
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Jaijaiwanti_1
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.37)
+Correct Raga Rank: 1
+Correct Raga Score: 0.37
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_4
+GT Raga: Jaijaiwanti
+Top-1 Pred: alhaiya bilawal (Score: 0.24)
+Correct Raga Rank: 2
+Correct Raga Score: 0.22
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Jaijaiwanti_5
+GT Raga: Jaijaiwanti
+Top-1 Pred: alhaiya bilawal (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Jaijaiwanti_6
+GT Raga: Jaijaiwanti
+Top-1 Pred: bahar (Score: 0.03)
+Correct Raga Rank: 12
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Jaijaiwanti_8
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_9
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_10
+GT Raga: Jaijaiwanti
+Top-1 Pred: gavati (Score: 0.29)
+Correct Raga Rank: 4
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------

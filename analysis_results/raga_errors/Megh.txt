@@ -1,0 +1,63 @@
+File: Megh_2
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 3.38)
+Correct Raga Rank: 1
+Correct Raga Score: 3.38
+✅ CORRECT
+------------------------------
+File: Megh_3
+GT Raga: Megh
+Top-1 Pred: sarang (Score: 1.58)
+Correct Raga Rank: 2
+Correct Raga Score: 1.44
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Megh_4
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 2.66)
+Correct Raga Rank: 1
+Correct Raga Score: 2.66
+✅ CORRECT
+------------------------------
+File: Megh_5
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 3.69)
+Correct Raga Rank: 1
+Correct Raga Score: 3.69
+✅ CORRECT
+------------------------------
+File: Megh_6
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 4.60)
+Correct Raga Rank: 1
+Correct Raga Score: 4.60
+✅ CORRECT
+------------------------------
+File: Megh_7
+GT Raga: Megh
+Top-1 Pred: sarang (Score: 1.51)
+Correct Raga Rank: 3
+Correct Raga Score: 0.83
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Megh_8
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 3.41)
+Correct Raga Rank: 1
+Correct Raga Score: 3.41
+✅ CORRECT
+------------------------------
+File: Megh_9
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 1.97)
+Correct Raga Rank: 1
+Correct Raga Score: 1.97
+✅ CORRECT
+------------------------------
+File: Megh_10
+GT Raga: Megh
+Top-1 Pred: madhumad sarang (Score: 6.08)
+Correct Raga Rank: 1
+Correct Raga Score: 6.08
+✅ CORRECT
+------------------------------

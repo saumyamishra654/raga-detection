@@ -1,0 +1,210 @@
+File: Kafi_1
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Kafi_6
+GT Raga: Kafi
+Top-1 Pred: bahar (Score: 0.64)
+Correct Raga Rank: 3
+Correct Raga Score: 0.18
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Kafi_7
+GT Raga: Kafi
+Top-1 Pred: bahar (Score: 0.38)
+Correct Raga Rank: 4
+Correct Raga Score: 0.17
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Kafi_8
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Kafi_9
+GT Raga: Kafi
+Top-1 Pred: surdasi malhar (Score: 0.56)
+Correct Raga Rank: 2
+Correct Raga Score: 0.51
+❌ MISCLASSIFIED (Confused with surdasi malhar)
+------------------------------
+File: Kafi_10
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Kafi_1
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Kafi_6
+GT Raga: Kafi
+Top-1 Pred: bahar (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Kafi_7
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Kafi_8
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Kafi_9
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Kafi_10
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Kafi_1
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Kafi_6
+GT Raga: Kafi
+Top-1 Pred: bahar (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Kafi_7
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Kafi_8
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Kafi_9
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Kafi_10
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Kafi_1
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Kafi_6
+GT Raga: Kafi
+Top-1 Pred: bahar (Score: 0.28)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Kafi_7
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Kafi_8
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Kafi_9
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Kafi_10
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Kafi_1
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Kafi_6
+GT Raga: Kafi
+Top-1 Pred: bahar (Score: 0.28)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Kafi_7
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Kafi_8
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Kafi_9
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Kafi_10
+GT Raga: Kafi
+Top-1 Pred: bageshri (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------

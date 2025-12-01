@@ -1,0 +1,315 @@
+File: Dhani_1
+GT Raga: Dhani
+Top-1 Pred: nayaki kanada (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.27
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Dhani_2
+GT Raga: Dhani
+Top-1 Pred: hemshri (Score: 0.59)
+Correct Raga Rank: 2
+Correct Raga Score: 0.38
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Dhani_3
+GT Raga: Dhani
+Top-1 Pred: hanskinkini (Score: 0.13)
+Correct Raga Rank: 26
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Dhani_4
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.84)
+Correct Raga Rank: 1
+Correct Raga Score: 0.84
+✅ CORRECT
+------------------------------
+File: Dhani_5
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.37)
+Correct Raga Rank: 1
+Correct Raga Score: 0.37
+✅ CORRECT
+------------------------------
+File: Dhani_6
+GT Raga: Dhani
+Top-1 Pred: madhuvanti (Score: 0.01)
+Correct Raga Rank: 67
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with madhuvanti)
+------------------------------
+File: Dhani_7
+GT Raga: Dhani
+Top-1 Pred: nayaki kanada (Score: 0.72)
+Correct Raga Rank: 2
+Correct Raga Score: 0.45
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Dhani_8
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.37)
+Correct Raga Rank: 1
+Correct Raga Score: 0.37
+✅ CORRECT
+------------------------------
+File: Dhani_9
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Dhani_1
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Dhani_2
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.08)
+Correct Raga Rank: 1
+Correct Raga Score: 0.08
+✅ CORRECT
+------------------------------
+File: Dhani_3
+GT Raga: Dhani
+Top-1 Pred: bageshri (Score: 0.21)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Dhani_4
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Dhani_5
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Dhani_6
+GT Raga: Dhani
+Top-1 Pred: bahar (Score: 0.14)
+Correct Raga Rank: 36
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Dhani_7
+GT Raga: Dhani
+Top-1 Pred: nayaki kanada (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.28
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Dhani_8
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.55)
+Correct Raga Rank: 1
+Correct Raga Score: 0.55
+✅ CORRECT
+------------------------------
+File: Dhani_9
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Dhani_1
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Dhani_2
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.08)
+Correct Raga Rank: 1
+Correct Raga Score: 0.08
+✅ CORRECT
+------------------------------
+File: Dhani_3
+GT Raga: Dhani
+Top-1 Pred: bageshri (Score: 0.21)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Dhani_4
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Dhani_5
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Dhani_6
+GT Raga: Dhani
+Top-1 Pred: bahar (Score: 0.14)
+Correct Raga Rank: 36
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Dhani_7
+GT Raga: Dhani
+Top-1 Pred: nayaki kanada (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.28
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Dhani_8
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.55)
+Correct Raga Rank: 1
+Correct Raga Score: 0.55
+✅ CORRECT
+------------------------------
+File: Dhani_9
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Dhani_1
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Dhani_2
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.08)
+Correct Raga Rank: 1
+Correct Raga Score: 0.08
+✅ CORRECT
+------------------------------
+File: Dhani_3
+GT Raga: Dhani
+Top-1 Pred: hanskinkini (Score: 0.19)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Dhani_4
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Dhani_5
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Dhani_6
+GT Raga: Dhani
+Top-1 Pred: bahar (Score: 0.12)
+Correct Raga Rank: 38
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Dhani_7
+GT Raga: Dhani
+Top-1 Pred: nayaki kanada (Score: 0.35)
+Correct Raga Rank: 2
+Correct Raga Score: 0.30
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Dhani_8
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Dhani_9
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------
+File: Dhani_1
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Dhani_2
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.08)
+Correct Raga Rank: 1
+Correct Raga Score: 0.08
+✅ CORRECT
+------------------------------
+File: Dhani_3
+GT Raga: Dhani
+Top-1 Pred: hanskinkini (Score: 0.19)
+Correct Raga Rank: 9
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Dhani_4
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Dhani_5
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Dhani_6
+GT Raga: Dhani
+Top-1 Pred: bahar (Score: 0.12)
+Correct Raga Rank: 38
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Dhani_7
+GT Raga: Dhani
+Top-1 Pred: nayaki kanada (Score: 0.35)
+Correct Raga Rank: 2
+Correct Raga Score: 0.30
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Dhani_8
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Dhani_9
+GT Raga: Dhani
+Top-1 Pred: dhani (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------

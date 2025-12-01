@@ -1,0 +1,280 @@
+File: Puriya Kalyan_2
+GT Raga: Puriya Kalyan
+Top-1 Pred: hindol (Score: 0.08)
+Correct Raga Rank: 2
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with hindol)
+------------------------------
+File: Puriya Kalyan_3
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_5
+GT Raga: Puriya Kalyan
+Top-1 Pred: hindol (Score: 0.04)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with hindol)
+------------------------------
+File: Puriya Kalyan_6
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.03)
+Correct Raga Rank: 1
+Correct Raga Score: 0.03
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_7
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.33)
+Correct Raga Rank: 1
+Correct Raga Score: 0.33
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_8
+GT Raga: Puriya Kalyan
+Top-1 Pred: marwa (Score: 0.29)
+Correct Raga Rank: 2
+Correct Raga Score: 0.29
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Puriya Kalyan_9
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_10
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_2
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.09)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_3
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_5
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.09)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_6
+GT Raga: Puriya Kalyan
+Top-1 Pred: multani (Score: 0.05)
+Correct Raga Rank: 5
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with multani)
+------------------------------
+File: Puriya Kalyan_7
+GT Raga: Puriya Kalyan
+Top-1 Pred: bhatiyar (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.41
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Puriya Kalyan_8
+GT Raga: Puriya Kalyan
+Top-1 Pred: marwa (Score: 0.16)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Puriya Kalyan_9
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_10
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_2
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.09)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_3
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_5
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.09)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_6
+GT Raga: Puriya Kalyan
+Top-1 Pred: multani (Score: 0.05)
+Correct Raga Rank: 5
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with multani)
+------------------------------
+File: Puriya Kalyan_7
+GT Raga: Puriya Kalyan
+Top-1 Pred: bhatiyar (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.41
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Puriya Kalyan_8
+GT Raga: Puriya Kalyan
+Top-1 Pred: marwa (Score: 0.16)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Puriya Kalyan_9
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_10
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_2
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.07)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_3
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.29)
+Correct Raga Rank: 1
+Correct Raga Score: 0.29
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_5
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.08)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_6
+GT Raga: Puriya Kalyan
+Top-1 Pred: multani (Score: 0.05)
+Correct Raga Rank: 3
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with multani)
+------------------------------
+File: Puriya Kalyan_7
+GT Raga: Puriya Kalyan
+Top-1 Pred: bhatiyar (Score: 0.47)
+Correct Raga Rank: 2
+Correct Raga Score: 0.41
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Puriya Kalyan_8
+GT Raga: Puriya Kalyan
+Top-1 Pred: marwa (Score: 0.17)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Puriya Kalyan_9
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_10
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_2
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.07)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_3
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.29)
+Correct Raga Rank: 1
+Correct Raga Score: 0.29
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_5
+GT Raga: Puriya Kalyan
+Top-1 Pred: bihag (Score: 0.08)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Puriya Kalyan_6
+GT Raga: Puriya Kalyan
+Top-1 Pred: multani (Score: 0.05)
+Correct Raga Rank: 3
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with multani)
+------------------------------
+File: Puriya Kalyan_7
+GT Raga: Puriya Kalyan
+Top-1 Pred: bhatiyar (Score: 0.47)
+Correct Raga Rank: 2
+Correct Raga Score: 0.41
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Puriya Kalyan_8
+GT Raga: Puriya Kalyan
+Top-1 Pred: marwa (Score: 0.17)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Puriya Kalyan_9
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Puriya Kalyan_10
+GT Raga: Puriya Kalyan
+Top-1 Pred: puriya kalyan (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------

@@ -1,0 +1,49 @@
+File: Jaijaiwanti_1
+GT Raga: Jaijaiwanti
+Top-1 Pred: ramkali (Score: -1.20)
+Correct Raga Rank: 6
+Correct Raga Score: -1.84
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Jaijaiwanti_4
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 1.14)
+Correct Raga Rank: 1
+Correct Raga Score: 1.14
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_5
+GT Raga: Jaijaiwanti
+Top-1 Pred: hansadhwani (Score: 2.56)
+Correct Raga Rank: 4
+Correct Raga Score: 1.63
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Jaijaiwanti_6
+GT Raga: Jaijaiwanti
+Top-1 Pred: pilu (Score: 1.26)
+Correct Raga Rank: 4
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Jaijaiwanti_8
+GT Raga: Jaijaiwanti
+Top-1 Pred: hanskinkini (Score: 1.53)
+Correct Raga Rank: 1
+Correct Raga Score: 1.53
+✅ CORRECT
+------------------------------
+File: Jaijaiwanti_9
+GT Raga: Jaijaiwanti
+Top-1 Pred: mohankauns (Score: 1.08)
+Correct Raga Rank: 8
+Correct Raga Score: -0.51
+❌ MISCLASSIFIED (Confused with mohankauns)
+------------------------------
+File: Jaijaiwanti_10
+GT Raga: Jaijaiwanti
+Top-1 Pred: bhupali (Score: 3.39)
+Correct Raga Rank: 7
+Correct Raga Score: 1.90
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------

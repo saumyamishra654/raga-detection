@@ -1,0 +1,70 @@
+File: Alhaiya Bilawal_1
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: bilawal (Score: 3.40)
+Correct Raga Rank: 6
+Correct Raga Score: 1.87
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Alhaiya Bilawal_2
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: bilawal (Score: 2.66)
+Correct Raga Rank: 4
+Correct Raga Score: 2.02
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Alhaiya Bilawal_3
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: jog (Score: 2.01)
+Correct Raga Rank: 23
+Correct Raga Score: -0.50
+❌ MISCLASSIFIED (Confused with jog)
+------------------------------
+File: Alhaiya Bilawal_4
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: shankara (Score: 3.33)
+Correct Raga Rank: 3
+Correct Raga Score: 2.15
+❌ MISCLASSIFIED (Confused with shankara)
+------------------------------
+File: Alhaiya Bilawal_5
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: manj khamaj (Score: 1.22)
+Correct Raga Rank: 5
+Correct Raga Score: 0.86
+❌ MISCLASSIFIED (Confused with manj khamaj)
+------------------------------
+File: Alhaiya Bilawal_6
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: bilawal (Score: 2.89)
+Correct Raga Rank: 2
+Correct Raga Score: 2.66
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Alhaiya Bilawal_7
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: tilang (Score: 2.87)
+Correct Raga Rank: 5
+Correct Raga Score: 1.28
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Alhaiya Bilawal_8
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: hindol (Score: 0.01)
+Correct Raga Rank: 8
+Correct Raga Score: -1.06
+❌ MISCLASSIFIED (Confused with hindol)
+------------------------------
+File: Alhaiya Bilawal_9
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: tilang (Score: 1.24)
+Correct Raga Rank: 14
+Correct Raga Score: -0.59
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Alhaiya Bilawal_10
+GT Raga: Alhaiya Bilawal
+Top-1 Pred: deshkar (Score: 2.15)
+Correct Raga Rank: 10
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------

@@ -1,0 +1,245 @@
+File: Bihari_1
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Bihari_2
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihari_3
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_5
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.44)
+Correct Raga Rank: 1
+Correct Raga Score: 0.44
+✅ CORRECT
+------------------------------
+File: Bihari_6
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Bihari_7
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Bihari_8
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------
+File: Bihari_1
+GT Raga: Bihari
+Top-1 Pred: bihag (Score: 0.23)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Bihari_2
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Bihari_3
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Bihari_5
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_6
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Bihari_7
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_8
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Bihari_1
+GT Raga: Bihari
+Top-1 Pred: bihag (Score: 0.23)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Bihari_2
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Bihari_3
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Bihari_5
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_6
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Bihari_7
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_8
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Bihari_1
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Bihari_2
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Bihari_3
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Bihari_5
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Bihari_6
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Bihari_7
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_8
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Bihari_1
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Bihari_2
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Bihari_3
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Bihari_5
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Bihari_6
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Bihari_7
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Bihari_8
+GT Raga: Bihari
+Top-1 Pred: bilawal (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------

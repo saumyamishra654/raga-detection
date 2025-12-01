@@ -1,0 +1,70 @@
+File: Bageshri_1
+GT Raga: Bageshri
+Top-1 Pred: sundarkauns (Score: 3.33)
+Correct Raga Rank: 12
+Correct Raga Score: 0.16
+❌ MISCLASSIFIED (Confused with sundarkauns)
+------------------------------
+File: Bageshri_2
+GT Raga: Bageshri
+Top-1 Pred: jogeshwari (Score: 2.83)
+Correct Raga Rank: 15
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with jogeshwari)
+------------------------------
+File: Bageshri_3
+GT Raga: Bageshri
+Top-1 Pred: sundarkauns (Score: 5.08)
+Correct Raga Rank: 10
+Correct Raga Score: 0.91
+❌ MISCLASSIFIED (Confused with sundarkauns)
+------------------------------
+File: Bageshri_4
+GT Raga: Bageshri
+Top-1 Pred: abhogi (Score: 2.47)
+Correct Raga Rank: 4
+Correct Raga Score: 1.44
+❌ MISCLASSIFIED (Confused with abhogi)
+------------------------------
+File: Bageshri_5
+GT Raga: Bageshri
+Top-1 Pred: bageshri (Score: 3.27)
+Correct Raga Rank: 1
+Correct Raga Score: 3.27
+✅ CORRECT
+------------------------------
+File: Bageshri_6
+GT Raga: Bageshri
+Top-1 Pred: sundarkauns (Score: 4.69)
+Correct Raga Rank: 10
+Correct Raga Score: 1.01
+❌ MISCLASSIFIED (Confused with sundarkauns)
+------------------------------
+File: Bageshri_7
+GT Raga: Bageshri
+Top-1 Pred: sundarkauns (Score: 2.32)
+Correct Raga Rank: 10
+Correct Raga Score: 0.64
+❌ MISCLASSIFIED (Confused with sundarkauns)
+------------------------------
+File: Bageshri_8
+GT Raga: Bageshri
+Top-1 Pred: rageshri (Score: 2.76)
+Correct Raga Rank: 7
+Correct Raga Score: 1.71
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Bageshri_9
+GT Raga: Bageshri
+Top-1 Pred: abhogi (Score: 2.63)
+Correct Raga Rank: 9
+Correct Raga Score: 0.48
+❌ MISCLASSIFIED (Confused with abhogi)
+------------------------------
+File: Bageshri_10
+GT Raga: Bageshri
+Top-1 Pred: sundarkauns (Score: 2.96)
+Correct Raga Rank: 9
+Correct Raga Score: 0.50
+❌ MISCLASSIFIED (Confused with sundarkauns)
+------------------------------

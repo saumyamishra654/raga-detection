@@ -1,0 +1,175 @@
+File: Charukeshi_2
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Charukeshi_3
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Charukeshi_5
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Charukeshi_7
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.50)
+Correct Raga Rank: 1
+Correct Raga Score: 0.50
+✅ CORRECT
+------------------------------
+File: Charukeshi_10
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Charukeshi_2
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.11)
+Correct Raga Rank: 1
+Correct Raga Score: 0.11
+✅ CORRECT
+------------------------------
+File: Charukeshi_3
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Charukeshi_5
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Charukeshi_7
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Charukeshi_10
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Charukeshi_2
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.11)
+Correct Raga Rank: 1
+Correct Raga Score: 0.11
+✅ CORRECT
+------------------------------
+File: Charukeshi_3
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Charukeshi_5
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Charukeshi_7
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Charukeshi_10
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Charukeshi_2
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.11)
+Correct Raga Rank: 1
+Correct Raga Score: 0.11
+✅ CORRECT
+------------------------------
+File: Charukeshi_3
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Charukeshi_5
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Charukeshi_7
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Charukeshi_10
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Charukeshi_2
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.11)
+Correct Raga Rank: 1
+Correct Raga Score: 0.11
+✅ CORRECT
+------------------------------
+File: Charukeshi_3
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Charukeshi_5
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Charukeshi_7
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Charukeshi_10
+GT Raga: Charukeshi
+Top-1 Pred: charukeshi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------

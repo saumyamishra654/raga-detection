@@ -1,0 +1,49 @@
+File: Bhimpalasi_1
+GT Raga: Bhimpalasi
+Top-1 Pred: nayaki kanada (Score: 2.39)
+Correct Raga Rank: 10
+Correct Raga Score: 0.60
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Bhimpalasi_2
+GT Raga: Bhimpalasi
+Top-1 Pred: nayaki kanada (Score: 4.23)
+Correct Raga Rank: 3
+Correct Raga Score: 3.44
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Bhimpalasi_3
+GT Raga: Bhimpalasi
+Top-1 Pred: nayaki kanada (Score: 2.15)
+Correct Raga Rank: 12
+Correct Raga Score: 0.30
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Bhimpalasi_5
+GT Raga: Bhimpalasi
+Top-1 Pred: nayaki kanada (Score: 2.99)
+Correct Raga Rank: 3
+Correct Raga Score: 1.76
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Bhimpalasi_7
+GT Raga: Bhimpalasi
+Top-1 Pred: madhumad sarang (Score: 3.79)
+Correct Raga Rank: 6
+Correct Raga Score: 2.27
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Bhimpalasi_8
+GT Raga: Bhimpalasi
+Top-1 Pred: hanskinkini (Score: 1.26)
+Correct Raga Rank: 10
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Bhimpalasi_9
+GT Raga: Bhimpalasi
+Top-1 Pred: dhani (Score: 4.77)
+Correct Raga Rank: 3
+Correct Raga Score: 3.68
+❌ MISCLASSIFIED (Confused with dhani)
+------------------------------

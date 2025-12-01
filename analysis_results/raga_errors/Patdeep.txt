@@ -1,0 +1,42 @@
+File: Patdeep_1
+GT Raga: Patdeep
+Top-1 Pred: patdeep (Score: 3.34)
+Correct Raga Rank: 1
+Correct Raga Score: 3.34
+✅ CORRECT
+------------------------------
+File: Patdeep_2
+GT Raga: Patdeep
+Top-1 Pred: hemshri (Score: 2.49)
+Correct Raga Rank: 2
+Correct Raga Score: 1.70
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Patdeep_5
+GT Raga: Patdeep
+Top-1 Pred: hemshri (Score: 1.83)
+Correct Raga Rank: 2
+Correct Raga Score: 1.19
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Patdeep_6
+GT Raga: Patdeep
+Top-1 Pred: patdeep (Score: 2.69)
+Correct Raga Rank: 1
+Correct Raga Score: 2.69
+✅ CORRECT
+------------------------------
+File: Patdeep_9
+GT Raga: Patdeep
+Top-1 Pred: patdeep (Score: 2.28)
+Correct Raga Rank: 1
+Correct Raga Score: 2.28
+✅ CORRECT
+------------------------------
+File: Patdeep_10
+GT Raga: Patdeep
+Top-1 Pred: hemshri (Score: 1.61)
+Correct Raga Rank: 2
+Correct Raga Score: 1.55
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------

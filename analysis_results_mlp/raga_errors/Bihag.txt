@@ -1,0 +1,350 @@
+File: Bihag_1
+GT Raga: Bihag
+Top-1 Pred: hansadhwani (Score: 0.53)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Bihag_2
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.06)
+Correct Raga Rank: 3
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_3
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.10)
+Correct Raga Rank: 2
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_4
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.13)
+Correct Raga Rank: 4
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_5
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.07)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_6
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.15)
+Correct Raga Rank: 6
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_7
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.09)
+Correct Raga Rank: 3
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_8
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 0.15)
+Correct Raga Rank: 7
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_9
+GT Raga: Bihag
+Top-1 Pred: hansadhwani (Score: 0.07)
+Correct Raga Rank: 6
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Bihag_10
+GT Raga: Bihag
+Top-1 Pred: bilawal (Score: 0.05)
+Correct Raga Rank: 8
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Bihag_1
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihag_2
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Bihag_3
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Bihag_4
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Bihag_5
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Bihag_6
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Bihag_7
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Bihag_8
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Bihag_9
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Bihag_10
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------
+File: Bihag_1
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihag_2
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Bihag_3
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Bihag_4
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Bihag_5
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Bihag_6
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Bihag_7
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Bihag_8
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Bihag_9
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Bihag_10
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------
+File: Bihag_1
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihag_2
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihag_3
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Bihag_4
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Bihag_5
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Bihag_6
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.49)
+Correct Raga Rank: 1
+Correct Raga Score: 0.49
+✅ CORRECT
+------------------------------
+File: Bihag_7
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Bihag_8
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Bihag_9
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.41)
+Correct Raga Rank: 1
+Correct Raga Score: 0.41
+✅ CORRECT
+------------------------------
+File: Bihag_10
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Bihag_1
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihag_2
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Bihag_3
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Bihag_4
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Bihag_5
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Bihag_6
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.49)
+Correct Raga Rank: 1
+Correct Raga Score: 0.49
+✅ CORRECT
+------------------------------
+File: Bihag_7
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Bihag_8
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Bihag_9
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.41)
+Correct Raga Rank: 1
+Correct Raga Score: 0.41
+✅ CORRECT
+------------------------------
+File: Bihag_10
+GT Raga: Bihag
+Top-1 Pred: bihag (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------

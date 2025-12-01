@@ -1,0 +1,42 @@
+File: Champakali_1
+GT Raga: Champakali
+Top-1 Pred: vachaspati (Score: 3.03)
+Correct Raga Rank: 1
+Correct Raga Score: 3.03
+✅ CORRECT
+------------------------------
+File: Champakali_4
+GT Raga: Champakali
+Top-1 Pred: vachaspati (Score: 3.69)
+Correct Raga Rank: 1
+Correct Raga Score: 3.69
+✅ CORRECT
+------------------------------
+File: Champakali_6
+GT Raga: Champakali
+Top-1 Pred: vachaspati (Score: 3.45)
+Correct Raga Rank: 1
+Correct Raga Score: 3.45
+✅ CORRECT
+------------------------------
+File: Champakali_7
+GT Raga: Champakali
+Top-1 Pred: vachaspati (Score: 3.25)
+Correct Raga Rank: 1
+Correct Raga Score: 3.25
+✅ CORRECT
+------------------------------
+File: Champakali_8
+GT Raga: Champakali
+Top-1 Pred: vachaspati (Score: 1.60)
+Correct Raga Rank: 1
+Correct Raga Score: 1.60
+✅ CORRECT
+------------------------------
+File: Champakali_9
+GT Raga: Champakali
+Top-1 Pred: vachaspati (Score: 2.63)
+Correct Raga Rank: 1
+Correct Raga Score: 2.63
+✅ CORRECT
+------------------------------

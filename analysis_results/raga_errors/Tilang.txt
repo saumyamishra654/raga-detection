@@ -1,0 +1,49 @@
+File: Tilang_2
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 3.86)
+Correct Raga Rank: 1
+Correct Raga Score: 3.86
+✅ CORRECT
+------------------------------
+File: Tilang_3
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 3.85)
+Correct Raga Rank: 1
+Correct Raga Score: 3.85
+✅ CORRECT
+------------------------------
+File: Tilang_5
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 4.21)
+Correct Raga Rank: 1
+Correct Raga Score: 4.21
+✅ CORRECT
+------------------------------
+File: Tilang_6
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 2.22)
+Correct Raga Rank: 1
+Correct Raga Score: 2.22
+✅ CORRECT
+------------------------------
+File: Tilang_7
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 4.05)
+Correct Raga Rank: 1
+Correct Raga Score: 4.05
+✅ CORRECT
+------------------------------
+File: Tilang_8
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 3.97)
+Correct Raga Rank: 1
+Correct Raga Score: 3.97
+✅ CORRECT
+------------------------------
+File: Tilang_9
+GT Raga: Tilang
+Top-1 Pred: tilang (Score: 3.54)
+Correct Raga Rank: 1
+Correct Raga Score: 3.54
+✅ CORRECT
+------------------------------

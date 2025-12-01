@@ -1,0 +1,70 @@
+File: Kedar_1
+GT Raga: Kedar
+Top-1 Pred: durga (Score: 3.23)
+Correct Raga Rank: 4
+Correct Raga Score: 1.56
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------
+File: Kedar_2
+GT Raga: Kedar
+Top-1 Pred: durga (Score: 2.85)
+Correct Raga Rank: 6
+Correct Raga Score: 1.01
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------
+File: Kedar_3
+GT Raga: Kedar
+Top-1 Pred: kedar (Score: 2.61)
+Correct Raga Rank: 1
+Correct Raga Score: 2.61
+✅ CORRECT
+------------------------------
+File: Kedar_4
+GT Raga: Kedar
+Top-1 Pred: bihag (Score: 1.84)
+Correct Raga Rank: 2
+Correct Raga Score: 1.50
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Kedar_5
+GT Raga: Kedar
+Top-1 Pred: bihag (Score: 1.94)
+Correct Raga Rank: 3
+Correct Raga Score: 1.78
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Kedar_6
+GT Raga: Kedar
+Top-1 Pred: kedar (Score: 2.84)
+Correct Raga Rank: 1
+Correct Raga Score: 2.84
+✅ CORRECT
+------------------------------
+File: Kedar_7
+GT Raga: Kedar
+Top-1 Pred: bihag (Score: 2.28)
+Correct Raga Rank: 2
+Correct Raga Score: 2.18
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Kedar_8
+GT Raga: Kedar
+Top-1 Pred: kedar (Score: 2.24)
+Correct Raga Rank: 1
+Correct Raga Score: 2.24
+✅ CORRECT
+------------------------------
+File: Kedar_9
+GT Raga: Kedar
+Top-1 Pred: durga (Score: 3.17)
+Correct Raga Rank: 3
+Correct Raga Score: 1.38
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------
+File: Kedar_10
+GT Raga: Kedar
+Top-1 Pred: durga (Score: 1.92)
+Correct Raga Rank: 2
+Correct Raga Score: 1.67
+❌ MISCLASSIFIED (Confused with durga)
+------------------------------

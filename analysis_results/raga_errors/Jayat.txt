@@ -1,0 +1,35 @@
+File: Jayat_1
+GT Raga: Jayat
+Top-1 Pred: deshkar (Score: 3.83)
+Correct Raga Rank: 28
+Correct Raga Score: 0.77
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Jayat_2
+GT Raga: Jayat
+Top-1 Pred: hansadhwani (Score: 1.60)
+Correct Raga Rank: 7
+Correct Raga Score: 0.43
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Jayat_4
+GT Raga: Jayat
+Top-1 Pred: deshkar (Score: 5.66)
+Correct Raga Rank: 2
+Correct Raga Score: 1.59
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Jayat_6
+GT Raga: Jayat
+Top-1 Pred: deshkar (Score: 5.35)
+Correct Raga Rank: 22
+Correct Raga Score: -0.36
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Jayat_7
+GT Raga: Jayat
+Top-1 Pred: jayat (Score: 1.07)
+Correct Raga Rank: 1
+Correct Raga Score: 1.07
+✅ CORRECT
+------------------------------

@@ -1,0 +1,63 @@
+File: Gavati_1
+GT Raga: Gavati
+Top-1 Pred: gavati (Score: 2.99)
+Correct Raga Rank: 1
+Correct Raga Score: 2.99
+✅ CORRECT
+------------------------------
+File: Gavati_3
+GT Raga: Gavati
+Top-1 Pred: pilu (Score: 0.38)
+Correct Raga Rank: 20
+Correct Raga Score: -2.31
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Gavati_4
+GT Raga: Gavati
+Top-1 Pred: deshkar (Score: 4.76)
+Correct Raga Rank: 6
+Correct Raga Score: 1.53
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Gavati_5
+GT Raga: Gavati
+Top-1 Pred: pilu (Score: 0.52)
+Correct Raga Rank: 18
+Correct Raga Score: -1.58
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Gavati_6
+GT Raga: Gavati
+Top-1 Pred: kalavati (Score: 2.31)
+Correct Raga Rank: 2
+Correct Raga Score: 2.26
+❌ MISCLASSIFIED (Confused with kalavati)
+------------------------------
+File: Gavati_7
+GT Raga: Gavati
+Top-1 Pred: gavati (Score: 3.92)
+Correct Raga Rank: 1
+Correct Raga Score: 3.92
+✅ CORRECT
+------------------------------
+File: Gavati_8
+GT Raga: Gavati
+Top-1 Pred: kalavati (Score: 3.09)
+Correct Raga Rank: 4
+Correct Raga Score: 0.97
+❌ MISCLASSIFIED (Confused with kalavati)
+------------------------------
+File: Gavati_9
+GT Raga: Gavati
+Top-1 Pred: gavati (Score: 3.87)
+Correct Raga Rank: 1
+Correct Raga Score: 3.87
+✅ CORRECT
+------------------------------
+File: Gavati_10
+GT Raga: Gavati
+Top-1 Pred: tilang (Score: 3.20)
+Correct Raga Rank: 3
+Correct Raga Score: 1.78
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------

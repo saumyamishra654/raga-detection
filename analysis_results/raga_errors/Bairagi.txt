@@ -1,0 +1,70 @@
+File: Bairagi_1
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 5.36)
+Correct Raga Rank: 1
+Correct Raga Score: 5.36
+✅ CORRECT
+------------------------------
+File: Bairagi_2
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 5.20)
+Correct Raga Rank: 1
+Correct Raga Score: 5.20
+✅ CORRECT
+------------------------------
+File: Bairagi_3
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 4.90)
+Correct Raga Rank: 1
+Correct Raga Score: 4.90
+✅ CORRECT
+------------------------------
+File: Bairagi_4
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 2.30)
+Correct Raga Rank: 1
+Correct Raga Score: 2.30
+✅ CORRECT
+------------------------------
+File: Bairagi_5
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 4.28)
+Correct Raga Rank: 1
+Correct Raga Score: 4.28
+✅ CORRECT
+------------------------------
+File: Bairagi_6
+GT Raga: Bairagi
+Top-1 Pred: ramkali (Score: 0.16)
+Correct Raga Rank: 2
+Correct Raga Score: -0.41
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Bairagi_7
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 1.87)
+Correct Raga Rank: 1
+Correct Raga Score: 1.87
+✅ CORRECT
+------------------------------
+File: Bairagi_8
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 4.66)
+Correct Raga Rank: 1
+Correct Raga Score: 4.66
+✅ CORRECT
+------------------------------
+File: Bairagi_9
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 2.87)
+Correct Raga Rank: 1
+Correct Raga Score: 2.87
+✅ CORRECT
+------------------------------
+File: Bairagi_10
+GT Raga: Bairagi
+Top-1 Pred: bairagi (Score: 4.34)
+Correct Raga Rank: 1
+Correct Raga Score: 4.34
+✅ CORRECT
+------------------------------

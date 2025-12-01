@@ -1,0 +1,42 @@
+File: Parameshwari_1
+GT Raga: Parameshwari
+Top-1 Pred: parameshwari (Score: 5.27)
+Correct Raga Rank: 1
+Correct Raga Score: 5.27
+✅ CORRECT
+------------------------------
+File: Parameshwari_2
+GT Raga: Parameshwari
+Top-1 Pred: parameshwari (Score: 3.64)
+Correct Raga Rank: 1
+Correct Raga Score: 3.64
+✅ CORRECT
+------------------------------
+File: Parameshwari_4
+GT Raga: Parameshwari
+Top-1 Pred: parameshwari (Score: 5.23)
+Correct Raga Rank: 1
+Correct Raga Score: 5.23
+✅ CORRECT
+------------------------------
+File: Parameshwari_5
+GT Raga: Parameshwari
+Top-1 Pred: parameshwari (Score: 5.07)
+Correct Raga Rank: 1
+Correct Raga Score: 5.07
+✅ CORRECT
+------------------------------
+File: Parameshwari_7
+GT Raga: Parameshwari
+Top-1 Pred: pilu (Score: 1.37)
+Correct Raga Rank: 60
+Correct Raga Score: -3.29
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Parameshwari_8
+GT Raga: Parameshwari
+Top-1 Pred: parameshwari (Score: 4.40)
+Correct Raga Rank: 1
+Correct Raga Score: 4.40
+✅ CORRECT
+------------------------------

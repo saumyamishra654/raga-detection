@@ -1,0 +1,70 @@
+File: Kamod_1
+GT Raga: Kamod
+Top-1 Pred: bihag (Score: 2.04)
+Correct Raga Rank: 1
+Correct Raga Score: 2.04
+✅ CORRECT
+------------------------------
+File: Kamod_2
+GT Raga: Kamod
+Top-1 Pred: bhupali (Score: 2.94)
+Correct Raga Rank: 4
+Correct Raga Score: 1.95
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------
+File: Kamod_3
+GT Raga: Kamod
+Top-1 Pred: bihag (Score: 1.87)
+Correct Raga Rank: 1
+Correct Raga Score: 1.87
+✅ CORRECT
+------------------------------
+File: Kamod_4
+GT Raga: Kamod
+Top-1 Pred: bhupali (Score: 3.14)
+Correct Raga Rank: 5
+Correct Raga Score: 2.03
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------
+File: Kamod_5
+GT Raga: Kamod
+Top-1 Pred: bhupali (Score: 0.70)
+Correct Raga Rank: 12
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------
+File: Kamod_6
+GT Raga: Kamod
+Top-1 Pred: bihag (Score: 1.49)
+Correct Raga Rank: 1
+Correct Raga Score: 1.49
+✅ CORRECT
+------------------------------
+File: Kamod_7
+GT Raga: Kamod
+Top-1 Pred: bihag (Score: 1.62)
+Correct Raga Rank: 1
+Correct Raga Score: 1.62
+✅ CORRECT
+------------------------------
+File: Kamod_8
+GT Raga: Kamod
+Top-1 Pred: bhupali (Score: 4.62)
+Correct Raga Rank: 4
+Correct Raga Score: 2.33
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------
+File: Kamod_9
+GT Raga: Kamod
+Top-1 Pred: bhupali (Score: 3.80)
+Correct Raga Rank: 5
+Correct Raga Score: 2.24
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------
+File: Kamod_10
+GT Raga: Kamod
+Top-1 Pred: bhupali (Score: 3.16)
+Correct Raga Rank: 5
+Correct Raga Score: 1.81
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------

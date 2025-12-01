@@ -1,0 +1,350 @@
+File: Malkauns_1
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Malkauns_2
+GT Raga: Malkauns
+Top-1 Pred: chandrakauns (Score: 0.39)
+Correct Raga Rank: 3
+Correct Raga Score: 0.29
+❌ MISCLASSIFIED (Confused with chandrakauns)
+------------------------------
+File: Malkauns_3
+GT Raga: Malkauns
+Top-1 Pred: chandrakauns (Score: 0.01)
+Correct Raga Rank: 27
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with chandrakauns)
+------------------------------
+File: Malkauns_4
+GT Raga: Malkauns
+Top-1 Pred: megh malhar (Score: 0.02)
+Correct Raga Rank: 20
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with megh malhar)
+------------------------------
+File: Malkauns_5
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Malkauns_6
+GT Raga: Malkauns
+Top-1 Pred: mohankauns (Score: 0.17)
+Correct Raga Rank: 2
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with mohankauns)
+------------------------------
+File: Malkauns_7
+GT Raga: Malkauns
+Top-1 Pred: mohankauns (Score: 0.46)
+Correct Raga Rank: 2
+Correct Raga Score: 0.31
+❌ MISCLASSIFIED (Confused with mohankauns)
+------------------------------
+File: Malkauns_8
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Malkauns_9
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Malkauns_10
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.64)
+Correct Raga Rank: 1
+Correct Raga Score: 0.64
+✅ CORRECT
+------------------------------
+File: Malkauns_1
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Malkauns_2
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Malkauns_3
+GT Raga: Malkauns
+Top-1 Pred: bageshri (Score: 0.02)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Malkauns_4
+GT Raga: Malkauns
+Top-1 Pred: pilu (Score: 0.09)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Malkauns_5
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Malkauns_6
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Malkauns_7
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.88)
+Correct Raga Rank: 1
+Correct Raga Score: 0.88
+✅ CORRECT
+------------------------------
+File: Malkauns_8
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Malkauns_9
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Malkauns_10
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Malkauns_1
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Malkauns_2
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Malkauns_3
+GT Raga: Malkauns
+Top-1 Pred: bageshri (Score: 0.02)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Malkauns_4
+GT Raga: Malkauns
+Top-1 Pred: pilu (Score: 0.09)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Malkauns_5
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Malkauns_6
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Malkauns_7
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.88)
+Correct Raga Rank: 1
+Correct Raga Score: 0.88
+✅ CORRECT
+------------------------------
+File: Malkauns_8
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Malkauns_9
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Malkauns_10
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Malkauns_1
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Malkauns_2
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Malkauns_3
+GT Raga: Malkauns
+Top-1 Pred: bageshri (Score: 0.02)
+Correct Raga Rank: 11
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Malkauns_4
+GT Raga: Malkauns
+Top-1 Pred: pilu (Score: 0.12)
+Correct Raga Rank: 2
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Malkauns_5
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Malkauns_6
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Malkauns_7
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Malkauns_8
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Malkauns_9
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Malkauns_10
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Malkauns_1
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Malkauns_2
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Malkauns_3
+GT Raga: Malkauns
+Top-1 Pred: bageshri (Score: 0.02)
+Correct Raga Rank: 11
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Malkauns_4
+GT Raga: Malkauns
+Top-1 Pred: pilu (Score: 0.12)
+Correct Raga Rank: 2
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Malkauns_5
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Malkauns_6
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Malkauns_7
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Malkauns_8
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Malkauns_9
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Malkauns_10
+GT Raga: Malkauns
+Top-1 Pred: malkauns (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------

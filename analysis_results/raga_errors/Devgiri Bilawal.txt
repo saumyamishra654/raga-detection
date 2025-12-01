@@ -1,0 +1,63 @@
+File: Devgiri Bilawal_1
+GT Raga: Devgiri Bilawal
+Top-1 Pred: hansadhwani (Score: 2.52)
+Correct Raga Rank: 10
+Correct Raga Score: 0.60
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Devgiri Bilawal_2
+GT Raga: Devgiri Bilawal
+Top-1 Pred: bilawal (Score: 2.09)
+Correct Raga Rank: 4
+Correct Raga Score: 1.35
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Devgiri Bilawal_3
+GT Raga: Devgiri Bilawal
+Top-1 Pred: bhupali (Score: 2.92)
+Correct Raga Rank: 6
+Correct Raga Score: 1.65
+❌ MISCLASSIFIED (Confused with bhupali)
+------------------------------
+File: Devgiri Bilawal_4
+GT Raga: Devgiri Bilawal
+Top-1 Pred: hansadhwani (Score: 2.99)
+Correct Raga Rank: 4
+Correct Raga Score: 1.57
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Devgiri Bilawal_6
+GT Raga: Devgiri Bilawal
+Top-1 Pred: bilawal (Score: 2.44)
+Correct Raga Rank: 4
+Correct Raga Score: 1.72
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Devgiri Bilawal_7
+GT Raga: Devgiri Bilawal
+Top-1 Pred: hansadhwani (Score: 3.56)
+Correct Raga Rank: 5
+Correct Raga Score: 0.73
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Devgiri Bilawal_8
+GT Raga: Devgiri Bilawal
+Top-1 Pred: hansadhwani (Score: 4.29)
+Correct Raga Rank: 7
+Correct Raga Score: 1.09
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Devgiri Bilawal_9
+GT Raga: Devgiri Bilawal
+Top-1 Pred: shankara (Score: 3.72)
+Correct Raga Rank: 2
+Correct Raga Score: 2.30
+❌ MISCLASSIFIED (Confused with shankara)
+------------------------------
+File: Devgiri Bilawal_10
+GT Raga: Devgiri Bilawal
+Top-1 Pred: bilawal (Score: 2.42)
+Correct Raga Rank: 2
+Correct Raga Score: 1.39
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------

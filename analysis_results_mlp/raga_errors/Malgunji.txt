@@ -1,0 +1,280 @@
+File: Malgunji_1
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 0.67)
+Correct Raga Rank: 3
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_2
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 0.56)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_3
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Malgunji_4
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.22)
+Correct Raga Rank: 1
+Correct Raga Score: 0.22
+✅ CORRECT
+------------------------------
+File: Malgunji_5
+GT Raga: Malgunji
+Top-1 Pred: jogeshwari (Score: 0.11)
+Correct Raga Rank: 10
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogeshwari)
+------------------------------
+File: Malgunji_7
+GT Raga: Malgunji
+Top-1 Pred: kaushik dhwani (Score: 0.50)
+Correct Raga Rank: 22
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with kaushik dhwani)
+------------------------------
+File: Malgunji_8
+GT Raga: Malgunji
+Top-1 Pred: jogeshwari (Score: 0.01)
+Correct Raga Rank: 6
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jogeshwari)
+------------------------------
+File: Malgunji_9
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 0.52)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_1
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.70)
+Correct Raga Rank: 3
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_2
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 0.47)
+Correct Raga Rank: 2
+Correct Raga Score: 0.42
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_3
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.70)
+Correct Raga Rank: 2
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_4
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.45)
+Correct Raga Rank: 2
+Correct Raga Score: 0.44
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_5
+GT Raga: Malgunji
+Top-1 Pred: hanskinkini (Score: 0.13)
+Correct Raga Rank: 4
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Malgunji_7
+GT Raga: Malgunji
+Top-1 Pred: bihag (Score: 0.64)
+Correct Raga Rank: 24
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Malgunji_8
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.23)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_9
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Malgunji_1
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.70)
+Correct Raga Rank: 3
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_2
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 0.47)
+Correct Raga Rank: 2
+Correct Raga Score: 0.42
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_3
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.70)
+Correct Raga Rank: 2
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_4
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.45)
+Correct Raga Rank: 2
+Correct Raga Score: 0.44
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_5
+GT Raga: Malgunji
+Top-1 Pred: hanskinkini (Score: 0.13)
+Correct Raga Rank: 4
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Malgunji_7
+GT Raga: Malgunji
+Top-1 Pred: bihag (Score: 0.64)
+Correct Raga Rank: 24
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Malgunji_8
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.23)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_9
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Malgunji_1
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.66)
+Correct Raga Rank: 3
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_2
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------
+File: Malgunji_3
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.70)
+Correct Raga Rank: 2
+Correct Raga Score: 0.53
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_4
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Malgunji_5
+GT Raga: Malgunji
+Top-1 Pred: hanskinkini (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Malgunji_7
+GT Raga: Malgunji
+Top-1 Pred: bihag (Score: 0.62)
+Correct Raga Rank: 24
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Malgunji_8
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.19)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_9
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------
+File: Malgunji_1
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.66)
+Correct Raga Rank: 3
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_2
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------
+File: Malgunji_3
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.70)
+Correct Raga Rank: 2
+Correct Raga Score: 0.53
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_4
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Malgunji_5
+GT Raga: Malgunji
+Top-1 Pred: hanskinkini (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Malgunji_7
+GT Raga: Malgunji
+Top-1 Pred: bihag (Score: 0.62)
+Correct Raga Rank: 24
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Malgunji_8
+GT Raga: Malgunji
+Top-1 Pred: gavati (Score: 0.19)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with gavati)
+------------------------------
+File: Malgunji_9
+GT Raga: Malgunji
+Top-1 Pred: bheem (Score: 0.40)
+Correct Raga Rank: 1
+Correct Raga Score: 0.40
+✅ CORRECT
+------------------------------

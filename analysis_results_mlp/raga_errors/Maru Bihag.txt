@@ -1,0 +1,350 @@
+File: Maru Bihag_1
+GT Raga: Maru Bihag
+Top-1 Pred: hansadhwani (Score: 0.31)
+Correct Raga Rank: 6
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Maru Bihag_2
+GT Raga: Maru Bihag
+Top-1 Pred: shuddha kalyan (Score: 0.04)
+Correct Raga Rank: 2
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Maru Bihag_3
+GT Raga: Maru Bihag
+Top-1 Pred: hansadhwani (Score: 0.10)
+Correct Raga Rank: 3
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Maru Bihag_4
+GT Raga: Maru Bihag
+Top-1 Pred: shuddha kalyan (Score: 0.71)
+Correct Raga Rank: 2
+Correct Raga Score: 0.32
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Maru Bihag_5
+GT Raga: Maru Bihag
+Top-1 Pred: shuddha kalyan (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Maru Bihag_6
+GT Raga: Maru Bihag
+Top-1 Pred: shuddha kalyan (Score: 0.16)
+Correct Raga Rank: 3
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Maru Bihag_7
+GT Raga: Maru Bihag
+Top-1 Pred: poorvi (Score: 0.24)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Maru Bihag_8
+GT Raga: Maru Bihag
+Top-1 Pred: shuddha kalyan (Score: 0.62)
+Correct Raga Rank: 2
+Correct Raga Score: 0.39
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Maru Bihag_9
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.10)
+Correct Raga Rank: 1
+Correct Raga Score: 0.10
+✅ CORRECT
+------------------------------
+File: Maru Bihag_10
+GT Raga: Maru Bihag
+Top-1 Pred: bageshri (Score: 0.29)
+Correct Raga Rank: 48
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Maru Bihag_1
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Maru Bihag_2
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Maru Bihag_3
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.44)
+Correct Raga Rank: 1
+Correct Raga Score: 0.44
+✅ CORRECT
+------------------------------
+File: Maru Bihag_4
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Maru Bihag_5
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Maru Bihag_6
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Maru Bihag_7
+GT Raga: Maru Bihag
+Top-1 Pred: poorvi (Score: 0.07)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Maru Bihag_8
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Maru Bihag_9
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Maru Bihag_10
+GT Raga: Maru Bihag
+Top-1 Pred: bageshri (Score: 0.06)
+Correct Raga Rank: 18
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Maru Bihag_1
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Maru Bihag_2
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Maru Bihag_3
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.44)
+Correct Raga Rank: 1
+Correct Raga Score: 0.44
+✅ CORRECT
+------------------------------
+File: Maru Bihag_4
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Maru Bihag_5
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Maru Bihag_6
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Maru Bihag_7
+GT Raga: Maru Bihag
+Top-1 Pred: poorvi (Score: 0.07)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Maru Bihag_8
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Maru Bihag_9
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Maru Bihag_10
+GT Raga: Maru Bihag
+Top-1 Pred: bageshri (Score: 0.06)
+Correct Raga Rank: 18
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Maru Bihag_1
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Maru Bihag_2
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Maru Bihag_3
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Maru Bihag_4
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Maru Bihag_5
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Maru Bihag_6
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Maru Bihag_7
+GT Raga: Maru Bihag
+Top-1 Pred: poorvi (Score: 0.08)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Maru Bihag_8
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Maru Bihag_9
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Maru Bihag_10
+GT Raga: Maru Bihag
+Top-1 Pred: adana (Score: 0.06)
+Correct Raga Rank: 19
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Maru Bihag_1
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Maru Bihag_2
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Maru Bihag_3
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Maru Bihag_4
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Maru Bihag_5
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Maru Bihag_6
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Maru Bihag_7
+GT Raga: Maru Bihag
+Top-1 Pred: poorvi (Score: 0.08)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with poorvi)
+------------------------------
+File: Maru Bihag_8
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Maru Bihag_9
+GT Raga: Maru Bihag
+Top-1 Pred: bihag (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Maru Bihag_10
+GT Raga: Maru Bihag
+Top-1 Pred: adana (Score: 0.06)
+Correct Raga Rank: 19
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------

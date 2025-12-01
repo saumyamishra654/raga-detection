@@ -1,0 +1,112 @@
+File: Tilang Bahar_1
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.46)
+Correct Raga Rank: 8
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_2
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.47)
+Correct Raga Rank: 11
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_3
+GT Raga: Tilang Bahar
+Top-1 Pred: ramkali (Score: 0.00)
+Correct Raga Rank: 67
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Tilang Bahar_4
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.19)
+Correct Raga Rank: 7
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_1
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.36)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_2
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.34)
+Correct Raga Rank: 5
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_3
+GT Raga: Tilang Bahar
+Top-1 Pred: ramkali (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Tilang Bahar_4
+GT Raga: Tilang Bahar
+Top-1 Pred: hanskinkini (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Tilang Bahar_1
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.36)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_2
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.34)
+Correct Raga Rank: 5
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_3
+GT Raga: Tilang Bahar
+Top-1 Pred: ramkali (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Tilang Bahar_4
+GT Raga: Tilang Bahar
+Top-1 Pred: hanskinkini (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Tilang Bahar_1
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.26)
+Correct Raga Rank: 4
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_2
+GT Raga: Tilang Bahar
+Top-1 Pred: tilang (Score: 0.27)
+Correct Raga Rank: 5
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Tilang Bahar_3
+GT Raga: Tilang Bahar
+Top-1 Pred: ramkali (Score: 0.07)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with ramkali)
+------------------------------
+File: Tilang Bahar_4
+GT Raga: Tilang Bahar
+Top-1 Pred: bahar (Score: 0.28)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------

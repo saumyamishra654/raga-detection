@@ -1,0 +1,350 @@
+File: Poorvi_1
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.50)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_2
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Poorvi_3
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.71)
+Correct Raga Rank: 2
+Correct Raga Score: 0.39
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_4
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Poorvi_5
+GT Raga: Poorvi
+Top-1 Pred: gunakri (Score: 0.27)
+Correct Raga Rank: 2
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with gunakri)
+------------------------------
+File: Poorvi_6
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.34)
+Correct Raga Rank: 2
+Correct Raga Score: 0.17
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_7
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.03)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_8
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.37
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_9
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.13)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_10
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.50)
+Correct Raga Rank: 2
+Correct Raga Score: 0.39
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_1
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.21
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_2
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Poorvi_3
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_4
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Poorvi_5
+GT Raga: Poorvi
+Top-1 Pred: lalit (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with lalit)
+------------------------------
+File: Poorvi_6
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Poorvi_7
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.17)
+Correct Raga Rank: 1
+Correct Raga Score: 0.17
+✅ CORRECT
+------------------------------
+File: Poorvi_8
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.33)
+Correct Raga Rank: 1
+Correct Raga Score: 0.33
+✅ CORRECT
+------------------------------
+File: Poorvi_9
+GT Raga: Poorvi
+Top-1 Pred: bihag (Score: 0.08)
+Correct Raga Rank: 7
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Poorvi_10
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.36)
+Correct Raga Rank: 1
+Correct Raga Score: 0.36
+✅ CORRECT
+------------------------------
+File: Poorvi_1
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.21
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_2
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Poorvi_3
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_4
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Poorvi_5
+GT Raga: Poorvi
+Top-1 Pred: lalit (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with lalit)
+------------------------------
+File: Poorvi_6
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Poorvi_7
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.17)
+Correct Raga Rank: 1
+Correct Raga Score: 0.17
+✅ CORRECT
+------------------------------
+File: Poorvi_8
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.33)
+Correct Raga Rank: 1
+Correct Raga Score: 0.33
+✅ CORRECT
+------------------------------
+File: Poorvi_9
+GT Raga: Poorvi
+Top-1 Pred: bihag (Score: 0.08)
+Correct Raga Rank: 7
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Poorvi_10
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.36)
+Correct Raga Rank: 1
+Correct Raga Score: 0.36
+✅ CORRECT
+------------------------------
+File: Poorvi_1
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_2
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Poorvi_3
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.21
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_4
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Poorvi_5
+GT Raga: Poorvi
+Top-1 Pred: lalit (Score: 0.32)
+Correct Raga Rank: 3
+Correct Raga Score: 0.20
+❌ MISCLASSIFIED (Confused with lalit)
+------------------------------
+File: Poorvi_6
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Poorvi_7
+GT Raga: Poorvi
+Top-1 Pred: bhatiyar (Score: 0.19)
+Correct Raga Rank: 2
+Correct Raga Score: 0.18
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Poorvi_8
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Poorvi_9
+GT Raga: Poorvi
+Top-1 Pred: bihag (Score: 0.10)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Poorvi_10
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Poorvi_1
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_2
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Poorvi_3
+GT Raga: Poorvi
+Top-1 Pred: basant (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.21
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Poorvi_4
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Poorvi_5
+GT Raga: Poorvi
+Top-1 Pred: lalit (Score: 0.32)
+Correct Raga Rank: 3
+Correct Raga Score: 0.20
+❌ MISCLASSIFIED (Confused with lalit)
+------------------------------
+File: Poorvi_6
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Poorvi_7
+GT Raga: Poorvi
+Top-1 Pred: bhatiyar (Score: 0.19)
+Correct Raga Rank: 2
+Correct Raga Score: 0.18
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Poorvi_8
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Poorvi_9
+GT Raga: Poorvi
+Top-1 Pred: bihag (Score: 0.10)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Poorvi_10
+GT Raga: Poorvi
+Top-1 Pred: poorvi (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------

@@ -1,0 +1,63 @@
+File: Chhayanat_1
+GT Raga: Chhayanat
+Top-1 Pred: hansadhwani (Score: 3.05)
+Correct Raga Rank: 4
+Correct Raga Score: 1.80
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Chhayanat_2
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 2.93)
+Correct Raga Rank: 4
+Correct Raga Score: 1.70
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_3
+GT Raga: Chhayanat
+Top-1 Pred: jogkauns (Score: 2.58)
+Correct Raga Rank: 20
+Correct Raga Score: -0.12
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Chhayanat_4
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 2.28)
+Correct Raga Rank: 3
+Correct Raga Score: 1.56
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_5
+GT Raga: Chhayanat
+Top-1 Pred: hansadhwani (Score: 3.87)
+Correct Raga Rank: 3
+Correct Raga Score: 1.84
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Chhayanat_6
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 2.93)
+Correct Raga Rank: 4
+Correct Raga Score: 1.70
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_7
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 3.03)
+Correct Raga Rank: 6
+Correct Raga Score: 1.38
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Chhayanat_8
+GT Raga: Chhayanat
+Top-1 Pred: hansadhwani (Score: 2.27)
+Correct Raga Rank: 10
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Chhayanat_9
+GT Raga: Chhayanat
+Top-1 Pred: bilawal (Score: 2.27)
+Correct Raga Rank: 5
+Correct Raga Score: 1.18
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------

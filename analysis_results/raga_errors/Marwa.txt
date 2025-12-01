@@ -1,0 +1,70 @@
+File: Marwa_1
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 3.96)
+Correct Raga Rank: 1
+Correct Raga Score: 3.96
+✅ CORRECT
+------------------------------
+File: Marwa_2
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 3.66)
+Correct Raga Rank: 1
+Correct Raga Score: 3.66
+✅ CORRECT
+------------------------------
+File: Marwa_3
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 3.23)
+Correct Raga Rank: 1
+Correct Raga Score: 3.23
+✅ CORRECT
+------------------------------
+File: Marwa_4
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 2.65)
+Correct Raga Rank: 1
+Correct Raga Score: 2.65
+✅ CORRECT
+------------------------------
+File: Marwa_5
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 2.59)
+Correct Raga Rank: 1
+Correct Raga Score: 2.59
+✅ CORRECT
+------------------------------
+File: Marwa_6
+GT Raga: Marwa
+Top-1 Pred: jayat (Score: -0.21)
+Correct Raga Rank: 49
+Correct Raga Score: -3.56
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Marwa_7
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 2.37)
+Correct Raga Rank: 1
+Correct Raga Score: 2.37
+✅ CORRECT
+------------------------------
+File: Marwa_8
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 3.61)
+Correct Raga Rank: 1
+Correct Raga Score: 3.61
+✅ CORRECT
+------------------------------
+File: Marwa_9
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Marwa_10
+GT Raga: Marwa
+Top-1 Pred: marwa (Score: 3.91)
+Correct Raga Rank: 1
+Correct Raga Score: 3.91
+✅ CORRECT
+------------------------------

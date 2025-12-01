@@ -1,0 +1,56 @@
+File: Sarang_1
+GT Raga: Sarang
+Top-1 Pred: kedar (Score: 1.62)
+Correct Raga Rank: 5
+Correct Raga Score: 1.13
+❌ MISCLASSIFIED (Confused with kedar)
+------------------------------
+File: Sarang_2
+GT Raga: Sarang
+Top-1 Pred: sarang (Score: 2.10)
+Correct Raga Rank: 1
+Correct Raga Score: 2.10
+✅ CORRECT
+------------------------------
+File: Sarang_4
+GT Raga: Sarang
+Top-1 Pred: hansadhwani (Score: 3.26)
+Correct Raga Rank: 10
+Correct Raga Score: 0.87
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Sarang_5
+GT Raga: Sarang
+Top-1 Pred: kedar (Score: 2.01)
+Correct Raga Rank: 3
+Correct Raga Score: 1.36
+❌ MISCLASSIFIED (Confused with kedar)
+------------------------------
+File: Sarang_7
+GT Raga: Sarang
+Top-1 Pred: sarang (Score: 2.23)
+Correct Raga Rank: 1
+Correct Raga Score: 2.23
+✅ CORRECT
+------------------------------
+File: Sarang_8
+GT Raga: Sarang
+Top-1 Pred: hansadhwani (Score: 2.53)
+Correct Raga Rank: 2
+Correct Raga Score: 2.38
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Sarang_9
+GT Raga: Sarang
+Top-1 Pred: sarang (Score: 1.05)
+Correct Raga Rank: 1
+Correct Raga Score: 1.05
+✅ CORRECT
+------------------------------
+File: Sarang_10
+GT Raga: Sarang
+Top-1 Pred: sarang (Score: 2.49)
+Correct Raga Rank: 1
+Correct Raga Score: 2.49
+✅ CORRECT
+------------------------------

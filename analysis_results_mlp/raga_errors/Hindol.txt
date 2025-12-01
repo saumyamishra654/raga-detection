@@ -1,0 +1,280 @@
+File: Hindol_1
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Hindol_2
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.56)
+Correct Raga Rank: 1
+Correct Raga Score: 0.56
+✅ CORRECT
+------------------------------
+File: Hindol_3
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.11)
+Correct Raga Rank: 1
+Correct Raga Score: 0.11
+✅ CORRECT
+------------------------------
+File: Hindol_4
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Hindol_5
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Hindol_7
+GT Raga: Hindol
+Top-1 Pred: kaushik dhwani (Score: 0.01)
+Correct Raga Rank: 2
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with kaushik dhwani)
+------------------------------
+File: Hindol_8
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.22)
+Correct Raga Rank: 1
+Correct Raga Score: 0.22
+✅ CORRECT
+------------------------------
+File: Hindol_9
+GT Raga: Hindol
+Top-1 Pred: puriya kalyan (Score: 0.09)
+Correct Raga Rank: 5
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Hindol_1
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Hindol_2
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Hindol_3
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Hindol_4
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Hindol_5
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Hindol_7
+GT Raga: Hindol
+Top-1 Pred: hanskinkini (Score: 0.16)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Hindol_8
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Hindol_9
+GT Raga: Hindol
+Top-1 Pred: marwa (Score: 0.11)
+Correct Raga Rank: 3
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Hindol_1
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Hindol_2
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Hindol_3
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Hindol_4
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Hindol_5
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Hindol_7
+GT Raga: Hindol
+Top-1 Pred: hanskinkini (Score: 0.16)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Hindol_8
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Hindol_9
+GT Raga: Hindol
+Top-1 Pred: marwa (Score: 0.11)
+Correct Raga Rank: 3
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Hindol_1
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------
+File: Hindol_2
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Hindol_3
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Hindol_4
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.85)
+Correct Raga Rank: 1
+Correct Raga Score: 0.85
+✅ CORRECT
+------------------------------
+File: Hindol_5
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------
+File: Hindol_7
+GT Raga: Hindol
+Top-1 Pred: hanskinkini (Score: 0.15)
+Correct Raga Rank: 5
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Hindol_8
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.35)
+Correct Raga Rank: 1
+Correct Raga Score: 0.35
+✅ CORRECT
+------------------------------
+File: Hindol_9
+GT Raga: Hindol
+Top-1 Pred: marwa (Score: 0.17)
+Correct Raga Rank: 3
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------
+File: Hindol_1
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------
+File: Hindol_2
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Hindol_3
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Hindol_4
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.85)
+Correct Raga Rank: 1
+Correct Raga Score: 0.85
+✅ CORRECT
+------------------------------
+File: Hindol_5
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------
+File: Hindol_7
+GT Raga: Hindol
+Top-1 Pred: hanskinkini (Score: 0.15)
+Correct Raga Rank: 5
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with hanskinkini)
+------------------------------
+File: Hindol_8
+GT Raga: Hindol
+Top-1 Pred: hindol (Score: 0.35)
+Correct Raga Rank: 1
+Correct Raga Score: 0.35
+✅ CORRECT
+------------------------------
+File: Hindol_9
+GT Raga: Hindol
+Top-1 Pred: marwa (Score: 0.17)
+Correct Raga Rank: 3
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with marwa)
+------------------------------

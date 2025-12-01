@@ -1,0 +1,280 @@
+File: Todi_1
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Todi_2
+GT Raga: Todi
+Top-1 Pred: bhupali todi (Score: 0.60)
+Correct Raga Rank: 2
+Correct Raga Score: 0.50
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Todi_3
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.02)
+Correct Raga Rank: 1
+Correct Raga Score: 0.02
+✅ CORRECT
+------------------------------
+File: Todi_4
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Todi_5
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Todi_6
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Todi_7
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.76)
+Correct Raga Rank: 2
+Correct Raga Score: 0.43
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_8
+GT Raga: Todi
+Top-1 Pred: bhupali todi (Score: 0.27)
+Correct Raga Rank: 2
+Correct Raga Score: 0.17
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Todi_9
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.03)
+Correct Raga Rank: 3
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_10
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.64)
+Correct Raga Rank: 1
+Correct Raga Score: 0.64
+✅ CORRECT
+------------------------------
+File: Todi_1
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Todi_2
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Todi_3
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.09)
+Correct Raga Rank: 2
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_4
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Todi_5
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.21)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_6
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.26)
+Correct Raga Rank: 1
+Correct Raga Score: 0.26
+✅ CORRECT
+------------------------------
+File: Todi_7
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.69)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_8
+GT Raga: Todi
+Top-1 Pred: bhupali todi (Score: 0.03)
+Correct Raga Rank: 2
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Todi_9
+GT Raga: Todi
+Top-1 Pred: basant (Score: 0.01)
+Correct Raga Rank: 4
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Todi_10
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------
+File: Todi_1
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Todi_2
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Todi_3
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.09)
+Correct Raga Rank: 2
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_4
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.31)
+Correct Raga Rank: 1
+Correct Raga Score: 0.31
+✅ CORRECT
+------------------------------
+File: Todi_5
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.21)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_6
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.26)
+Correct Raga Rank: 1
+Correct Raga Score: 0.26
+✅ CORRECT
+------------------------------
+File: Todi_7
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.69)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_8
+GT Raga: Todi
+Top-1 Pred: bhupali todi (Score: 0.03)
+Correct Raga Rank: 2
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Todi_9
+GT Raga: Todi
+Top-1 Pred: basant (Score: 0.01)
+Correct Raga Rank: 4
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Todi_10
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------
+File: Todi_1
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Todi_2
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Todi_3
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.11)
+Correct Raga Rank: 2
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_4
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.34)
+Correct Raga Rank: 1
+Correct Raga Score: 0.34
+✅ CORRECT
+------------------------------
+File: Todi_5
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.18)
+Correct Raga Rank: 2
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_6
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.28)
+Correct Raga Rank: 1
+Correct Raga Score: 0.28
+✅ CORRECT
+------------------------------
+File: Todi_7
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.75)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_8
+GT Raga: Todi
+Top-1 Pred: bhupali todi (Score: 0.03)
+Correct Raga Rank: 3
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Todi_9
+GT Raga: Todi
+Top-1 Pred: gurjari todi (Score: 0.01)
+Correct Raga Rank: 4
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gurjari todi)
+------------------------------
+File: Todi_10
+GT Raga: Todi
+Top-1 Pred: multani (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------

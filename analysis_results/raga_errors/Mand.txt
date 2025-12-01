@@ -1,0 +1,49 @@
+File: Mand_1
+GT Raga: Mand
+Top-1 Pred: bilawal (Score: 1.12)
+Correct Raga Rank: 1
+Correct Raga Score: 1.12
+✅ CORRECT
+------------------------------
+File: Mand_3
+GT Raga: Mand
+Top-1 Pred: hansadhwani (Score: 3.14)
+Correct Raga Rank: 2
+Correct Raga Score: 2.88
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Mand_5
+GT Raga: Mand
+Top-1 Pred: deshkar (Score: 3.77)
+Correct Raga Rank: 3
+Correct Raga Score: 2.15
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Mand_6
+GT Raga: Mand
+Top-1 Pred: hansadhwani (Score: 2.94)
+Correct Raga Rank: 4
+Correct Raga Score: 2.76
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Mand_7
+GT Raga: Mand
+Top-1 Pred: hansadhwani (Score: 2.27)
+Correct Raga Rank: 3
+Correct Raga Score: 1.71
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Mand_8
+GT Raga: Mand
+Top-1 Pred: shankara (Score: 3.62)
+Correct Raga Rank: 4
+Correct Raga Score: 3.05
+❌ MISCLASSIFIED (Confused with shankara)
+------------------------------
+File: Mand_9
+GT Raga: Mand
+Top-1 Pred: hansadhwani (Score: 2.36)
+Correct Raga Rank: 5
+Correct Raga Score: 1.15
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------

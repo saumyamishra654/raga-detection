@@ -1,0 +1,280 @@
+File: Bibhas_2
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.63)
+Correct Raga Rank: 27
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_3
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.17)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_4
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.67)
+Correct Raga Rank: 4
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_5
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.48)
+Correct Raga Rank: 1
+Correct Raga Score: 0.48
+✅ CORRECT
+------------------------------
+File: Bibhas_6
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.20)
+Correct Raga Rank: 35
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_7
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.73)
+Correct Raga Rank: 7
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_8
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.85)
+Correct Raga Rank: 1
+Correct Raga Score: 0.85
+✅ CORRECT
+------------------------------
+File: Bibhas_9
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.61)
+Correct Raga Rank: 47
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_2
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.30)
+Correct Raga Rank: 14
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_3
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Bibhas_4
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.30)
+Correct Raga Rank: 3
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_5
+GT Raga: Bibhas
+Top-1 Pred: basant (Score: 0.39)
+Correct Raga Rank: 2
+Correct Raga Score: 0.32
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Bibhas_6
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.18)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_7
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.21)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_8
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Bibhas_9
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.58)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_2
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.30)
+Correct Raga Rank: 14
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_3
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Bibhas_4
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.30)
+Correct Raga Rank: 3
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_5
+GT Raga: Bibhas
+Top-1 Pred: basant (Score: 0.39)
+Correct Raga Rank: 2
+Correct Raga Score: 0.32
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Bibhas_6
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.18)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_7
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.21)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_8
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Bibhas_9
+GT Raga: Bibhas
+Top-1 Pred: deshkar (Score: 0.58)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bibhas_2
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.28)
+Correct Raga Rank: 13
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_3
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Bibhas_4
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.30)
+Correct Raga Rank: 3
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_5
+GT Raga: Bibhas
+Top-1 Pred: basant (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Bibhas_6
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.22)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_7
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.21)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_8
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Bibhas_9
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.63)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_2
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.28)
+Correct Raga Rank: 13
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_3
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.27)
+Correct Raga Rank: 1
+Correct Raga Score: 0.27
+✅ CORRECT
+------------------------------
+File: Bibhas_4
+GT Raga: Bibhas
+Top-1 Pred: puriya kalyan (Score: 0.30)
+Correct Raga Rank: 3
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with puriya kalyan)
+------------------------------
+File: Bibhas_5
+GT Raga: Bibhas
+Top-1 Pred: basant (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with basant)
+------------------------------
+File: Bibhas_6
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.22)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_7
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.21)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------
+File: Bibhas_8
+GT Raga: Bibhas
+Top-1 Pred: bibhas (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Bibhas_9
+GT Raga: Bibhas
+Top-1 Pred: jayat (Score: 0.63)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jayat)
+------------------------------

@@ -1,0 +1,70 @@
+File: Shuddh Sarang_1
+GT Raga: Shuddh Sarang
+Top-1 Pred: manj khamaj (Score: 1.25)
+Correct Raga Rank: 2
+Correct Raga Score: 0.46
+❌ MISCLASSIFIED (Confused with manj khamaj)
+------------------------------
+File: Shuddh Sarang_2
+GT Raga: Shuddh Sarang
+Top-1 Pred: kedar (Score: 1.12)
+Correct Raga Rank: 1
+Correct Raga Score: 1.12
+✅ CORRECT
+------------------------------
+File: Shuddh Sarang_3
+GT Raga: Shuddh Sarang
+Top-1 Pred: kedar (Score: 1.29)
+Correct Raga Rank: 1
+Correct Raga Score: 1.29
+✅ CORRECT
+------------------------------
+File: Shuddh Sarang_4
+GT Raga: Shuddh Sarang
+Top-1 Pred: kedar (Score: 1.77)
+Correct Raga Rank: 1
+Correct Raga Score: 1.77
+✅ CORRECT
+------------------------------
+File: Shuddh Sarang_5
+GT Raga: Shuddh Sarang
+Top-1 Pred: hansadhwani (Score: 2.32)
+Correct Raga Rank: 4
+Correct Raga Score: 0.88
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shuddh Sarang_6
+GT Raga: Shuddh Sarang
+Top-1 Pred: kedar (Score: 2.05)
+Correct Raga Rank: 1
+Correct Raga Score: 2.05
+✅ CORRECT
+------------------------------
+File: Shuddh Sarang_7
+GT Raga: Shuddh Sarang
+Top-1 Pred: sarang (Score: 2.41)
+Correct Raga Rank: 2
+Correct Raga Score: 2.02
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Shuddh Sarang_8
+GT Raga: Shuddh Sarang
+Top-1 Pred: sarang (Score: 1.89)
+Correct Raga Rank: 2
+Correct Raga Score: 1.87
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Shuddh Sarang_9
+GT Raga: Shuddh Sarang
+Top-1 Pred: chandranandan (Score: 0.40)
+Correct Raga Rank: 15
+Correct Raga Score: -0.50
+❌ MISCLASSIFIED (Confused with chandranandan)
+------------------------------
+File: Shuddh Sarang_10
+GT Raga: Shuddh Sarang
+Top-1 Pred: hansadhwani (Score: 2.24)
+Correct Raga Rank: 3
+Correct Raga Score: 1.27
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------

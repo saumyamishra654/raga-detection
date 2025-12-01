@@ -1,0 +1,350 @@
+File: Abhogi_1
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.56)
+Correct Raga Rank: 1
+Correct Raga Score: 0.56
+✅ CORRECT
+------------------------------
+File: Abhogi_2
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Abhogi_3
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Abhogi_4
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Abhogi_5
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Abhogi_6
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.56)
+Correct Raga Rank: 1
+Correct Raga Score: 0.56
+✅ CORRECT
+------------------------------
+File: Abhogi_7
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Abhogi_8
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Abhogi_9
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Abhogi_10
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.85)
+Correct Raga Rank: 1
+Correct Raga Score: 0.85
+✅ CORRECT
+------------------------------
+File: Abhogi_1
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.88)
+Correct Raga Rank: 1
+Correct Raga Score: 0.88
+✅ CORRECT
+------------------------------
+File: Abhogi_2
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Abhogi_3
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Abhogi_4
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Abhogi_5
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Abhogi_6
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.85)
+Correct Raga Rank: 1
+Correct Raga Score: 0.85
+✅ CORRECT
+------------------------------
+File: Abhogi_7
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Abhogi_8
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Abhogi_9
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Abhogi_10
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Abhogi_1
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.88)
+Correct Raga Rank: 1
+Correct Raga Score: 0.88
+✅ CORRECT
+------------------------------
+File: Abhogi_2
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Abhogi_3
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Abhogi_4
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Abhogi_5
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Abhogi_6
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.85)
+Correct Raga Rank: 1
+Correct Raga Score: 0.85
+✅ CORRECT
+------------------------------
+File: Abhogi_7
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Abhogi_8
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Abhogi_9
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Abhogi_10
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Abhogi_1
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Abhogi_2
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Abhogi_3
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Abhogi_4
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Abhogi_5
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Abhogi_6
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Abhogi_7
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Abhogi_8
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Abhogi_9
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Abhogi_10
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------
+File: Abhogi_1
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Abhogi_2
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Abhogi_3
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Abhogi_4
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Abhogi_5
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Abhogi_6
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Abhogi_7
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Abhogi_8
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Abhogi_9
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Abhogi_10
+GT Raga: Abhogi
+Top-1 Pred: abhogi (Score: 0.99)
+Correct Raga Rank: 1
+Correct Raga Score: 0.99
+✅ CORRECT
+------------------------------

@@ -1,0 +1,70 @@
+File: Bihag_1
+GT Raga: Bihag
+Top-1 Pred: hansadhwani (Score: 4.36)
+Correct Raga Rank: 4
+Correct Raga Score: 1.22
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Bihag_2
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 1.06)
+Correct Raga Rank: 4
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_3
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 1.92)
+Correct Raga Rank: 4
+Correct Raga Score: 0.94
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_4
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 2.39)
+Correct Raga Rank: 6
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_5
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 1.01)
+Correct Raga Rank: 3
+Correct Raga Score: 0.57
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_6
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 2.12)
+Correct Raga Rank: 6
+Correct Raga Score: 0.61
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_7
+GT Raga: Bihag
+Top-1 Pred: tilang (Score: 2.33)
+Correct Raga Rank: 5
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bihag_8
+GT Raga: Bihag
+Top-1 Pred: hansadhwani (Score: 2.81)
+Correct Raga Rank: 3
+Correct Raga Score: 1.26
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Bihag_9
+GT Raga: Bihag
+Top-1 Pred: hansadhwani (Score: 2.54)
+Correct Raga Rank: 2
+Correct Raga Score: 1.28
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Bihag_10
+GT Raga: Bihag
+Top-1 Pred: hansadhwani (Score: 1.53)
+Correct Raga Rank: 2
+Correct Raga Score: 1.16
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------

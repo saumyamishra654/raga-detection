@@ -1,0 +1,63 @@
+File: Surdasi Malhar_1
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 3.93)
+Correct Raga Rank: 2
+Correct Raga Score: 3.40
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_2
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 2.62)
+Correct Raga Rank: 2
+Correct Raga Score: 2.50
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_3
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 3.99)
+Correct Raga Rank: 2
+Correct Raga Score: 3.44
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_4
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 3.59)
+Correct Raga Rank: 2
+Correct Raga Score: 3.07
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_6
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 4.02)
+Correct Raga Rank: 2
+Correct Raga Score: 3.25
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_7
+GT Raga: Surdasi Malhar
+Top-1 Pred: madhumad sarang (Score: 2.62)
+Correct Raga Rank: 5
+Correct Raga Score: 1.71
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Surdasi Malhar_8
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 3.31)
+Correct Raga Rank: 1
+Correct Raga Score: 3.31
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_9
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 4.15)
+Correct Raga Rank: 2
+Correct Raga Score: 3.29
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_10
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 2.76)
+Correct Raga Rank: 2
+Correct Raga Score: 2.44
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------

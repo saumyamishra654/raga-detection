@@ -1,0 +1,70 @@
+File: Madhukauns_1
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 6.28)
+Correct Raga Rank: 1
+Correct Raga Score: 6.28
+✅ CORRECT
+------------------------------
+File: Madhukauns_2
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 3.98)
+Correct Raga Rank: 1
+Correct Raga Score: 3.98
+✅ CORRECT
+------------------------------
+File: Madhukauns_3
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 5.08)
+Correct Raga Rank: 1
+Correct Raga Score: 5.08
+✅ CORRECT
+------------------------------
+File: Madhukauns_4
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 6.01)
+Correct Raga Rank: 1
+Correct Raga Score: 6.01
+✅ CORRECT
+------------------------------
+File: Madhukauns_5
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 2.80)
+Correct Raga Rank: 1
+Correct Raga Score: 2.80
+✅ CORRECT
+------------------------------
+File: Madhukauns_6
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 2.66)
+Correct Raga Rank: 1
+Correct Raga Score: 2.66
+✅ CORRECT
+------------------------------
+File: Madhukauns_7
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 4.46)
+Correct Raga Rank: 1
+Correct Raga Score: 4.46
+✅ CORRECT
+------------------------------
+File: Madhukauns_8
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 4.65)
+Correct Raga Rank: 1
+Correct Raga Score: 4.65
+✅ CORRECT
+------------------------------
+File: Madhukauns_9
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 5.24)
+Correct Raga Rank: 1
+Correct Raga Score: 5.24
+✅ CORRECT
+------------------------------
+File: Madhukauns_10
+GT Raga: Madhukauns
+Top-1 Pred: madhukauns (Score: 5.19)
+Correct Raga Rank: 1
+Correct Raga Score: 5.19
+✅ CORRECT
+------------------------------

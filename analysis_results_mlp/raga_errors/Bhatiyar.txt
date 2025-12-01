@@ -1,0 +1,350 @@
+File: Bhatiyar_1
+GT Raga: Bhatiyar
+Top-1 Pred: tilang (Score: 0.12)
+Correct Raga Rank: 2
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Bhatiyar_2
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.31)
+Correct Raga Rank: 3
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_3
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Bhatiyar_4
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.20)
+Correct Raga Rank: 2
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_5
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.30)
+Correct Raga Rank: 1
+Correct Raga Score: 0.30
+✅ CORRECT
+------------------------------
+File: Bhatiyar_6
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.06)
+Correct Raga Rank: 1
+Correct Raga Score: 0.06
+✅ CORRECT
+------------------------------
+File: Bhatiyar_7
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.26)
+Correct Raga Rank: 1
+Correct Raga Score: 0.26
+✅ CORRECT
+------------------------------
+File: Bhatiyar_8
+GT Raga: Bhatiyar
+Top-1 Pred: jogkauns (Score: 0.03)
+Correct Raga Rank: 3
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with jogkauns)
+------------------------------
+File: Bhatiyar_9
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Bhatiyar_10
+GT Raga: Bhatiyar
+Top-1 Pred: kaushik dhwani (Score: 0.08)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with kaushik dhwani)
+------------------------------
+File: Bhatiyar_1
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Bhatiyar_2
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.48)
+Correct Raga Rank: 2
+Correct Raga Score: 0.29
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_3
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Bhatiyar_4
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Bhatiyar_5
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Bhatiyar_6
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.37)
+Correct Raga Rank: 1
+Correct Raga Score: 0.37
+✅ CORRECT
+------------------------------
+File: Bhatiyar_7
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Bhatiyar_8
+GT Raga: Bhatiyar
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 2
+Correct Raga Score: 0.20
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Bhatiyar_9
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Bhatiyar_10
+GT Raga: Bhatiyar
+Top-1 Pred: deshkar (Score: 0.03)
+Correct Raga Rank: 2
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bhatiyar_1
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Bhatiyar_2
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.48)
+Correct Raga Rank: 2
+Correct Raga Score: 0.29
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_3
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Bhatiyar_4
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.38)
+Correct Raga Rank: 1
+Correct Raga Score: 0.38
+✅ CORRECT
+------------------------------
+File: Bhatiyar_5
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Bhatiyar_6
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.37)
+Correct Raga Rank: 1
+Correct Raga Score: 0.37
+✅ CORRECT
+------------------------------
+File: Bhatiyar_7
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Bhatiyar_8
+GT Raga: Bhatiyar
+Top-1 Pred: bihag (Score: 0.46)
+Correct Raga Rank: 2
+Correct Raga Score: 0.20
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Bhatiyar_9
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Bhatiyar_10
+GT Raga: Bhatiyar
+Top-1 Pred: deshkar (Score: 0.03)
+Correct Raga Rank: 2
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with deshkar)
+------------------------------
+File: Bhatiyar_1
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------
+File: Bhatiyar_2
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_3
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.16)
+Correct Raga Rank: 1
+Correct Raga Score: 0.16
+✅ CORRECT
+------------------------------
+File: Bhatiyar_4
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.33)
+Correct Raga Rank: 2
+Correct Raga Score: 0.32
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_5
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Bhatiyar_6
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Bhatiyar_7
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Bhatiyar_8
+GT Raga: Bhatiyar
+Top-1 Pred: bihag (Score: 0.51)
+Correct Raga Rank: 2
+Correct Raga Score: 0.24
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Bhatiyar_9
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Bhatiyar_10
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.03)
+Correct Raga Rank: 1
+Correct Raga Score: 0.03
+✅ CORRECT
+------------------------------
+File: Bhatiyar_1
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------
+File: Bhatiyar_2
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_3
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.16)
+Correct Raga Rank: 1
+Correct Raga Score: 0.16
+✅ CORRECT
+------------------------------
+File: Bhatiyar_4
+GT Raga: Bhatiyar
+Top-1 Pred: ahir bhairav (Score: 0.33)
+Correct Raga Rank: 2
+Correct Raga Score: 0.32
+❌ MISCLASSIFIED (Confused with ahir bhairav)
+------------------------------
+File: Bhatiyar_5
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Bhatiyar_6
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Bhatiyar_7
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Bhatiyar_8
+GT Raga: Bhatiyar
+Top-1 Pred: bihag (Score: 0.51)
+Correct Raga Rank: 2
+Correct Raga Score: 0.24
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Bhatiyar_9
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Bhatiyar_10
+GT Raga: Bhatiyar
+Top-1 Pred: bhatiyar (Score: 0.03)
+Correct Raga Rank: 1
+Correct Raga Score: 0.03
+✅ CORRECT
+------------------------------

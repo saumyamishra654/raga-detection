@@ -1,0 +1,35 @@
+File: Hem Bihag_1
+GT Raga: Hem Bihag
+Top-1 Pred: bilawal (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Hem Bihag_1
+GT Raga: Hem Bihag
+Top-1 Pred: bilawal (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Hem Bihag_1
+GT Raga: Hem Bihag
+Top-1 Pred: bilawal (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Hem Bihag_1
+GT Raga: Hem Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Hem Bihag_1
+GT Raga: Hem Bihag
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------

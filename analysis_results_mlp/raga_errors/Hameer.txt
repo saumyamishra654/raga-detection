@@ -1,0 +1,350 @@
+File: Hameer_1
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Hameer_2
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.36)
+Correct Raga Rank: 1
+Correct Raga Score: 0.36
+✅ CORRECT
+------------------------------
+File: Hameer_3
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Hameer_4
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Hameer_5
+GT Raga: Hameer
+Top-1 Pred: bhatiyar (Score: 0.01)
+Correct Raga Rank: 7
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Hameer_6
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Hameer_7
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.10)
+Correct Raga Rank: 1
+Correct Raga Score: 0.10
+✅ CORRECT
+------------------------------
+File: Hameer_8
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.45)
+Correct Raga Rank: 1
+Correct Raga Score: 0.45
+✅ CORRECT
+------------------------------
+File: Hameer_9
+GT Raga: Hameer
+Top-1 Pred: bilawal (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.35
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Hameer_10
+GT Raga: Hameer
+Top-1 Pred: bilawal (Score: 0.18)
+Correct Raga Rank: 2
+Correct Raga Score: 0.16
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Hameer_1
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Hameer_2
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.84)
+Correct Raga Rank: 1
+Correct Raga Score: 0.84
+✅ CORRECT
+------------------------------
+File: Hameer_3
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Hameer_4
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Hameer_5
+GT Raga: Hameer
+Top-1 Pred: bhatiyar (Score: 0.07)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Hameer_6
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.88)
+Correct Raga Rank: 1
+Correct Raga Score: 0.88
+✅ CORRECT
+------------------------------
+File: Hameer_7
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Hameer_8
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Hameer_9
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Hameer_10
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.34)
+Correct Raga Rank: 1
+Correct Raga Score: 0.34
+✅ CORRECT
+------------------------------
+File: Hameer_1
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Hameer_2
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.84)
+Correct Raga Rank: 1
+Correct Raga Score: 0.84
+✅ CORRECT
+------------------------------
+File: Hameer_3
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Hameer_4
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Hameer_5
+GT Raga: Hameer
+Top-1 Pred: bhatiyar (Score: 0.07)
+Correct Raga Rank: 3
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Hameer_6
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.88)
+Correct Raga Rank: 1
+Correct Raga Score: 0.88
+✅ CORRECT
+------------------------------
+File: Hameer_7
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Hameer_8
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Hameer_9
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Hameer_10
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.34)
+Correct Raga Rank: 1
+Correct Raga Score: 0.34
+✅ CORRECT
+------------------------------
+File: Hameer_1
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Hameer_2
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.81)
+Correct Raga Rank: 1
+Correct Raga Score: 0.81
+✅ CORRECT
+------------------------------
+File: Hameer_3
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Hameer_4
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Hameer_5
+GT Raga: Hameer
+Top-1 Pred: bhatiyar (Score: 0.10)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Hameer_6
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Hameer_7
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.49)
+Correct Raga Rank: 1
+Correct Raga Score: 0.49
+✅ CORRECT
+------------------------------
+File: Hameer_8
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Hameer_9
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Hameer_10
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.33)
+Correct Raga Rank: 1
+Correct Raga Score: 0.33
+✅ CORRECT
+------------------------------
+File: Hameer_1
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Hameer_2
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.81)
+Correct Raga Rank: 1
+Correct Raga Score: 0.81
+✅ CORRECT
+------------------------------
+File: Hameer_3
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Hameer_4
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Hameer_5
+GT Raga: Hameer
+Top-1 Pred: bhatiyar (Score: 0.10)
+Correct Raga Rank: 2
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bhatiyar)
+------------------------------
+File: Hameer_6
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Hameer_7
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.49)
+Correct Raga Rank: 1
+Correct Raga Score: 0.49
+✅ CORRECT
+------------------------------
+File: Hameer_8
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Hameer_9
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Hameer_10
+GT Raga: Hameer
+Top-1 Pred: bihag (Score: 0.33)
+Correct Raga Rank: 1
+Correct Raga Score: 0.33
+✅ CORRECT
+------------------------------

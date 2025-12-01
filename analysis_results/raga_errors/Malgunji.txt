@@ -1,0 +1,56 @@
+File: Malgunji_1
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 4.24)
+Correct Raga Rank: 4
+Correct Raga Score: 2.31
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_2
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 3.35)
+Correct Raga Rank: 5
+Correct Raga Score: 1.12
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_3
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 3.98)
+Correct Raga Rank: 3
+Correct Raga Score: 2.87
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_4
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 2.50)
+Correct Raga Rank: 3
+Correct Raga Score: 1.81
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------
+File: Malgunji_5
+GT Raga: Malgunji
+Top-1 Pred: jogeshwari (Score: 2.78)
+Correct Raga Rank: 11
+Correct Raga Score: -0.07
+❌ MISCLASSIFIED (Confused with jogeshwari)
+------------------------------
+File: Malgunji_7
+GT Raga: Malgunji
+Top-1 Pred: kaushik dhwani (Score: 4.28)
+Correct Raga Rank: 27
+Correct Raga Score: -0.91
+❌ MISCLASSIFIED (Confused with kaushik dhwani)
+------------------------------
+File: Malgunji_8
+GT Raga: Malgunji
+Top-1 Pred: pilu (Score: 0.34)
+Correct Raga Rank: 8
+Correct Raga Score: -0.44
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Malgunji_9
+GT Raga: Malgunji
+Top-1 Pred: rageshri (Score: 3.79)
+Correct Raga Rank: 3
+Correct Raga Score: 2.48
+❌ MISCLASSIFIED (Confused with rageshri)
+------------------------------

@@ -1,0 +1,70 @@
+File: Adana_1
+GT Raga: Adana
+Top-1 Pred: sarang (Score: 0.38)
+Correct Raga Rank: 23
+Correct Raga Score: -1.09
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Adana_2
+GT Raga: Adana
+Top-1 Pred: madhumad sarang (Score: 2.16)
+Correct Raga Rank: 21
+Correct Raga Score: -0.46
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Adana_3
+GT Raga: Adana
+Top-1 Pred: gopika basant (Score: 1.15)
+Correct Raga Rank: 2
+Correct Raga Score: 1.14
+❌ MISCLASSIFIED (Confused with gopika basant)
+------------------------------
+File: Adana_4
+GT Raga: Adana
+Top-1 Pred: madhumad sarang (Score: 2.96)
+Correct Raga Rank: 16
+Correct Raga Score: 0.41
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Adana_5
+GT Raga: Adana
+Top-1 Pred: madhumad sarang (Score: 2.01)
+Correct Raga Rank: 18
+Correct Raga Score: 0.27
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Adana_6
+GT Raga: Adana
+Top-1 Pred: nayaki kanada (Score: 2.98)
+Correct Raga Rank: 4
+Correct Raga Score: 1.43
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Adana_7
+GT Raga: Adana
+Top-1 Pred: pilu (Score: 0.95)
+Correct Raga Rank: 3
+Correct Raga Score: 0.59
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Adana_8
+GT Raga: Adana
+Top-1 Pred: pilu (Score: 0.69)
+Correct Raga Rank: 17
+Correct Raga Score: -0.18
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------
+File: Adana_9
+GT Raga: Adana
+Top-1 Pred: shobhawari (Score: 2.83)
+Correct Raga Rank: 6
+Correct Raga Score: 1.06
+❌ MISCLASSIFIED (Confused with shobhawari)
+------------------------------
+File: Adana_10
+GT Raga: Adana
+Top-1 Pred: dev gandhar (Score: 1.75)
+Correct Raga Rank: 2
+Correct Raga Score: 1.24
+❌ MISCLASSIFIED (Confused with dev gandhar)
+------------------------------

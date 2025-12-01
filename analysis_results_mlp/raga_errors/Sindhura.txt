@@ -1,0 +1,252 @@
+File: Sindhura_1
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.41)
+Correct Raga Rank: 6
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_2
+GT Raga: Sindhura
+Top-1 Pred: alhaiya bilawal (Score: 0.55)
+Correct Raga Rank: 2
+Correct Raga Score: 0.51
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Sindhura_3
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Sindhura_4
+GT Raga: Sindhura
+Top-1 Pred: surdasi malhar (Score: 0.12)
+Correct Raga Rank: 5
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with surdasi malhar)
+------------------------------
+File: Sindhura_5
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.44)
+Correct Raga Rank: 1
+Correct Raga Score: 0.44
+✅ CORRECT
+------------------------------
+File: Sindhura_6
+GT Raga: Sindhura
+Top-1 Pred: shankara (Score: 0.21)
+Correct Raga Rank: 12
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with shankara)
+------------------------------
+File: Sindhura_7
+GT Raga: Sindhura
+Top-1 Pred: shivranjani (Score: 0.08)
+Correct Raga Rank: 16
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with shivranjani)
+------------------------------
+File: Sindhura_8
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Sindhura_9
+GT Raga: Sindhura
+Top-1 Pred: nayaki kanada (Score: 0.07)
+Correct Raga Rank: 13
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Sindhura_1
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.60)
+Correct Raga Rank: 3
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_2
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.64)
+Correct Raga Rank: 3
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_3
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.76)
+Correct Raga Rank: 2
+Correct Raga Score: 0.30
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_4
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Sindhura_5
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.80)
+Correct Raga Rank: 6
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_6
+GT Raga: Sindhura
+Top-1 Pred: bilawal (Score: 0.11)
+Correct Raga Rank: 18
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Sindhura_7
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Sindhura_8
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.61)
+Correct Raga Rank: 2
+Correct Raga Score: 0.22
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_9
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.16)
+Correct Raga Rank: 2
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_1
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.60)
+Correct Raga Rank: 3
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_2
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.64)
+Correct Raga Rank: 3
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_3
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.76)
+Correct Raga Rank: 2
+Correct Raga Score: 0.30
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_4
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Sindhura_5
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.80)
+Correct Raga Rank: 6
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_6
+GT Raga: Sindhura
+Top-1 Pred: bilawal (Score: 0.11)
+Correct Raga Rank: 18
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Sindhura_7
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.07)
+Correct Raga Rank: 1
+Correct Raga Score: 0.07
+✅ CORRECT
+------------------------------
+File: Sindhura_8
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.61)
+Correct Raga Rank: 2
+Correct Raga Score: 0.22
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_9
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.16)
+Correct Raga Rank: 2
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_1
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.61)
+Correct Raga Rank: 3
+Correct Raga Score: 0.15
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_2
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.61)
+Correct Raga Rank: 3
+Correct Raga Score: 0.35
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_3
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.75)
+Correct Raga Rank: 2
+Correct Raga Score: 0.31
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_4
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Sindhura_5
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.79)
+Correct Raga Rank: 6
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_6
+GT Raga: Sindhura
+Top-1 Pred: bilawal (Score: 0.11)
+Correct Raga Rank: 17
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Sindhura_7
+GT Raga: Sindhura
+Top-1 Pred: bahar (Score: 0.09)
+Correct Raga Rank: 1
+Correct Raga Score: 0.09
+✅ CORRECT
+------------------------------
+File: Sindhura_8
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.59)
+Correct Raga Rank: 2
+Correct Raga Score: 0.22
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Sindhura_9
+GT Raga: Sindhura
+Top-1 Pred: bageshri (Score: 0.17)
+Correct Raga Rank: 2
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------

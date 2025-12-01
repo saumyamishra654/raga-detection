@@ -1,0 +1,280 @@
+File: Yaman Kalyan_1
+GT Raga: Yaman Kalyan
+Top-1 Pred: jog (Score: 0.02)
+Correct Raga Rank: 8
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with jog)
+------------------------------
+File: Yaman Kalyan_2
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.81)
+Correct Raga Rank: 1
+Correct Raga Score: 0.81
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_3
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.19)
+Correct Raga Rank: 1
+Correct Raga Score: 0.19
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_4
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.42)
+Correct Raga Rank: 1
+Correct Raga Score: 0.42
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_5
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_6
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_7
+GT Raga: Yaman Kalyan
+Top-1 Pred: hansadhwani (Score: 0.52)
+Correct Raga Rank: 2
+Correct Raga Score: 0.27
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Yaman Kalyan_8
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.49)
+Correct Raga Rank: 1
+Correct Raga Score: 0.49
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_9
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_10
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_1
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.11)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_2
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.84)
+Correct Raga Rank: 2
+Correct Raga Score: 0.71
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_3
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.44)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_4
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_5
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_6
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.41)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_7
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_8
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 2
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_9
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_10
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.65)
+Correct Raga Rank: 2
+Correct Raga Score: 0.31
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_1
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.11)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_2
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.84)
+Correct Raga Rank: 2
+Correct Raga Score: 0.71
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_3
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.44)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_4
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_5
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_6
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.41)
+Correct Raga Rank: 2
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_7
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_8
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.58)
+Correct Raga Rank: 2
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_9
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.54)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_10
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.65)
+Correct Raga Rank: 2
+Correct Raga Score: 0.31
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_1
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.10)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_2
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.85)
+Correct Raga Rank: 2
+Correct Raga Score: 0.68
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_3
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.20
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_4
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.37)
+Correct Raga Rank: 2
+Correct Raga Score: 0.12
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_5
+GT Raga: Yaman Kalyan
+Top-1 Pred: shuddha kalyan (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Yaman Kalyan_6
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.42)
+Correct Raga Rank: 2
+Correct Raga Score: 0.15
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_7
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.24)
+Correct Raga Rank: 2
+Correct Raga Score: 0.20
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_8
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.60)
+Correct Raga Rank: 2
+Correct Raga Score: 0.33
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_9
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.55)
+Correct Raga Rank: 2
+Correct Raga Score: 0.36
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------
+File: Yaman Kalyan_10
+GT Raga: Yaman Kalyan
+Top-1 Pred: bihag (Score: 0.66)
+Correct Raga Rank: 2
+Correct Raga Score: 0.29
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------

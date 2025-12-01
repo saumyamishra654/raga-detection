@@ -1,0 +1,63 @@
+File: Madhumand Sarang_1
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 3.64)
+Correct Raga Rank: 1
+Correct Raga Score: 3.64
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_2
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 3.12)
+Correct Raga Rank: 1
+Correct Raga Score: 3.12
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_3
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 3.89)
+Correct Raga Rank: 1
+Correct Raga Score: 3.89
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_4
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 5.33)
+Correct Raga Rank: 1
+Correct Raga Score: 5.33
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_5
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 5.60)
+Correct Raga Rank: 1
+Correct Raga Score: 5.60
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_6
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 5.03)
+Correct Raga Rank: 1
+Correct Raga Score: 5.03
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_7
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 5.38)
+Correct Raga Rank: 1
+Correct Raga Score: 5.38
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_8
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 4.85)
+Correct Raga Rank: 1
+Correct Raga Score: 4.85
+✅ CORRECT
+------------------------------
+File: Madhumand Sarang_10
+GT Raga: Madhumand Sarang
+Top-1 Pred: madhumad sarang (Score: 4.30)
+Correct Raga Rank: 1
+Correct Raga Score: 4.30
+✅ CORRECT
+------------------------------

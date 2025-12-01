@@ -1,0 +1,210 @@
+File: Lanka Dahan Sarang_1
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: madhumad sarang (Score: 0.29)
+Correct Raga Rank: 11
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Lanka Dahan Sarang_2
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: kirwani (Score: 0.12)
+Correct Raga Rank: 4
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with kirwani)
+------------------------------
+File: Lanka Dahan Sarang_3
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: sarang (Score: 0.11)
+Correct Raga Rank: 19
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Lanka Dahan Sarang_4
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: sarang (Score: 0.05)
+Correct Raga Rank: 13
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Lanka Dahan Sarang_5
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: sarang (Score: 0.07)
+Correct Raga Rank: 5
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Lanka Dahan Sarang_8
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: sarang (Score: 0.04)
+Correct Raga Rank: 11
+Correct Raga Score: 0.02
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Lanka Dahan Sarang_1
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: madhumad sarang (Score: 0.19)
+Correct Raga Rank: 11
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Lanka Dahan Sarang_2
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: kirwani (Score: 0.10)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with kirwani)
+------------------------------
+File: Lanka Dahan Sarang_3
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.02)
+Correct Raga Rank: 1
+Correct Raga Score: 0.02
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_4
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: nayaki kanada (Score: 0.08)
+Correct Raga Rank: 2
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Lanka Dahan Sarang_5
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.15)
+Correct Raga Rank: 1
+Correct Raga Score: 0.15
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_8
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.17)
+Correct Raga Rank: 1
+Correct Raga Score: 0.17
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_1
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: madhumad sarang (Score: 0.19)
+Correct Raga Rank: 11
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Lanka Dahan Sarang_2
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: kirwani (Score: 0.10)
+Correct Raga Rank: 3
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with kirwani)
+------------------------------
+File: Lanka Dahan Sarang_3
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.02)
+Correct Raga Rank: 1
+Correct Raga Score: 0.02
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_4
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: nayaki kanada (Score: 0.08)
+Correct Raga Rank: 2
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Lanka Dahan Sarang_5
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.15)
+Correct Raga Rank: 1
+Correct Raga Score: 0.15
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_8
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.17)
+Correct Raga Rank: 1
+Correct Raga Score: 0.17
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_1
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: madhumad sarang (Score: 0.20)
+Correct Raga Rank: 8
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Lanka Dahan Sarang_2
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: kirwani (Score: 0.14)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with kirwani)
+------------------------------
+File: Lanka Dahan Sarang_3
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.02)
+Correct Raga Rank: 1
+Correct Raga Score: 0.02
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_4
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: nayaki kanada (Score: 0.07)
+Correct Raga Rank: 2
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Lanka Dahan Sarang_5
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_8
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.16)
+Correct Raga Rank: 1
+Correct Raga Score: 0.16
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_1
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: madhumad sarang (Score: 0.20)
+Correct Raga Rank: 8
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Lanka Dahan Sarang_2
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: kirwani (Score: 0.14)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with kirwani)
+------------------------------
+File: Lanka Dahan Sarang_3
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.02)
+Correct Raga Rank: 1
+Correct Raga Score: 0.02
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_4
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: nayaki kanada (Score: 0.07)
+Correct Raga Rank: 2
+Correct Raga Score: 0.05
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Lanka Dahan Sarang_5
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.14)
+Correct Raga Rank: 1
+Correct Raga Score: 0.14
+✅ CORRECT
+------------------------------
+File: Lanka Dahan Sarang_8
+GT Raga: Lanka Dahan Sarang
+Top-1 Pred: bahar (Score: 0.16)
+Correct Raga Rank: 1
+Correct Raga Score: 0.16
+✅ CORRECT
+------------------------------

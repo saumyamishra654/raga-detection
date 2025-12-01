@@ -1,0 +1,63 @@
+File: Multani_1
+GT Raga: Multani
+Top-1 Pred: multani (Score: 2.57)
+Correct Raga Rank: 1
+Correct Raga Score: 2.57
+✅ CORRECT
+------------------------------
+File: Multani_2
+GT Raga: Multani
+Top-1 Pred: multani (Score: 1.18)
+Correct Raga Rank: 1
+Correct Raga Score: 1.18
+✅ CORRECT
+------------------------------
+File: Multani_4
+GT Raga: Multani
+Top-1 Pred: multani (Score: 1.08)
+Correct Raga Rank: 1
+Correct Raga Score: 1.08
+✅ CORRECT
+------------------------------
+File: Multani_5
+GT Raga: Multani
+Top-1 Pred: multani (Score: 1.00)
+Correct Raga Rank: 1
+Correct Raga Score: 1.00
+✅ CORRECT
+------------------------------
+File: Multani_6
+GT Raga: Multani
+Top-1 Pred: multani (Score: 2.53)
+Correct Raga Rank: 1
+Correct Raga Score: 2.53
+✅ CORRECT
+------------------------------
+File: Multani_7
+GT Raga: Multani
+Top-1 Pred: multani (Score: 1.12)
+Correct Raga Rank: 1
+Correct Raga Score: 1.12
+✅ CORRECT
+------------------------------
+File: Multani_8
+GT Raga: Multani
+Top-1 Pred: multani (Score: 0.90)
+Correct Raga Rank: 1
+Correct Raga Score: 0.90
+✅ CORRECT
+------------------------------
+File: Multani_9
+GT Raga: Multani
+Top-1 Pred: multani (Score: 0.84)
+Correct Raga Rank: 1
+Correct Raga Score: 0.84
+✅ CORRECT
+------------------------------
+File: Multani_10
+GT Raga: Multani
+Top-1 Pred: multani (Score: 1.18)
+Correct Raga Rank: 1
+Correct Raga Score: 1.18
+✅ CORRECT
+------------------------------

@@ -1,0 +1,280 @@
+File: Dev Gandhar_1
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.39)
+Correct Raga Rank: 1
+Correct Raga Score: 0.39
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_2
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_3
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_5
+GT Raga: Dev Gandhar
+Top-1 Pred: charukeshi (Score: 0.22)
+Correct Raga Rank: 2
+Correct Raga Score: 0.16
+❌ MISCLASSIFIED (Confused with charukeshi)
+------------------------------
+File: Dev Gandhar_6
+GT Raga: Dev Gandhar
+Top-1 Pred: bheem (Score: 0.42)
+Correct Raga Rank: 10
+Correct Raga Score: 0.06
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Dev Gandhar_7
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_8
+GT Raga: Dev Gandhar
+Top-1 Pred: gorakh kalyan (Score: 0.37)
+Correct Raga Rank: 44
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Dev Gandhar_9
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_1
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_2
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.74)
+Correct Raga Rank: 2
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_3
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_5
+GT Raga: Dev Gandhar
+Top-1 Pred: charukeshi (Score: 0.41)
+Correct Raga Rank: 2
+Correct Raga Score: 0.33
+❌ MISCLASSIFIED (Confused with charukeshi)
+------------------------------
+File: Dev Gandhar_6
+GT Raga: Dev Gandhar
+Top-1 Pred: bheem (Score: 0.29)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Dev Gandhar_7
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.35)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_8
+GT Raga: Dev Gandhar
+Top-1 Pred: gorakh kalyan (Score: 0.78)
+Correct Raga Rank: 44
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Dev Gandhar_9
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_1
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_2
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.74)
+Correct Raga Rank: 2
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_3
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_5
+GT Raga: Dev Gandhar
+Top-1 Pred: charukeshi (Score: 0.41)
+Correct Raga Rank: 2
+Correct Raga Score: 0.33
+❌ MISCLASSIFIED (Confused with charukeshi)
+------------------------------
+File: Dev Gandhar_6
+GT Raga: Dev Gandhar
+Top-1 Pred: bheem (Score: 0.29)
+Correct Raga Rank: 4
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Dev Gandhar_7
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.35)
+Correct Raga Rank: 2
+Correct Raga Score: 0.25
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_8
+GT Raga: Dev Gandhar
+Top-1 Pred: gorakh kalyan (Score: 0.78)
+Correct Raga Rank: 44
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Dev Gandhar_9
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_1
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_2
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.75)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_3
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_5
+GT Raga: Dev Gandhar
+Top-1 Pred: charukeshi (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with charukeshi)
+------------------------------
+File: Dev Gandhar_6
+GT Raga: Dev Gandhar
+Top-1 Pred: bheem (Score: 0.41)
+Correct Raga Rank: 4
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Dev Gandhar_7
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.33)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_8
+GT Raga: Dev Gandhar
+Top-1 Pred: gorakh kalyan (Score: 0.80)
+Correct Raga Rank: 42
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Dev Gandhar_9
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.64)
+Correct Raga Rank: 1
+Correct Raga Score: 0.64
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_1
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_2
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.75)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_3
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Dev Gandhar_5
+GT Raga: Dev Gandhar
+Top-1 Pred: charukeshi (Score: 0.43)
+Correct Raga Rank: 2
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with charukeshi)
+------------------------------
+File: Dev Gandhar_6
+GT Raga: Dev Gandhar
+Top-1 Pred: bheem (Score: 0.41)
+Correct Raga Rank: 4
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Dev Gandhar_7
+GT Raga: Dev Gandhar
+Top-1 Pred: adana (Score: 0.33)
+Correct Raga Rank: 2
+Correct Raga Score: 0.26
+❌ MISCLASSIFIED (Confused with adana)
+------------------------------
+File: Dev Gandhar_8
+GT Raga: Dev Gandhar
+Top-1 Pred: gorakh kalyan (Score: 0.80)
+Correct Raga Rank: 42
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Dev Gandhar_9
+GT Raga: Dev Gandhar
+Top-1 Pred: dev gandhar (Score: 0.64)
+Correct Raga Rank: 1
+Correct Raga Score: 0.64
+✅ CORRECT
+------------------------------

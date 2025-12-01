@@ -1,0 +1,252 @@
+File: Surdasi Malhar_1
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 0.65)
+Correct Raga Rank: 2
+Correct Raga Score: 0.57
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_2
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.35)
+Correct Raga Rank: 1
+Correct Raga Score: 0.35
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_3
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 0.65)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_4
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 0.60)
+Correct Raga Rank: 2
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_6
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 0.57)
+Correct Raga Rank: 2
+Correct Raga Score: 0.51
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_7
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 0.31)
+Correct Raga Rank: 3
+Correct Raga Score: 0.27
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_8
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.61)
+Correct Raga Rank: 1
+Correct Raga Score: 0.61
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_9
+GT Raga: Surdasi Malhar
+Top-1 Pred: sarang (Score: 0.73)
+Correct Raga Rank: 2
+Correct Raga Score: 0.64
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Surdasi Malhar_10
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_1
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_2
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.20)
+Correct Raga Rank: 3
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_3
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.32)
+Correct Raga Rank: 2
+Correct Raga Score: 0.28
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_4
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_6
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.40)
+Correct Raga Rank: 2
+Correct Raga Score: 0.37
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_7
+GT Raga: Surdasi Malhar
+Top-1 Pred: kedar (Score: 0.36)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with kedar)
+------------------------------
+File: Surdasi Malhar_8
+GT Raga: Surdasi Malhar
+Top-1 Pred: bageshri (Score: 0.23)
+Correct Raga Rank: 3
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Surdasi Malhar_9
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.78)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_10
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.12)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_1
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_2
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.20)
+Correct Raga Rank: 3
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_3
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.32)
+Correct Raga Rank: 2
+Correct Raga Score: 0.28
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_4
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_6
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.40)
+Correct Raga Rank: 2
+Correct Raga Score: 0.37
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_7
+GT Raga: Surdasi Malhar
+Top-1 Pred: kedar (Score: 0.36)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with kedar)
+------------------------------
+File: Surdasi Malhar_8
+GT Raga: Surdasi Malhar
+Top-1 Pred: bageshri (Score: 0.23)
+Correct Raga Rank: 3
+Correct Raga Score: 0.10
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Surdasi Malhar_9
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.78)
+Correct Raga Rank: 2
+Correct Raga Score: 0.58
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_10
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.12)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_1
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_2
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.19)
+Correct Raga Rank: 2
+Correct Raga Score: 0.13
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_3
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.31)
+Correct Raga Rank: 2
+Correct Raga Score: 0.23
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_4
+GT Raga: Surdasi Malhar
+Top-1 Pred: surdasi malhar (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Surdasi Malhar_6
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.40)
+Correct Raga Rank: 2
+Correct Raga Score: 0.28
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_7
+GT Raga: Surdasi Malhar
+Top-1 Pred: kedar (Score: 0.34)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with kedar)
+------------------------------
+File: Surdasi Malhar_8
+GT Raga: Surdasi Malhar
+Top-1 Pred: bageshri (Score: 0.18)
+Correct Raga Rank: 4
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Surdasi Malhar_9
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.72)
+Correct Raga Rank: 2
+Correct Raga Score: 0.54
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------
+File: Surdasi Malhar_10
+GT Raga: Surdasi Malhar
+Top-1 Pred: bahar (Score: 0.12)
+Correct Raga Rank: 2
+Correct Raga Score: 0.11
+❌ MISCLASSIFIED (Confused with bahar)
+------------------------------

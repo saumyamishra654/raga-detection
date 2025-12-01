@@ -1,0 +1,49 @@
+File: Hanskinki_1
+GT Raga: Hanskinki
+Top-1 Pred: jogeshwari pancham (Score: 2.26)
+Correct Raga Rank: 3
+Correct Raga Score: 1.66
+❌ MISCLASSIFIED (Confused with jogeshwari pancham)
+------------------------------
+File: Hanskinki_2
+GT Raga: Hanskinki
+Top-1 Pred: hanskinkini (Score: 2.48)
+Correct Raga Rank: 1
+Correct Raga Score: 2.48
+✅ CORRECT
+------------------------------
+File: Hanskinki_3
+GT Raga: Hanskinki
+Top-1 Pred: jog (Score: 2.80)
+Correct Raga Rank: 3
+Correct Raga Score: 1.22
+❌ MISCLASSIFIED (Confused with jog)
+------------------------------
+File: Hanskinki_4
+GT Raga: Hanskinki
+Top-1 Pred: hanskinkini (Score: 2.17)
+Correct Raga Rank: 1
+Correct Raga Score: 2.17
+✅ CORRECT
+------------------------------
+File: Hanskinki_5
+GT Raga: Hanskinki
+Top-1 Pred: jog (Score: 3.01)
+Correct Raga Rank: 5
+Correct Raga Score: 2.06
+❌ MISCLASSIFIED (Confused with jog)
+------------------------------
+File: Hanskinki_7
+GT Raga: Hanskinki
+Top-1 Pred: tilang (Score: 2.64)
+Correct Raga Rank: 5
+Correct Raga Score: 1.42
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Hanskinki_8
+GT Raga: Hanskinki
+Top-1 Pred: jog (Score: 2.76)
+Correct Raga Rank: 6
+Correct Raga Score: 1.15
+❌ MISCLASSIFIED (Confused with jog)
+------------------------------

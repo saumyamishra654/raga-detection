@@ -1,0 +1,140 @@
+File: Tilak Kamod_1
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.34)
+Correct Raga Rank: 1
+Correct Raga Score: 0.34
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_2
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.22)
+Correct Raga Rank: 1
+Correct Raga Score: 0.22
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_3
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.12)
+Correct Raga Rank: 1
+Correct Raga Score: 0.12
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_4
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.60)
+Correct Raga Rank: 1
+Correct Raga Score: 0.60
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_6
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_1
+GT Raga: Tilak Kamod
+Top-1 Pred: alhaiya bilawal (Score: 0.47)
+Correct Raga Rank: 2
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Tilak Kamod_2
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.25)
+Correct Raga Rank: 1
+Correct Raga Score: 0.25
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_3
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_4
+GT Raga: Tilak Kamod
+Top-1 Pred: alhaiya bilawal (Score: 0.44)
+Correct Raga Rank: 2
+Correct Raga Score: 0.40
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Tilak Kamod_6
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_1
+GT Raga: Tilak Kamod
+Top-1 Pred: alhaiya bilawal (Score: 0.47)
+Correct Raga Rank: 2
+Correct Raga Score: 0.34
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Tilak Kamod_2
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.25)
+Correct Raga Rank: 1
+Correct Raga Score: 0.25
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_3
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.23)
+Correct Raga Rank: 1
+Correct Raga Score: 0.23
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_4
+GT Raga: Tilak Kamod
+Top-1 Pred: alhaiya bilawal (Score: 0.44)
+Correct Raga Rank: 2
+Correct Raga Score: 0.40
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Tilak Kamod_6
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_1
+GT Raga: Tilak Kamod
+Top-1 Pred: alhaiya bilawal (Score: 0.56)
+Correct Raga Rank: 2
+Correct Raga Score: 0.35
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Tilak Kamod_2
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.24)
+Correct Raga Rank: 1
+Correct Raga Score: 0.24
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_3
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.20)
+Correct Raga Rank: 1
+Correct Raga Score: 0.20
+✅ CORRECT
+------------------------------
+File: Tilak Kamod_4
+GT Raga: Tilak Kamod
+Top-1 Pred: alhaiya bilawal (Score: 0.46)
+Correct Raga Rank: 2
+Correct Raga Score: 0.42
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Tilak Kamod_6
+GT Raga: Tilak Kamod
+Top-1 Pred: bilawal (Score: 0.62)
+Correct Raga Rank: 1
+Correct Raga Score: 0.62
+✅ CORRECT
+------------------------------

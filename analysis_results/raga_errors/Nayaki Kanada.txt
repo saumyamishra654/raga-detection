@@ -1,0 +1,63 @@
+File: Nayaki Kanada_1
+GT Raga: Nayaki Kanada
+Top-1 Pred: nayaki kanada (Score: 3.29)
+Correct Raga Rank: 1
+Correct Raga Score: 3.29
+✅ CORRECT
+------------------------------
+File: Nayaki Kanada_2
+GT Raga: Nayaki Kanada
+Top-1 Pred: nayaki kanada (Score: 2.42)
+Correct Raga Rank: 1
+Correct Raga Score: 2.42
+✅ CORRECT
+------------------------------
+File: Nayaki Kanada_3
+GT Raga: Nayaki Kanada
+Top-1 Pred: madhumad sarang (Score: 3.93)
+Correct Raga Rank: 2
+Correct Raga Score: 2.89
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Nayaki Kanada_4
+GT Raga: Nayaki Kanada
+Top-1 Pred: nayaki kanada (Score: 2.77)
+Correct Raga Rank: 1
+Correct Raga Score: 2.77
+✅ CORRECT
+------------------------------
+File: Nayaki Kanada_5
+GT Raga: Nayaki Kanada
+Top-1 Pred: nayaki kanada (Score: 3.64)
+Correct Raga Rank: 1
+Correct Raga Score: 3.64
+✅ CORRECT
+------------------------------
+File: Nayaki Kanada_6
+GT Raga: Nayaki Kanada
+Top-1 Pred: nayaki kanada (Score: 2.07)
+Correct Raga Rank: 1
+Correct Raga Score: 2.07
+✅ CORRECT
+------------------------------
+File: Nayaki Kanada_7
+GT Raga: Nayaki Kanada
+Top-1 Pred: nayaki kanada (Score: 3.58)
+Correct Raga Rank: 1
+Correct Raga Score: 3.58
+✅ CORRECT
+------------------------------
+File: Nayaki Kanada_8
+GT Raga: Nayaki Kanada
+Top-1 Pred: jog (Score: 2.02)
+Correct Raga Rank: 2
+Correct Raga Score: 1.52
+❌ MISCLASSIFIED (Confused with jog)
+------------------------------
+File: Nayaki Kanada_9
+GT Raga: Nayaki Kanada
+Top-1 Pred: madhumad sarang (Score: 3.91)
+Correct Raga Rank: 2
+Correct Raga Score: 3.75
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------

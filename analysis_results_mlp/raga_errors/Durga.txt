@@ -1,0 +1,315 @@
+File: Durga_1
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.54)
+Correct Raga Rank: 1
+Correct Raga Score: 0.54
+✅ CORRECT
+------------------------------
+File: Durga_2
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.58)
+Correct Raga Rank: 1
+Correct Raga Score: 0.58
+✅ CORRECT
+------------------------------
+File: Durga_3
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Durga_4
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Durga_5
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.73)
+Correct Raga Rank: 1
+Correct Raga Score: 0.73
+✅ CORRECT
+------------------------------
+File: Durga_6
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.55)
+Correct Raga Rank: 1
+Correct Raga Score: 0.55
+✅ CORRECT
+------------------------------
+File: Durga_7
+GT Raga: Durga
+Top-1 Pred: bageshri (Score: 0.08)
+Correct Raga Rank: 11
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Durga_8
+GT Raga: Durga
+Top-1 Pred: gorakh kalyan (Score: 0.44)
+Correct Raga Rank: 3
+Correct Raga Score: 0.35
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Durga_10
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.82)
+Correct Raga Rank: 1
+Correct Raga Score: 0.82
+✅ CORRECT
+------------------------------
+File: Durga_1
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Durga_2
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Durga_3
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Durga_4
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Durga_5
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Durga_6
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Durga_7
+GT Raga: Durga
+Top-1 Pred: bageshri (Score: 0.30)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Durga_8
+GT Raga: Durga
+Top-1 Pred: gorakh kalyan (Score: 0.69)
+Correct Raga Rank: 2
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Durga_10
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Durga_1
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Durga_2
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Durga_3
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Durga_4
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Durga_5
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Durga_6
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.74)
+Correct Raga Rank: 1
+Correct Raga Score: 0.74
+✅ CORRECT
+------------------------------
+File: Durga_7
+GT Raga: Durga
+Top-1 Pred: bageshri (Score: 0.30)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Durga_8
+GT Raga: Durga
+Top-1 Pred: gorakh kalyan (Score: 0.69)
+Correct Raga Rank: 2
+Correct Raga Score: 0.56
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Durga_10
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.97)
+Correct Raga Rank: 1
+Correct Raga Score: 0.97
+✅ CORRECT
+------------------------------
+File: Durga_1
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Durga_2
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Durga_3
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Durga_4
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Durga_5
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Durga_6
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Durga_7
+GT Raga: Durga
+Top-1 Pred: bageshri (Score: 0.31)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Durga_8
+GT Raga: Durga
+Top-1 Pred: gorakh kalyan (Score: 0.68)
+Correct Raga Rank: 2
+Correct Raga Score: 0.62
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Durga_10
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Durga_1
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Durga_2
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.77)
+Correct Raga Rank: 1
+Correct Raga Score: 0.77
+✅ CORRECT
+------------------------------
+File: Durga_3
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.92)
+Correct Raga Rank: 1
+Correct Raga Score: 0.92
+✅ CORRECT
+------------------------------
+File: Durga_4
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Durga_5
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Durga_6
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.76)
+Correct Raga Rank: 1
+Correct Raga Score: 0.76
+✅ CORRECT
+------------------------------
+File: Durga_7
+GT Raga: Durga
+Top-1 Pred: bageshri (Score: 0.31)
+Correct Raga Rank: 9
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with bageshri)
+------------------------------
+File: Durga_8
+GT Raga: Durga
+Top-1 Pred: gorakh kalyan (Score: 0.68)
+Correct Raga Rank: 2
+Correct Raga Score: 0.62
+❌ MISCLASSIFIED (Confused with gorakh kalyan)
+------------------------------
+File: Durga_10
+GT Raga: Durga
+Top-1 Pred: durga (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------

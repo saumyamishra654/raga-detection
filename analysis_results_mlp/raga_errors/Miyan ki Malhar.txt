@@ -1,0 +1,350 @@
+File: Miyan ki Malhar_1
+GT Raga: Miyan ki Malhar
+Top-1 Pred: dev gandhar (Score: 0.01)
+Correct Raga Rank: 6
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with dev gandhar)
+------------------------------
+File: Miyan ki Malhar_2
+GT Raga: Miyan ki Malhar
+Top-1 Pred: sarang (Score: 0.55)
+Correct Raga Rank: 3
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Miyan ki Malhar_3
+GT Raga: Miyan ki Malhar
+Top-1 Pred: hemshri (Score: 0.17)
+Correct Raga Rank: 6
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Miyan ki Malhar_4
+GT Raga: Miyan ki Malhar
+Top-1 Pred: nayaki kanada (Score: 0.04)
+Correct Raga Rank: 10
+Correct Raga Score: 0.01
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Miyan ki Malhar_5
+GT Raga: Miyan ki Malhar
+Top-1 Pred: sarang (Score: 0.44)
+Correct Raga Rank: 4
+Correct Raga Score: 0.08
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Miyan ki Malhar_6
+GT Raga: Miyan ki Malhar
+Top-1 Pred: sarang (Score: 0.31)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Miyan ki Malhar_7
+GT Raga: Miyan ki Malhar
+Top-1 Pred: surdasi malhar (Score: 0.01)
+Correct Raga Rank: 3
+Correct Raga Score: 0.00
+❌ MISCLASSIFIED (Confused with surdasi malhar)
+------------------------------
+File: Miyan ki Malhar_8
+GT Raga: Miyan ki Malhar
+Top-1 Pred: sarang (Score: 0.12)
+Correct Raga Rank: 3
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Miyan ki Malhar_9
+GT Raga: Miyan ki Malhar
+Top-1 Pred: sarang (Score: 0.53)
+Correct Raga Rank: 3
+Correct Raga Score: 0.17
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Miyan ki Malhar_10
+GT Raga: Miyan ki Malhar
+Top-1 Pred: sarang (Score: 0.51)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Miyan ki Malhar_1
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_2
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_3
+GT Raga: Miyan ki Malhar
+Top-1 Pred: hemshri (Score: 0.04)
+Correct Raga Rank: 2
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Miyan ki Malhar_4
+GT Raga: Miyan ki Malhar
+Top-1 Pred: nayaki kanada (Score: 0.09)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Miyan ki Malhar_5
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.36)
+Correct Raga Rank: 1
+Correct Raga Score: 0.36
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_6
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_7
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.05)
+Correct Raga Rank: 1
+Correct Raga Score: 0.05
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_8
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_9
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_10
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_1
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.32)
+Correct Raga Rank: 1
+Correct Raga Score: 0.32
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_2
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_3
+GT Raga: Miyan ki Malhar
+Top-1 Pred: hemshri (Score: 0.04)
+Correct Raga Rank: 2
+Correct Raga Score: 0.04
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Miyan ki Malhar_4
+GT Raga: Miyan ki Malhar
+Top-1 Pred: nayaki kanada (Score: 0.09)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Miyan ki Malhar_5
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.36)
+Correct Raga Rank: 1
+Correct Raga Score: 0.36
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_6
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_7
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.05)
+Correct Raga Rank: 1
+Correct Raga Score: 0.05
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_8
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.72)
+Correct Raga Rank: 1
+Correct Raga Score: 0.72
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_9
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_10
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.47)
+Correct Raga Rank: 1
+Correct Raga Score: 0.47
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_1
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.29)
+Correct Raga Rank: 1
+Correct Raga Score: 0.29
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_2
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_3
+GT Raga: Miyan ki Malhar
+Top-1 Pred: hemshri (Score: 0.04)
+Correct Raga Rank: 2
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Miyan ki Malhar_4
+GT Raga: Miyan ki Malhar
+Top-1 Pred: nayaki kanada (Score: 0.07)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Miyan ki Malhar_5
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.39)
+Correct Raga Rank: 1
+Correct Raga Score: 0.39
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_6
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_7
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.06)
+Correct Raga Rank: 1
+Correct Raga Score: 0.06
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_8
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_9
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_10
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.56)
+Correct Raga Rank: 1
+Correct Raga Score: 0.56
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_1
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.29)
+Correct Raga Rank: 1
+Correct Raga Score: 0.29
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_2
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.67)
+Correct Raga Rank: 1
+Correct Raga Score: 0.67
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_3
+GT Raga: Miyan ki Malhar
+Top-1 Pred: hemshri (Score: 0.04)
+Correct Raga Rank: 2
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with hemshri)
+------------------------------
+File: Miyan ki Malhar_4
+GT Raga: Miyan ki Malhar
+Top-1 Pred: nayaki kanada (Score: 0.07)
+Correct Raga Rank: 4
+Correct Raga Score: 0.03
+❌ MISCLASSIFIED (Confused with nayaki kanada)
+------------------------------
+File: Miyan ki Malhar_5
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.39)
+Correct Raga Rank: 1
+Correct Raga Score: 0.39
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_6
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.51)
+Correct Raga Rank: 1
+Correct Raga Score: 0.51
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_7
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.06)
+Correct Raga Rank: 1
+Correct Raga Score: 0.06
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_8
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.70)
+Correct Raga Rank: 1
+Correct Raga Score: 0.70
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_9
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.75)
+Correct Raga Rank: 1
+Correct Raga Score: 0.75
+✅ CORRECT
+------------------------------
+File: Miyan ki Malhar_10
+GT Raga: Miyan ki Malhar
+Top-1 Pred: bahar (Score: 0.56)
+Correct Raga Rank: 1
+Correct Raga Score: 0.56
+✅ CORRECT
+------------------------------

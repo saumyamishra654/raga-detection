@@ -1,0 +1,63 @@
+File: Ramdasi Malhar_1
+GT Raga: Ramdasi Malhar
+Top-1 Pred: sarang (Score: 2.14)
+Correct Raga Rank: 10
+Correct Raga Score: 0.74
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Ramdasi Malhar_2
+GT Raga: Ramdasi Malhar
+Top-1 Pred: alhaiya bilawal (Score: 2.44)
+Correct Raga Rank: 3
+Correct Raga Score: 1.86
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Ramdasi Malhar_3
+GT Raga: Ramdasi Malhar
+Top-1 Pred: alhaiya bilawal (Score: 3.82)
+Correct Raga Rank: 2
+Correct Raga Score: 3.29
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Ramdasi Malhar_4
+GT Raga: Ramdasi Malhar
+Top-1 Pred: shankara (Score: 1.92)
+Correct Raga Rank: 5
+Correct Raga Score: 1.08
+❌ MISCLASSIFIED (Confused with shankara)
+------------------------------
+File: Ramdasi Malhar_6
+GT Raga: Ramdasi Malhar
+Top-1 Pred: alhaiya bilawal (Score: 2.45)
+Correct Raga Rank: 2
+Correct Raga Score: 2.24
+❌ MISCLASSIFIED (Confused with alhaiya bilawal)
+------------------------------
+File: Ramdasi Malhar_7
+GT Raga: Ramdasi Malhar
+Top-1 Pred: tilang (Score: 3.49)
+Correct Raga Rank: 3
+Correct Raga Score: 2.12
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Ramdasi Malhar_8
+GT Raga: Ramdasi Malhar
+Top-1 Pred: hanskinkini (Score: 2.57)
+Correct Raga Rank: 1
+Correct Raga Score: 2.57
+✅ CORRECT
+------------------------------
+File: Ramdasi Malhar_9
+GT Raga: Ramdasi Malhar
+Top-1 Pred: hanskinkini (Score: 2.77)
+Correct Raga Rank: 1
+Correct Raga Score: 2.77
+✅ CORRECT
+------------------------------
+File: Ramdasi Malhar_10
+GT Raga: Ramdasi Malhar
+Top-1 Pred: bheem (Score: 2.42)
+Correct Raga Rank: 2
+Correct Raga Score: 2.17
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------

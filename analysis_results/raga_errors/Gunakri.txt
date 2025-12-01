@@ -1,0 +1,70 @@
+File: Gunakri_1
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 5.70)
+Correct Raga Rank: 1
+Correct Raga Score: 5.70
+✅ CORRECT
+------------------------------
+File: Gunakri_2
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 6.46)
+Correct Raga Rank: 1
+Correct Raga Score: 6.46
+✅ CORRECT
+------------------------------
+File: Gunakri_3
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 6.91)
+Correct Raga Rank: 1
+Correct Raga Score: 6.91
+✅ CORRECT
+------------------------------
+File: Gunakri_4
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 5.58)
+Correct Raga Rank: 1
+Correct Raga Score: 5.58
+✅ CORRECT
+------------------------------
+File: Gunakri_5
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 6.35)
+Correct Raga Rank: 1
+Correct Raga Score: 6.35
+✅ CORRECT
+------------------------------
+File: Gunakri_6
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 4.75)
+Correct Raga Rank: 1
+Correct Raga Score: 4.75
+✅ CORRECT
+------------------------------
+File: Gunakri_7
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 6.54)
+Correct Raga Rank: 1
+Correct Raga Score: 6.54
+✅ CORRECT
+------------------------------
+File: Gunakri_8
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 5.24)
+Correct Raga Rank: 1
+Correct Raga Score: 5.24
+✅ CORRECT
+------------------------------
+File: Gunakri_9
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 5.15)
+Correct Raga Rank: 1
+Correct Raga Score: 5.15
+✅ CORRECT
+------------------------------
+File: Gunakri_10
+GT Raga: Gunakri
+Top-1 Pred: gunakri (Score: 4.45)
+Correct Raga Rank: 1
+Correct Raga Score: 4.45
+✅ CORRECT
+------------------------------

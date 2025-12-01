@@ -1,0 +1,385 @@
+File: Nand_1
+GT Raga: Nand
+Top-1 Pred: tilang (Score: 0.16)
+Correct Raga Rank: 3
+Correct Raga Score: 0.09
+❌ MISCLASSIFIED (Confused with tilang)
+------------------------------
+File: Nand_2
+GT Raga: Nand
+Top-1 Pred: bilawal (Score: 0.36)
+Correct Raga Rank: 2
+Correct Raga Score: 0.35
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Nand_3
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.65)
+Correct Raga Rank: 1
+Correct Raga Score: 0.65
+✅ CORRECT
+------------------------------
+File: Nand_4
+GT Raga: Nand
+Top-1 Pred: bilawal (Score: 0.58)
+Correct Raga Rank: 2
+Correct Raga Score: 0.57
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Nand_5
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.09)
+Correct Raga Rank: 1
+Correct Raga Score: 0.09
+✅ CORRECT
+------------------------------
+File: Nand_6
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.57)
+Correct Raga Rank: 1
+Correct Raga Score: 0.57
+✅ CORRECT
+------------------------------
+File: Nand_7
+GT Raga: Nand
+Top-1 Pred: bilawal (Score: 0.27)
+Correct Raga Rank: 2
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Nand_8
+GT Raga: Nand
+Top-1 Pred: bilawal (Score: 0.55)
+Correct Raga Rank: 2
+Correct Raga Score: 0.52
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Nand_9
+GT Raga: Nand
+Top-1 Pred: shuddha kalyan (Score: 0.59)
+Correct Raga Rank: 2
+Correct Raga Score: 0.47
+❌ MISCLASSIFIED (Confused with shuddha kalyan)
+------------------------------
+File: Nand_10
+GT Raga: Nand
+Top-1 Pred: bilawal (Score: 0.61)
+Correct Raga Rank: 3
+Correct Raga Score: 0.19
+❌ MISCLASSIFIED (Confused with bilawal)
+------------------------------
+File: Nand_11
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.18)
+Correct Raga Rank: 1
+Correct Raga Score: 0.18
+✅ CORRECT
+------------------------------
+File: Nand_1
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Nand_2
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Nand_3
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Nand_4
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Nand_5
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Nand_6
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Nand_7
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Nand_8
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Nand_9
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Nand_10
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Nand_11
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Nand_1
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.53)
+Correct Raga Rank: 1
+Correct Raga Score: 0.53
+✅ CORRECT
+------------------------------
+File: Nand_2
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Nand_3
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Nand_4
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Nand_5
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.63)
+Correct Raga Rank: 1
+Correct Raga Score: 0.63
+✅ CORRECT
+------------------------------
+File: Nand_6
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.94)
+Correct Raga Rank: 1
+Correct Raga Score: 0.94
+✅ CORRECT
+------------------------------
+File: Nand_7
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.69)
+Correct Raga Rank: 1
+Correct Raga Score: 0.69
+✅ CORRECT
+------------------------------
+File: Nand_8
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Nand_9
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Nand_10
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Nand_11
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Nand_1
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Nand_2
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Nand_3
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Nand_4
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Nand_5
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Nand_6
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Nand_7
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Nand_8
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Nand_9
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Nand_10
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Nand_11
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Nand_1
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.52)
+Correct Raga Rank: 1
+Correct Raga Score: 0.52
+✅ CORRECT
+------------------------------
+File: Nand_2
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.78)
+Correct Raga Rank: 1
+Correct Raga Score: 0.78
+✅ CORRECT
+------------------------------
+File: Nand_3
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.96)
+Correct Raga Rank: 1
+Correct Raga Score: 0.96
+✅ CORRECT
+------------------------------
+File: Nand_4
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.87)
+Correct Raga Rank: 1
+Correct Raga Score: 0.87
+✅ CORRECT
+------------------------------
+File: Nand_5
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.66)
+Correct Raga Rank: 1
+Correct Raga Score: 0.66
+✅ CORRECT
+------------------------------
+File: Nand_6
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Nand_7
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.71)
+Correct Raga Rank: 1
+Correct Raga Score: 0.71
+✅ CORRECT
+------------------------------
+File: Nand_8
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.83)
+Correct Raga Rank: 1
+Correct Raga Score: 0.83
+✅ CORRECT
+------------------------------
+File: Nand_9
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.86)
+Correct Raga Rank: 1
+Correct Raga Score: 0.86
+✅ CORRECT
+------------------------------
+File: Nand_10
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.59)
+Correct Raga Rank: 1
+Correct Raga Score: 0.59
+✅ CORRECT
+------------------------------
+File: Nand_11
+GT Raga: Nand
+Top-1 Pred: bihag (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------

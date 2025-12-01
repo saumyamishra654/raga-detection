@@ -1,0 +1,35 @@
+File: Bhairavi_3
+GT Raga: Bhairavi
+Top-1 Pred: gopika basant (Score: 3.09)
+Correct Raga Rank: 2
+Correct Raga Score: 2.62
+❌ MISCLASSIFIED (Confused with gopika basant)
+------------------------------
+File: Bhairavi_4
+GT Raga: Bhairavi
+Top-1 Pred: bhupali todi (Score: 4.79)
+Correct Raga Rank: 3
+Correct Raga Score: 3.23
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bhairavi_5
+GT Raga: Bhairavi
+Top-1 Pred: bhupali todi (Score: 4.39)
+Correct Raga Rank: 3
+Correct Raga Score: 1.45
+❌ MISCLASSIFIED (Confused with bhupali todi)
+------------------------------
+File: Bhairavi_6
+GT Raga: Bhairavi
+Top-1 Pred: gunakri (Score: 2.07)
+Correct Raga Rank: 2
+Correct Raga Score: 2.03
+❌ MISCLASSIFIED (Confused with gunakri)
+------------------------------
+File: Bhairavi_10
+GT Raga: Bhairavi
+Top-1 Pred: gopika basant (Score: 2.11)
+Correct Raga Rank: 2
+Correct Raga Score: 1.93
+❌ MISCLASSIFIED (Confused with gopika basant)
+------------------------------

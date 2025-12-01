@@ -1,0 +1,63 @@
+File: Shankara_1
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 1.52)
+Correct Raga Rank: 13
+Correct Raga Score: 0.07
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_2
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 2.94)
+Correct Raga Rank: 19
+Correct Raga Score: 0.32
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_3
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 4.37)
+Correct Raga Rank: 2
+Correct Raga Score: 1.59
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_4
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 3.23)
+Correct Raga Rank: 6
+Correct Raga Score: 1.40
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_5
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 2.70)
+Correct Raga Rank: 19
+Correct Raga Score: -0.28
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_6
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 3.23)
+Correct Raga Rank: 13
+Correct Raga Score: 0.78
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_7
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 3.34)
+Correct Raga Rank: 2
+Correct Raga Score: 1.94
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_8
+GT Raga: Shankara
+Top-1 Pred: hansadhwani (Score: 2.63)
+Correct Raga Rank: 3
+Correct Raga Score: 1.22
+❌ MISCLASSIFIED (Confused with hansadhwani)
+------------------------------
+File: Shankara_9
+GT Raga: Shankara
+Top-1 Pred: bihag (Score: 1.07)
+Correct Raga Rank: 13
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with bihag)
+------------------------------

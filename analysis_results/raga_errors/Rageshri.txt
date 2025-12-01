@@ -1,0 +1,70 @@
+File: Rageshri_1
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 2.53)
+Correct Raga Rank: 1
+Correct Raga Score: 2.53
+✅ CORRECT
+------------------------------
+File: Rageshri_2
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 4.59)
+Correct Raga Rank: 1
+Correct Raga Score: 4.59
+✅ CORRECT
+------------------------------
+File: Rageshri_3
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 3.19)
+Correct Raga Rank: 1
+Correct Raga Score: 3.19
+✅ CORRECT
+------------------------------
+File: Rageshri_4
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 3.08)
+Correct Raga Rank: 1
+Correct Raga Score: 3.08
+✅ CORRECT
+------------------------------
+File: Rageshri_5
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 3.75)
+Correct Raga Rank: 1
+Correct Raga Score: 3.75
+✅ CORRECT
+------------------------------
+File: Rageshri_6
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 4.37)
+Correct Raga Rank: 1
+Correct Raga Score: 4.37
+✅ CORRECT
+------------------------------
+File: Rageshri_7
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 3.18)
+Correct Raga Rank: 1
+Correct Raga Score: 3.18
+✅ CORRECT
+------------------------------
+File: Rageshri_8
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 3.87)
+Correct Raga Rank: 1
+Correct Raga Score: 3.87
+✅ CORRECT
+------------------------------
+File: Rageshri_9
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 2.87)
+Correct Raga Rank: 1
+Correct Raga Score: 2.87
+✅ CORRECT
+------------------------------
+File: Rageshri_10
+GT Raga: Rageshri
+Top-1 Pred: rageshri (Score: 3.12)
+Correct Raga Rank: 1
+Correct Raga Score: 3.12
+✅ CORRECT
+------------------------------

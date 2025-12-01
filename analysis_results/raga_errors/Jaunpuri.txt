@@ -1,0 +1,56 @@
+File: Jaunpuri_1
+GT Raga: Jaunpuri
+Top-1 Pred: shobhawari (Score: 3.55)
+Correct Raga Rank: 3
+Correct Raga Score: 2.62
+❌ MISCLASSIFIED (Confused with shobhawari)
+------------------------------
+File: Jaunpuri_2
+GT Raga: Jaunpuri
+Top-1 Pred: shobhawari (Score: 3.52)
+Correct Raga Rank: 2
+Correct Raga Score: 3.36
+❌ MISCLASSIFIED (Confused with shobhawari)
+------------------------------
+File: Jaunpuri_3
+GT Raga: Jaunpuri
+Top-1 Pred: adana (Score: 2.13)
+Correct Raga Rank: 1
+Correct Raga Score: 2.13
+✅ CORRECT
+------------------------------
+File: Jaunpuri_4
+GT Raga: Jaunpuri
+Top-1 Pred: adana (Score: 3.28)
+Correct Raga Rank: 1
+Correct Raga Score: 3.28
+✅ CORRECT
+------------------------------
+File: Jaunpuri_5
+GT Raga: Jaunpuri
+Top-1 Pred: adana (Score: 3.09)
+Correct Raga Rank: 1
+Correct Raga Score: 3.09
+✅ CORRECT
+------------------------------
+File: Jaunpuri_6
+GT Raga: Jaunpuri
+Top-1 Pred: shobhawari (Score: 2.54)
+Correct Raga Rank: 2
+Correct Raga Score: 2.32
+❌ MISCLASSIFIED (Confused with shobhawari)
+------------------------------
+File: Jaunpuri_8
+GT Raga: Jaunpuri
+Top-1 Pred: shobhawari (Score: 4.62)
+Correct Raga Rank: 2
+Correct Raga Score: 3.20
+❌ MISCLASSIFIED (Confused with shobhawari)
+------------------------------
+File: Jaunpuri_9
+GT Raga: Jaunpuri
+Top-1 Pred: shobhawari (Score: 3.03)
+Correct Raga Rank: 4
+Correct Raga Score: 1.25
+❌ MISCLASSIFIED (Confused with shobhawari)
+------------------------------

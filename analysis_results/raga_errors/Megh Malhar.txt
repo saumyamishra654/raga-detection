@@ -1,0 +1,42 @@
+File: Megh Malhar_1
+GT Raga: Megh Malhar
+Top-1 Pred: madhumad sarang (Score: 3.13)
+Correct Raga Rank: 9
+Correct Raga Score: 0.73
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Megh Malhar_2
+GT Raga: Megh Malhar
+Top-1 Pred: madhumad sarang (Score: 3.68)
+Correct Raga Rank: 15
+Correct Raga Score: 0.38
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Megh Malhar_3
+GT Raga: Megh Malhar
+Top-1 Pred: madhumad sarang (Score: 5.15)
+Correct Raga Rank: 18
+Correct Raga Score: 0.57
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Megh Malhar_4
+GT Raga: Megh Malhar
+Top-1 Pred: sarang (Score: 2.19)
+Correct Raga Rank: 16
+Correct Raga Score: 0.14
+❌ MISCLASSIFIED (Confused with sarang)
+------------------------------
+File: Megh Malhar_5
+GT Raga: Megh Malhar
+Top-1 Pred: madhumad sarang (Score: 5.33)
+Correct Raga Rank: 12
+Correct Raga Score: 0.93
+❌ MISCLASSIFIED (Confused with madhumad sarang)
+------------------------------
+File: Megh Malhar_6
+GT Raga: Megh Malhar
+Top-1 Pred: pilu (Score: -0.88)
+Correct Raga Rank: 2
+Correct Raga Score: -0.89
+❌ MISCLASSIFIED (Confused with pilu)
+------------------------------

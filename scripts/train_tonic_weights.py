@@ -65,7 +65,7 @@ def load_data(gt_csv, stems_dir, raga_weights):
         
         if gt_tonic is None: continue
             
-        json_path = os.path.join(stems_dir, filename, 'raga_features.json')
+        json_path = os.path.join(stems_dir, filename, 'raga_features', 'raga_features.json')
         if not os.path.exists(json_path): continue
             
         try:
@@ -139,6 +139,22 @@ def main():
         print(f"Formula: Final_Score = S_melody + ({ratio:.4f} * S_salience)")
     else:
         print("\nWarning: Melody weight is zero. Model failed to use melody.")
+
+    # Calculate Accuracy
+    y_scores = clf.decision_function(X)
+    num_songs = len(X) // 12
+    correct_count = 0
+    
+    for i in range(num_songs):
+        scores_slice = y_scores[i*12 : (i+1)*12]
+        labels_slice = y[i*12 : (i+1)*12]
+        
+        best_idx = np.argmax(scores_slice)
+        
+        if labels_slice[best_idx] == 1:
+            correct_count += 1
+            
+    print(f"\nTonic Detection Accuracy: {correct_count}/{num_songs} ({correct_count/num_songs:.2%})")
 
 if __name__ == "__main__":
     main()

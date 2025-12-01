@@ -1,0 +1,140 @@
+File: Shivranjani_1
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.46)
+Correct Raga Rank: 1
+Correct Raga Score: 0.46
+✅ CORRECT
+------------------------------
+File: Shivranjani_2
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.68)
+Correct Raga Rank: 1
+Correct Raga Score: 0.68
+✅ CORRECT
+------------------------------
+File: Shivranjani_3
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.91)
+Correct Raga Rank: 1
+Correct Raga Score: 0.91
+✅ CORRECT
+------------------------------
+File: Shivranjani_6
+GT Raga: Shivranjani
+Top-1 Pred: bheem (Score: 0.22)
+Correct Raga Rank: 2
+Correct Raga Score: 0.16
+❌ MISCLASSIFIED (Confused with bheem)
+------------------------------
+File: Shivranjani_1
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Shivranjani_2
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Shivranjani_3
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Shivranjani_6
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Shivranjani_1
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.80)
+Correct Raga Rank: 1
+Correct Raga Score: 0.80
+✅ CORRECT
+------------------------------
+File: Shivranjani_2
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.93)
+Correct Raga Rank: 1
+Correct Raga Score: 0.93
+✅ CORRECT
+------------------------------
+File: Shivranjani_3
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Shivranjani_6
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.43)
+Correct Raga Rank: 1
+Correct Raga Score: 0.43
+✅ CORRECT
+------------------------------
+File: Shivranjani_1
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Shivranjani_2
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Shivranjani_3
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Shivranjani_6
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.39)
+Correct Raga Rank: 1
+Correct Raga Score: 0.39
+✅ CORRECT
+------------------------------
+File: Shivranjani_1
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.79)
+Correct Raga Rank: 1
+Correct Raga Score: 0.79
+✅ CORRECT
+------------------------------
+File: Shivranjani_2
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.89)
+Correct Raga Rank: 1
+Correct Raga Score: 0.89
+✅ CORRECT
+------------------------------
+File: Shivranjani_3
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.98)
+Correct Raga Rank: 1
+Correct Raga Score: 0.98
+✅ CORRECT
+------------------------------
+File: Shivranjani_6
+GT Raga: Shivranjani
+Top-1 Pred: shivranjani (Score: 0.39)
+Correct Raga Rank: 1
+Correct Raga Score: 0.39
+✅ CORRECT
+------------------------------

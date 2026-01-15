@@ -1,0 +1,79 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Raga Analysis Report: Maru Bihag</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #333; }
+            h1, h2, h3 { color: #2c3e50; }
+            section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+            .stat-box { background: #ecf0f1; padding: 15px; border-radius: 6px; text-align: center; }
+            audio { width: 100%; margin: 10px 0; }
+            pre { white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px; }
+            ul { list-style-type: none; padding: 0; }
+            li { padding: 8px 0; border-bottom: 1px solid #eee; }
+            .viz-container { margin-bottom: 20px; text-align: center; }
+        </style>
+    </head>
+    <body>
+        <h1>Raga Analysis Report</h1>
+        <p><strong>Target Raga:</strong> Maru Bihag</p>
+        <p><strong>Tonic:</strong> D#</p>
+        
+        <section>
+            <h2>Audio</h2>
+            <audio controls src="vocals.wav"></audio>
+        </section>
+        
+        
+        <section id="correction">
+            <h2>Raga Correction Summary</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><strong>Total Notes:</strong> 66</div>
+                <div class="stat-box"><strong>Unchanged:</strong> 60</div>
+                <div class="stat-box"><strong>Corrected (Snapped):</strong> 6</div>
+                <div class="stat-box"><strong>Discarded:</strong> 0</div>
+                <div class="stat-box"><strong>Valid Notes Remaining:</strong> 66</div>
+            </div>
+        </section>
+        
+        
+    <section id="transcription">
+        <h2>Musical Transcription</h2>
+        <p><strong>Total Notes:</strong> 66 | <strong>Phrases:</strong> 6</p>
+        <div class="sargam-notation">
+            <h3>Full Transcription</h3>
+            <pre>Sa Ni' Dha' Dha' Dha' Pa' Ma' Ni' Sa Ni' Sa Ni' Sa Ni' Ga Re Sa Ni' Sa Ni' Sa Ni' Dha' Dha' Dha' Ni' Sa Ni' Sa Ni' Sa Ni' Ga Re Ga Re Re Ni' Sa Sa Sa Ni' Re Sa Ni' Sa Ni' Sa Ni' Sa Ni' Sa Ni' Ga Ma Pa Ma ma Ga Ma Ga Re Sa Sa Ga ma</pre>
+        </div>
+        <div class="phrase-list">
+            <h3>Detected Phrases</h3>
+            <p><strong>Phrase 1</strong> (5.18s - 73.58s): Sa Ni Dha Dha Dha Pa Ma Ni Sa Ni Sa Ni Sa Ni</p><p><strong>Phrase 2</strong> (74.33s - 80.47s): Ga Re Sa Ni Sa Ni Sa Ni Dha Dha Dha</p><p><strong>Phrase 3</strong> (81.21s - 92.31s): Ni Sa Ni Sa Ni Sa Ni</p><p><strong>Phrase 4</strong> (92.73s - 118.94s): Ga Re Ga Re Re Ni Sa Sa Sa Ni Re Sa Ni Sa Ni Sa Ni</p><p><strong>Phrase 5</strong> (119.32s - 120.65s): Sa Ni Sa Ni</p><p><strong>Phrase 6</strong> (121.10s - 139.77s): Ga Ma Pa Ma ma Ga Ma Ga Re Sa Sa Ga ma</p>
+        </div>
+    </section>
+    
+        
+        <section id="motifs">
+            <h2>Common Melodic Patterns (Motifs)</h2>
+            <ul>
+                <li><strong>Ni -> Sa -> Ni</strong>: 51 times</li><li><strong>Sa -> Ni -> Sa</strong>: 39 times</li><li><strong>Sa -> Ni -> Sa -> Ni</strong>: 35 times</li><li><strong>Ni -> Sa -> Ni -> Sa</strong>: 23 times</li><li><strong>Ni -> Sa -> Ni -> Sa -> Ni</strong>: 20 times</li><li><strong>Sa -> Ni -> Sa -> Ni -> Sa</strong>: 13 times</li><li><strong>Sa -> Ni -> Sa -> Ni -> Sa -> Ni</strong>: 11 times</li><li><strong>Dha -> Dha -> Dha</strong>: 9 times</li><li><strong>Ni -> Dha -> Dha</strong>: 8 times</li><li><strong>Re -> Sa -> Ni</strong>: 8 times</li>
+            </ul>
+        </section>
+        
+        
+    <section id="visualizations">
+        <h2>Detailed Visualizations</h2>
+        <div class="viz-container">
+            <h3>Pitch Contour with Sargam</h3>
+            <img src="pitch_sargam.png" alt="Pitch Contour" style="width:100%; max-width:1000px;">
+        </div>
+        <div class="viz-container">
+            <h3>Transition Matrix</h3>
+            <img src="transition_matrix.png" alt="Transition Matrix" style="width:100%; max-width:600px;">
+        </div>
+    </section>
+    
+        
+    </body>
+    </html>
+    

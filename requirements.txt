@@ -1,0 +1,31 @@
+# Raga Detection Pipeline - Requirements
+
+# Audio processing
+librosa>=0.10.0
+
+# Pitch extraction
+# Note: swift-f0 may need to be installed separately
+# pip install swift-f0
+
+# Data processing
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+
+# Machine learning
+scikit-learn>=1.0.0
+joblib>=1.0.0
+
+# Visualization
+matplotlib>=3.4.0
+plotly>=5.0.0
+
+# Deep learning (for Demucs stem separation)
+# Install if you plan to use demucs:
+#   pip install torch demucs
+# On Apple Silicon Mac:
+#   pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Optional: Spleeter (alternative to Demucs)
+# Note: Spleeter has limited Python version support (<=3.10)
+# pip install spleeter

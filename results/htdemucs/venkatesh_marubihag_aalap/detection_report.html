@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raga Detection Summary - venkatesh_marubihag_aalap</title>
+    <style>
+        
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        header {
+            text-align: center;
+            padding: 30px 20px;
+            background: #2c3e50;
+            color: white;
+            border-radius: 0;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #3498db;
+        }
+        header h1 { margin: 0; }
+        header .subtitle { opacity: 0.9; }
+        section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .audio-player-container {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        audio { width: 100%; margin-bottom: 10px; }
+        .pitch-plot { width: 100%; height: 420px; }
+        .time-display {
+            padding: 10px;
+            background: #eee;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 8px 12px; text-align: left; border: 1px solid #ddd; }
+        th { background: #34495e; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .metadata-table td:first-child { font-weight: bold; width: 200px; }
+        .transition-table th, .transition-table td { 
+            text-align: center; 
+            padding: 4px 8px; 
+            font-size: 12px;
+        }
+        .sargam-notation pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Ranking table styles */
+        .table-scroll-container {
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .ranking-table {
+            min-width: 1000px;
+        }
+        .ranking-table th, .ranking-table td {
+            white-space: nowrap;
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+        .ranking-table .raga-name {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ranking-table .score {
+            font-weight: bold;
+        }
+        .hidden-row {
+            display: none;
+        }
+        #show-more-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        #show-more-btn:hover {
+            background: #2980b9;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔍 Raga Detection Summary</h1>
+        <p class="subtitle">venkatesh_marubihag_aalap</p>
+    </header>
+    <main>
+        
+    <section id="metadata">
+        <h2>Analysis Metadata</h2>
+        <table class="metadata-table">
+            <tr><td>Audio File</td><td>venkatesh_marubihag_aalap</td></tr>
+            <tr><td>Separator</td><td>demucs (htdemucs)</td></tr>
+            <tr><td>Vocal Confidence</td><td>0.98</td></tr>
+            <tr><td>Histogram Bins</td><td>100 (high-res), 33 (low-res)</td></tr>
+            <tr><td>Detected Tonic</td><td>D#</td></tr>
+            <tr><td>Top Raga</td><td>Hansadhwani</td></tr>
+        </table>
+    </section>
+    
+        <section id="histogram-analysis">
+            <h2>Pitch Distribution</h2>
+            <img src="histogram_vocals.png" 
+                 alt="Pitch histogram" style="max-width: 100%;">
+        </section>
+        
+    <section id="peak-detection">
+        <h2>Peak Detection</h2>
+        <p><strong>Detected Pitch Classes:</strong> C, D, D#, F, G, G#, A, A#</p>
+        <table class="data-table">
+            <thead>
+                <tr><th>Cent Position</th><th>Mapped Note</th><th>Distance</th><th>Valid</th></tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td>6.0¢</td>
+                <td>C (0)</td>
+                <td>6.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>210.0¢</td>
+                <td>D (2)</td>
+                <td>10.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>306.0¢</td>
+                <td>D# (3)</td>
+                <td>6.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>498.0¢</td>
+                <td>F (5)</td>
+                <td>2.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>702.0¢</td>
+                <td>G (7)</td>
+                <td>2.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>798.0¢</td>
+                <td>G# (8)</td>
+                <td>2.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>906.0¢</td>
+                <td>A (9)</td>
+                <td>6.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            <tr>
+                <td>1014.0¢</td>
+                <td>A# (10)</td>
+                <td>14.0¢</td>
+                <td>✓</td>
+            </tr>
+        
+            </tbody>
+        </table>
+    </section>
+    
+    <section id="raga-ranking">
+        <h2>Raga Candidates</h2>
+        <p>Showing top 40 candidates. Scroll horizontally to see all parameters.</p>
+        <div class="table-scroll-container">
+            <table class="data-table ranking-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Raga</th>
+                        <th>Tonic</th>
+                        <th>Score</th>
+                        <th>Match</th>
+                        <th>Extra</th>
+                        <th>Presence</th>
+                        <th>LogLike</th>
+                        <th>Primary</th>
+                        <th>Salience</th>
+                        <th>Size</th>
+                        <th>Δ Size</th>
+                        <th>Complex</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-tbody">
+                    
+            <tr>
+                <td>1</td>
+                <td class="raga-name">Hansadhwani</td>
+                <td>D#</td>
+                <td class="score">506.32</td>
+                <td>0.918</td>
+                <td>0.082</td>
+                <td>0.467</td>
+                <td>0.180</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>5</td>
+                <td>3</td>
+                <td>0.000</td>
+            </tr>
+        
+            <tr>
+                <td>2</td>
+                <td class="raga-name">Bihag, Chhayanat, Gaud Sarang, Hameer, Kamod, Maru Bihag, Nand, Shyam Kalyan</td>
+                <td>D#</td>
+                <td class="score">468.93</td>
+                <td>0.981</td>
+                <td>0.019</td>
+                <td>0.311</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>3</td>
+                <td class="raga-name">Alhaiya Bilawal, Bihagda, Desh, Devgiri Bilawal, Gaud Malhar</td>
+                <td>D#</td>
+                <td class="score">432.50</td>
+                <td>0.958</td>
+                <td>0.042</td>
+                <td>0.304</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>4</td>
+                <td class="raga-name">“Shuddha Kalyan, Yaman</td>
+                <td>D#</td>
+                <td class="score">424.04</td>
+                <td>0.964</td>
+                <td>0.036</td>
+                <td>0.350</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr>
+                <td>5</td>
+                <td class="raga-name">“Bhatiyar, Shuddha Basant</td>
+                <td>D#</td>
+                <td class="score">415.39</td>
+                <td>0.947</td>
+                <td>0.053</td>
+                <td>0.301</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>6</td>
+                <td class="raga-name">Shankara</td>
+                <td>D#</td>
+                <td class="score">405.35</td>
+                <td>0.935</td>
+                <td>0.065</td>
+                <td>0.396</td>
+                <td>0.042</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>6</td>
+                <td>2</td>
+                <td>0.083</td>
+            </tr>
+        
+            <tr>
+                <td>7</td>
+                <td class="raga-name">Bilawal, Bihari, Hem Bihag, Hemant, Mand, Tilak Kamod</td>
+                <td>D#</td>
+                <td class="score">405.24</td>
+                <td>0.952</td>
+                <td>0.048</td>
+                <td>0.345</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr>
+                <td>8</td>
+                <td class="raga-name">Poorvi</td>
+                <td>D#</td>
+                <td class="score">396.06</td>
+                <td>0.935</td>
+                <td>0.065</td>
+                <td>0.297</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>9</td>
+                <td class="raga-name">Nat Bhairav</td>
+                <td>D#</td>
+                <td class="score">385.77</td>
+                <td>0.940</td>
+                <td>0.060</td>
+                <td>0.341</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr>
+                <td>10</td>
+                <td class="raga-name">Manj Khamaj, Saraswati Kedar</td>
+                <td>D#</td>
+                <td class="score">373.29</td>
+                <td>0.986</td>
+                <td>0.014</td>
+                <td>0.278</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>9</td>
+                <td>1</td>
+                <td>0.333</td>
+            </tr>
+        
+            <tr>
+                <td>11</td>
+                <td class="raga-name">Puriya Kalyan</td>
+                <td>D#</td>
+                <td class="score">370.11</td>
+                <td>0.930</td>
+                <td>0.070</td>
+                <td>0.337</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr>
+                <td>12</td>
+                <td class="raga-name">Alhaiya Bilawal, Bihagda, Desh, Devgiri Bilawal, Gaud Malhar</td>
+                <td>A#</td>
+                <td class="score">368.13</td>
+                <td>0.981</td>
+                <td>0.019</td>
+                <td>0.311</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>13</td>
+                <td class="raga-name">Gunakri, Gunkali</td>
+                <td>D</td>
+                <td class="score">358.47</td>
+                <td>0.906</td>
+                <td>0.094</td>
+                <td>0.460</td>
+                <td>0.151</td>
+                <td>0.542</td>
+                <td>537</td>
+                <td>5</td>
+                <td>3</td>
+                <td>0.000</td>
+            </tr>
+        
+            <tr>
+                <td>14</td>
+                <td class="raga-name">Kaushik Dhwani</td>
+                <td>A#</td>
+                <td class="score">357.53</td>
+                <td>0.906</td>
+                <td>0.094</td>
+                <td>0.460</td>
+                <td>0.151</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>5</td>
+                <td>3</td>
+                <td>0.000</td>
+            </tr>
+        
+            <tr>
+                <td>15</td>
+                <td class="raga-name">Bihag, Chhayanat, Gaud Sarang, Hameer, Kamod, Maru Bihag, Nand, Shyam Kalyan</td>
+                <td>A#</td>
+                <td class="score">352.36</td>
+                <td>0.971</td>
+                <td>0.029</td>
+                <td>0.308</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>16</td>
+                <td class="raga-name">Basant, Puriya Dhanashree, Shri”</td>
+                <td>D#</td>
+                <td class="score">350.64</td>
+                <td>0.918</td>
+                <td>0.082</td>
+                <td>0.333</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr>
+                <td>17</td>
+                <td class="raga-name">“Bhatiyar, Shuddha Basant</td>
+                <td>A#</td>
+                <td class="score">333.03</td>
+                <td>0.959</td>
+                <td>0.041</td>
+                <td>0.304</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr>
+                <td>18</td>
+                <td class="raga-name">Bhairav, Gauri</td>
+                <td>D#</td>
+                <td class="score">331.85</td>
+                <td>0.906</td>
+                <td>0.094</td>
+                <td>0.329</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr>
+                <td>19</td>
+                <td class="raga-name">Hanskinki, Jaijaiwanti, Ramdasi Malhar, Tilang Bahar, Zila Kafi</td>
+                <td>D#</td>
+                <td class="score">331.75</td>
+                <td>0.960</td>
+                <td>0.040</td>
+                <td>0.271</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>9</td>
+                <td>1</td>
+                <td>0.333</td>
+            </tr>
+        
+            <tr>
+                <td>20</td>
+                <td class="raga-name">Bheem, Malgunji</td>
+                <td>A#</td>
+                <td class="score">331.70</td>
+                <td>0.958</td>
+                <td>0.042</td>
+                <td>0.304</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>21</td>
+                <td class="raga-name">Jogkauns</td>
+                <td>D#</td>
+                <td class="score">324.46</td>
+                <td>0.901</td>
+                <td>0.099</td>
+                <td>0.327</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>22</td>
+                <td class="raga-name">Bhairavi, Bilaskhani Todi, Asavari (komal re)</td>
+                <td>D</td>
+                <td class="score">324.17</td>
+                <td>0.964</td>
+                <td>0.036</td>
+                <td>0.350</td>
+                <td>0.000</td>
+                <td>0.542</td>
+                <td>537</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>23</td>
+                <td class="raga-name">Bilawal, Bihari, Hem Bihag, Hemant, Mand, Tilak Kamod</td>
+                <td>A#</td>
+                <td class="score">323.24</td>
+                <td>0.964</td>
+                <td>0.036</td>
+                <td>0.350</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>24</td>
+                <td class="raga-name">Chandranandan</td>
+                <td>D#</td>
+                <td class="score">312.53</td>
+                <td>0.948</td>
+                <td>0.052</td>
+                <td>0.267</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>9</td>
+                <td>1</td>
+                <td>0.333</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>25</td>
+                <td class="raga-name">Tilang</td>
+                <td>D#</td>
+                <td class="score">307.11</td>
+                <td>0.900</td>
+                <td>0.100</td>
+                <td>0.381</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>6</td>
+                <td>2</td>
+                <td>0.083</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>26</td>
+                <td class="raga-name">Gavati, Jhinjoti, Khamaj, Khambhavati</td>
+                <td>A#</td>
+                <td class="score">304.44</td>
+                <td>0.952</td>
+                <td>0.048</td>
+                <td>0.345</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>27</td>
+                <td class="raga-name">Ramkali</td>
+                <td>D#</td>
+                <td class="score">300.82</td>
+                <td>0.940</td>
+                <td>0.060</td>
+                <td>0.265</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>9</td>
+                <td>1</td>
+                <td>0.333</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>28</td>
+                <td class="raga-name">Hindol</td>
+                <td>D#</td>
+                <td class="score">296.44</td>
+                <td>0.867</td>
+                <td>0.133</td>
+                <td>0.440</td>
+                <td>0.054</td>
+                <td>0.308</td>
+                <td>3200</td>
+                <td>5</td>
+                <td>3</td>
+                <td>0.000</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>29</td>
+                <td class="raga-name">Poorvi</td>
+                <td>D</td>
+                <td class="score">290.65</td>
+                <td>0.931</td>
+                <td>0.069</td>
+                <td>0.296</td>
+                <td>0.000</td>
+                <td>0.542</td>
+                <td>537</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.250</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>30</td>
+                <td class="raga-name">Lalit</td>
+                <td>D#</td>
+                <td class="score">287.99</td>
+                <td>0.878</td>
+                <td>0.122</td>
+                <td>0.319</td>
+                <td>0.000</td>
+                <td>0.308</td>
+                <td>3200</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>31</td>
+                <td class="raga-name">Jogeshwari Pancham</td>
+                <td>A#</td>
+                <td class="score">286.76</td>
+                <td>0.941</td>
+                <td>0.059</td>
+                <td>0.341</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>32</td>
+                <td class="raga-name">Ahir Bhairav</td>
+                <td>A#</td>
+                <td class="score">284.97</td>
+                <td>0.940</td>
+                <td>0.060</td>
+                <td>0.341</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>33</td>
+                <td class="raga-name">Manj Khamaj, Saraswati Kedar</td>
+                <td>A#</td>
+                <td class="score">274.48</td>
+                <td>0.988</td>
+                <td>0.012</td>
+                <td>0.279</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>9</td>
+                <td>1</td>
+                <td>0.333</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>34</td>
+                <td class="raga-name">Hanskinki, Jaijaiwanti, Ramdasi Malhar, Tilang Bahar, Zila Kafi</td>
+                <td>A#</td>
+                <td class="score">272.49</td>
+                <td>0.986</td>
+                <td>0.014</td>
+                <td>0.278</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>512</td>
+                <td>9</td>
+                <td>1</td>
+                <td>0.333</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>35</td>
+                <td class="raga-name">Marwa, Puriya, Sohini</td>
+                <td>D#</td>
+                <td class="score">264.65</td>
+                <td>0.874</td>
+                <td>0.126</td>
+                <td>0.370</td>
+                <td>0.000</td>
+                <td>0.308</td>
+                <td>3200</td>
+                <td>6</td>
+                <td>2</td>
+                <td>0.083</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>36</td>
+                <td class="raga-name">Basant Mukhari</td>
+                <td>D</td>
+                <td class="score">262.86</td>
+                <td>0.925</td>
+                <td>0.075</td>
+                <td>0.336</td>
+                <td>0.000</td>
+                <td>0.542</td>
+                <td>537</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>37</td>
+                <td class="raga-name">Bhairav, Gauri</td>
+                <td>D</td>
+                <td class="score">245.19</td>
+                <td>0.914</td>
+                <td>0.086</td>
+                <td>0.332</td>
+                <td>0.000</td>
+                <td>0.542</td>
+                <td>537</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>38</td>
+                <td class="raga-name">Prabhateshwari</td>
+                <td>D</td>
+                <td class="score">241.83</td>
+                <td>0.912</td>
+                <td>0.088</td>
+                <td>0.331</td>
+                <td>0.000</td>
+                <td>0.542</td>
+                <td>537</td>
+                <td>7</td>
+                <td>1</td>
+                <td>0.167</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>39</td>
+                <td class="raga-name">Pilu</td>
+                <td>D#</td>
+                <td class="score">236.19</td>
+                <td>0.964</td>
+                <td>0.036</td>
+                <td>0.245</td>
+                <td>0.000</td>
+                <td>0.336</td>
+                <td>3200</td>
+                <td>10</td>
+                <td>2</td>
+                <td>0.417</td>
+            </tr>
+        
+            <tr class="hidden-row">
+                <td>40</td>
+                <td class="raga-name">Kaushik Dhwani</td>
+                <td>D#</td>
+                <td class="score">234.51</td>
+                <td>0.855</td>
+                <td>0.145</td>
+                <td>0.434</td>
+                <td>0.011</td>
+                <td>0.296</td>
+                <td>3200</td>
+                <td>5</td>
+                <td>3</td>
+                <td>0.000</td>
+            </tr>
+        
+                </tbody>
+            </table>
+        </div>
+        <button id="show-more-btn" onclick="toggleMoreRows()">Show More (21-40)</button>
+    </section>
+    
+    </main>
+    <footer>
+        <p>Generated on 2026-01-14 14:44:08</p>
+        <p><em>Run 'analyze' phase with selected tonic/raga for full details.</em></p>
+    </footer>
+    <script>
+        
+        // Toggle show more/less rows in ranking table
+        var showingMore = false;
+        function toggleMoreRows() {
+            var hiddenRows = document.querySelectorAll('.hidden-row');
+            var btn = document.getElementById('show-more-btn');
+            showingMore = !showingMore;
+            hiddenRows.forEach(function(row) {
+                row.style.display = showingMore ? 'table-row' : 'none';
+            });
+            btn.textContent = showingMore ? 'Show Less (1-20)' : 'Show More (21-40)';
+        }
+        
+        function setupAudioSync(playerId, tonic) {
+            var audio = document.getElementById(playerId + '-audio');
+            var plotDiv = document.getElementById(playerId + '-plot');
+            var timeDisplay = document.getElementById(playerId + '-time');
+            var sargamDisplay = document.getElementById(playerId + '-sargam');
+            
+            if (!audio || !plotDiv) return;
+            
+            var SARGAM = {0:'Sa',1:'re',2:'Re',3:'ga',4:'Ga',5:'ma',6:'Ma',7:'Pa',8:'dha',9:'Dha',10:'ni',11:'Ni'};
+            
+            // Get cursor shape index (last shape)
+            var shapes = plotDiv.layout.shapes || [];
+            var cursorIdx = shapes.length - 1;
+            
+            // Audio timeupdate -> cursor position
+            audio.addEventListener('timeupdate', function() {
+                var t = audio.currentTime;
+                
+                // Update cursor line
+                Plotly.relayout(plotDiv, {
+                    ['shapes[' + cursorIdx + '].x0']: t,
+                    ['shapes[' + cursorIdx + '].x1']: t
+                });
+                
+                // Update time display
+                timeDisplay.textContent = t.toFixed(2) + 's';
+                
+                // Estimate current MIDI from plot data
+                try {
+                    var trace = plotDiv.data[0];
+                    if (trace && trace.x && trace.y) {
+                        var idx = trace.x.findIndex(function(x) { return x >= t; });
+                        if (idx > 0) {
+                            var midi = trace.y[idx];
+                            var offset = Math.round(midi - tonic) % 12;
+                            if (offset < 0) offset += 12;
+                            sargamDisplay.textContent = SARGAM[offset] || '--';
+                        }
+                    }
+                } catch(e) {}
+            });
+            
+            // Click on plot -> seek audio
+            plotDiv.on('plotly_click', function(data) {
+                if (data.points && data.points[0]) {
+                    audio.currentTime = data.points[0].x;
+                }
+            });
+        }
+    
+    </script>
+</body>
+</html>

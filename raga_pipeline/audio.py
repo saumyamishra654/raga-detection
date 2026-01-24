@@ -206,20 +206,98 @@ def _separate_spleeter(
     print(f"[SPLEETER] Separating: {os.path.basename(audio_path)}...")
     separator.separate_to_file(audio_path, stem_dir, codec="wav")
     
-    # Spleeter uses different naming convention
-    spleeter_vocals = os.path.join(stem_dir, "vocals.wav")
-    spleeter_accomp = os.path.join(stem_dir, "accompaniment.wav")
+    # Spleeter creates a subdirectory named after the input file
+    filename_no_ext = os.path.splitext(os.path.basename(audio_path))[0]
+    spleeter_out_dir = os.path.join(stem_dir, filename_no_ext)
     
-    # Rename if needed
+    spleeter_vocals = os.path.join(spleeter_out_dir, "vocals.wav")
+    spleeter_accomp = os.path.join(spleeter_out_dir, "accompaniment.wav")
+    
+    # Move files to the expected location (stem_dir root)
     if os.path.exists(spleeter_vocals) and spleeter_vocals != vocals_path:
-        os.rename(spleeter_vocals, vocals_path)
+        import shutil
+        shutil.move(spleeter_vocals, vocals_path)
     if os.path.exists(spleeter_accomp) and spleeter_accomp != accompaniment_path:
-        os.rename(spleeter_accomp, accompaniment_path)
+        import shutil
+        shutil.move(spleeter_accomp, accompaniment_path)
+    
+    # Clean up empty subdirectory
+    if os.path.exists(spleeter_out_dir) and not os.listdir(spleeter_out_dir):
+        os.rmdir(spleeter_out_dir)
     
     print(f"[SPLEETER] Saved vocals: {vocals_path}")
     print(f"[SPLEETER] Saved accompaniment: {accompaniment_path}")
     
     return vocals_path, accompaniment_path
+
+
+def load_audio_direct(
+    audio_path: str,
+    output_dir: str,
+    source_type: str = "instrumental",
+) -> Tuple[str, Optional[str]]:
+    """
+    Load audio directly without stem separation.
+    
+    For instrumental or solo vocal recordings, skip stem separation 
+    and use the original audio as the melody source.
+    
+    Args:
+        audio_path: Path to input audio file
+        output_dir: Output directory for the processed file
+        source_type: "instrumental" or "vocal"
+        
+    Returns:
+        Tuple of (melody_path, accompaniment_path or None)
+        accompaniment_path is always None since no separation is done.
+    """
+    filename = os.path.splitext(os.path.basename(audio_path))[0]
+    stem_dir = os.path.join(output_dir, "direct", filename)
+    os.makedirs(stem_dir, exist_ok=True)
+    
+    # Name the output based on source type for clarity
+    if source_type == "vocal":
+        melody_filename = "vocals.wav"
+    else:
+        melody_filename = "melody.wav"
+    
+    melody_path = os.path.join(stem_dir, melody_filename)
+    
+    # Check if already exists
+    if os.path.isfile(melody_path):
+        print(f"[CACHE] Direct audio already exists: {melody_path}")
+        return melody_path, None
+    
+    # Copy audio to output (convert to WAV if needed)
+    import shutil
+    import subprocess
+    
+    input_ext = os.path.splitext(audio_path)[1].lower()
+    if input_ext == ".wav":
+        # Just copy
+        shutil.copy2(audio_path, melody_path)
+        print(f"[DIRECT] Copied audio to: {melody_path}")
+    else:
+        # Use ffmpeg for conversion (more reliable than librosa for various formats)
+        try:
+            cmd = [
+                "ffmpeg", "-y", "-i", audio_path,
+                "-ar", "44100", "-ac", "2",
+                melody_path
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise RuntimeError(f"ffmpeg failed: {result.stderr}")
+            print(f"[DIRECT] Converted to WAV using ffmpeg: {melody_path}")
+        except FileNotFoundError:
+            # Fallback to soundfile if ffmpeg not available
+            import soundfile as sf
+            audio_data, sr = sf.read(audio_path)
+            sf.write(melody_path, audio_data, sr)
+            print(f"[DIRECT] Converted to WAV using soundfile: {melody_path}")
+    
+    # Return None for accompaniment since we're not separating
+    return melody_path, None
 
 
 # =============================================================================

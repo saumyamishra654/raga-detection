@@ -39,7 +39,7 @@ class ScoringParams:
     DELTA_EXTRA: float = 1.10          # extra mass penalty (-ve)
     COMPLEX_PENALTY: float = 0.4       # complexity penalty (-ve)
     MATCH_SIZE_GAMMA: float = 0.25     # size mismatch coefficient
-    TONIC_SALIENCE_WEIGHT: float = 0.12  # accompaniment tonic weight
+    TONIC_SALIENCE_WEIGHT: float = 0.12  # tonic salience weight
     SCALE: float = 1000.0
     USE_PRESENCE_MEAN: bool = True     # mean vs sum/sqrt
     USE_NORM_PRIMARY: bool = True
@@ -47,6 +47,57 @@ class ScoringParams:
 
 
 DEFAULT_SCORING_PARAMS = ScoringParams()
+
+
+# =============================================================================
+# TONIC BIAS CONSTANTS (for instrumental/vocal source types)
+# =============================================================================
+
+# Tonic bias ranges (pitch class 0-11, where 0=C)
+# These restrict candidate tonics based on source type and instrument/vocalist
+TONIC_BIAS = {
+    # Vocalist gender (biases toward typical vocal ranges)
+    "vocal_female": [7, 8, 9, 10, 11, 0],     # G, G#, A, A#, B, C (bias around A-A#)
+    "vocal_male": [11, 0, 1, 2, 3, 4, 5],     # B, C, C#, D, D#, E, F (bias around D-D#)
+    
+    # Instrument-specific tonic ranges
+    "sarod": [10, 11, 0, 1, 2],               # A#, B, C, C#, D
+    "sitar": [1, 2, 3],                       # C#, D, D#
+    "bansuri": [2, 3, 4, 5],                  # D, D#, E, F
+    "slide_guitar": [1, 2, 3],                # C#, D, D#
+    
+    # Default: all tonics allowed
+    "autodetect": list(range(12)),
+}
+
+
+def get_tonic_candidates(
+    source_type: str,
+    vocalist_gender: str = None,
+    instrument_type: str = "autodetect",
+) -> List[int]:
+    """
+    Get list of valid tonic candidates based on source configuration.
+    
+    Args:
+        source_type: "mixed", "instrumental", or "vocal"
+        vocalist_gender: "male" or "female" (only for source_type="vocal")
+        instrument_type: Instrument name (only for source_type="instrumental")
+        
+    Returns:
+        List of pitch classes (0-11) to use as candidate tonics
+    """
+    if source_type == "vocal" and vocalist_gender:
+        key = f"vocal_{vocalist_gender}"
+        if key in TONIC_BIAS:
+            return TONIC_BIAS[key].copy()
+    
+    if source_type == "instrumental" and instrument_type:
+        if instrument_type in TONIC_BIAS:
+            return TONIC_BIAS[instrument_type].copy()
+    
+    # Default: all tonics
+    return list(range(12))
 
 
 # =============================================================================
@@ -238,17 +289,27 @@ def generate_candidates(
 
 def score_candidates_full(
     pitch_data_vocals: PitchData,
-    pitch_data_accomp: PitchData,
+    pitch_data_accomp: Optional[PitchData],
     raga_db: RagaDatabase,
     detected_peak_count: int,
     instrument_mode: str = "autodetect",
     params: ScoringParams = DEFAULT_SCORING_PARAMS,
+    tonic_candidates: Optional[List[int]] = None,
 ) -> pd.DataFrame:
     """
     Full scoring pipeline matching the notebook exactly.
     
     This computes cent-level histograms, applies accompaniment salience filtering,
     and scores all ragas against all allowed tonics.
+    
+    Args:
+        pitch_data_vocals: Pitch data from melody/vocals
+        pitch_data_accomp: Pitch data from accompaniment (can be None)
+        raga_db: Raga database
+        detected_peak_count: Number of detected peaks
+        instrument_mode: Source type for fallback tonic selection
+        params: Scoring parameters
+        tonic_candidates: Optional list of allowed tonics (from get_tonic_candidates)
     """
     EPS = params.EPS
     
@@ -274,39 +335,37 @@ def score_candidates_full(
     # Normalized probability distribution
     p_pc = (H_pc_arr + EPS) / (np.sum(H_pc_arr) + 12 * EPS)
     
-    # === Accompaniment salience ===
-    midi_vals_acc = pitch_data_accomp.midi_vals
-    pitch_classes_acc = np.mod(np.round(midi_vals_acc), 12).astype(int)
-    H_acc, _ = np.histogram(pitch_classes_acc, bins=12, range=(0, 12))
-    salience_all_tonics = {t: int(H_acc[t]) for t in range(12)}
-    max_acc = float(H_acc.max()) if H_acc.size and H_acc.max() > 0 else 1.0
+    # === Accompaniment salience (only if accompaniment available) ===
+    has_accompaniment = pitch_data_accomp is not None and len(pitch_data_accomp.midi_vals) > 0
     
-    # === Tonic filtering based on mean salience ===
-    mean_salience = float(np.mean(list(salience_all_tonics.values())))
-    surviving_tonics = [t for t, a in salience_all_tonics.items() if a > mean_salience]
-    
-    print(f"[SCORING] Mean accomp salience = {mean_salience:.1f}; {len(surviving_tonics)} surviving tonics")
-    
-    # Allowed tonics by instrument mode
-    allowed_tonics_map = {
-        "sitar": [1, 2, 3],
-        "sarod": [0, 1, 2, 11],
-        "autodetect": list(range(12)),
-        "male": [12, 0, 1, 2, 3, 4, 5],
-        "female": [5, 6, 7, 8, 9, 10],
-    }
-    
-    if instrument_mode == "autodetect" or instrument_mode not in allowed_tonics_map:
-        allowed_tonics = surviving_tonics.copy() if surviving_tonics else list(range(12))
+    if has_accompaniment:
+        midi_vals_acc = pitch_data_accomp.midi_vals
+        pitch_classes_acc = np.mod(np.round(midi_vals_acc), 12).astype(int)
+        H_acc, _ = np.histogram(pitch_classes_acc, bins=12, range=(0, 12))
+        salience_all_tonics = {t: int(H_acc[t]) for t in range(12)}
+        max_acc = float(H_acc.max()) if H_acc.size and H_acc.max() > 0 else 1.0
+        
+        # Tonic filtering based on mean salience
+        mean_salience = float(np.mean(list(salience_all_tonics.values())))
+        surviving_tonics = [t for t, a in salience_all_tonics.items() if a > mean_salience]
+        
+        print(f"[SCORING] Mean accomp salience = {mean_salience:.1f}; {len(surviving_tonics)} surviving tonics")
     else:
-        base_allowed = allowed_tonics_map[instrument_mode]
-        allowed_intersection = [t for t in base_allowed if t in surviving_tonics]
-        if allowed_intersection:
-            allowed_tonics = allowed_intersection
-        else:
-            allowed_tonics = base_allowed.copy()
+        # No accompaniment - use melody histogram peaks as tonic hints
+        salience_all_tonics = {t: 0 for t in range(12)}
+        max_acc = 1.0
+        mean_salience = 0.0
+        surviving_tonics = []
+        print("[SCORING] No accompaniment - using tonic bias or all tonics")
     
-    if not allowed_tonics:
+    # === Determine allowed tonics ===
+    # Priority: explicit tonic_candidates > tonic bias > accompaniment filtering > all
+    if tonic_candidates is not None and len(tonic_candidates) > 0:
+        allowed_tonics = tonic_candidates.copy()
+        print(f"[SCORING] Using tonic candidates from bias: {allowed_tonics}")
+    elif has_accompaniment and len(surviving_tonics) > 0:
+        allowed_tonics = surviving_tonics.copy()
+    else:
         allowed_tonics = list(range(12))
     
     print(f"[SCORING] Using tonics: {allowed_tonics}")
@@ -322,9 +381,9 @@ def score_candidates_full(
             continue
         
         for tonic in allowed_tonics:
-            # Tonic salience check for autodetect
+            # Tonic salience check for autodetect (only when we have accompaniment)
             tonic_sal = float(salience_all_tonics.get(tonic, 0))
-            if instrument_mode == "autodetect" and tonic_sal <= mean_salience:
+            if has_accompaniment and tonic_candidates is None and instrument_mode == "autodetect" and tonic_sal <= mean_salience:
                 continue
             
             # Rotate observed distribution
@@ -423,9 +482,10 @@ def score_candidates_full(
     df = pd.DataFrame(final_results)
     
     if len(df) > 0:
-        # Sort by fit_score -> salience -> primary_score
+        # Sort by salience -> fit_score -> primary_score
+        # This matches the notebook behavior where high-salience tonics (like D) win
         df = df.sort_values(
-            by=["fit_score", "salience", "primary_score"],
+            by=["salience", "fit_score", "primary_score"],
             ascending=[False, False, False]
         ).reset_index(drop=True)
         df["rank"] = df.index + 1
@@ -758,6 +818,7 @@ class RagaScorer:
         pitch_data_accomp: PitchData,
         detected_peak_count: int,
         instrument_mode: str = "autodetect",
+        tonic_candidates: Optional[List[int]] = None,
     ) -> pd.DataFrame:
         """
         Score all raga candidates.
@@ -771,4 +832,5 @@ class RagaScorer:
             detected_peak_count,
             instrument_mode,
             self.params,
+            tonic_candidates,
         )

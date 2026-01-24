@@ -554,6 +554,61 @@ def _find_continuous_regions(mask: np.ndarray) -> List[Tuple[int, int]]:
     return list(zip(starts, ends))
 
 
+def filter_notes_by_octave_range(
+    notes: List[Note],
+    tonic: Union[int, str],
+    octave_range: int = 3,
+    verbose: bool = False,
+) -> List[Note]:
+    """
+    Filter notes to reasonable octave range around detected tonic.
+    
+    Removes likely pitch detection errors (notes in extreme high/low octaves).
+    
+    Args:
+        notes: List of detected notes
+        tonic: Tonic pitch class (0-11) or note name
+        octave_range: Number of octaves above and below center to allow (default: 3)
+        verbose: Print filtering statistics
+        
+    Returns:
+        Filtered list of notes within acceptable octave range
+    """
+    if not notes:
+        return []
+    
+    # Get tonic MIDI class
+    tonic_midi_class = tonic_to_midi_class(tonic)
+    
+    # Calculate median MIDI pitch to find center octave
+    midi_pitches = np.array([n.pitch_midi for n in notes])
+    median_midi = np.median(midi_pitches)
+    center_octave = int(round(median_midi)) // 12
+    
+    # Calculate center pitch (tonic in center octave)
+    center_midi = center_octave * 12 + tonic_midi_class
+    
+    # Define acceptable range
+    min_midi = center_midi - (octave_range * 12)
+    max_midi = center_midi + (octave_range * 12)
+    
+    # Filter notes
+    filtered_notes = []
+    removed_count = 0
+    
+    for note in notes:
+        if min_midi <= note.pitch_midi <= max_midi:
+            filtered_notes.append(note)
+        else:
+            removed_count += 1
+    
+    if verbose:
+        print(f"[OCTAVE_FILTER] Removed {removed_count}/{len(notes)} notes outside octave range")
+        print(f"  Center: MIDI {center_midi}, Range: [{min_midi}, {max_midi}]")
+    
+    return filtered_notes
+
+
 # =============================================================================
 # PHRASE DETECTION & CLUSTERING
 # =============================================================================
@@ -567,140 +622,32 @@ def detect_phrases(
     merge_gap_threshold: float = 0.1,
 ) -> List[Phrase]:
     """
-    Group notes into phrases using adaptive gap detection (KMeans).
+    Group notes into phrases using advanced gap detection.
     
-    Matches logic from note_sequence_playground.ipynb 'cluster_notes_into_phrases'.
+    Delegates to the user-provided 'cluster_notes_into_phrases' function.
     
     Args:
         notes: List of detected notes
-        max_gap: Fallback max gap if adaptive method fails (seconds)
+        max_gap: Fallback max gap or fixed threshold (seconds)
         min_length: Minimum number of notes per phrase
-        method: 'auto' (KMeans), 'threshold' (fixed max_gap), or 'dbscan'
+        method: 'auto' (KMeans), 'threshold' (fixed/adaptive), 'dbscan', 'kmeans'
         min_phrase_duration: Minimum duration for a phrase (seconds)
         merge_gap_threshold: Gap threshold to merge adjacent phrases after splitting
         
     Returns:
         List of Phrase objects
     """
-    if not notes:
-        return []
+    phrases, _, _ = cluster_notes_into_phrases(
+        notes=notes,
+        method=method,
+        fixed_threshold=max_gap if method == 'threshold' or method == 'dbscan' else None,
+        min_phrase_duration=min_phrase_duration,
+        min_notes_in_phrase=min_length,
+        merge_gap_threshold=merge_gap_threshold
+    )
+    return phrases
         
-    # Sort by start time just in case
-    notes_sorted = sorted(notes, key=lambda n: n.start)
-    
-    # 1. Compute gaps
-    if len(notes_sorted) <= 1:
-        return [Phrase(notes=notes_sorted)] if len(notes_sorted) >= min_length else []
-        
-    starts = np.array([n.start for n in notes_sorted])
-    ends = np.array([n.end for n in notes_sorted])
-    gaps = np.maximum(starts[1:] - ends[:-1], 0.0)
-    
-    # 2. Determine threshold
-    threshold_used = max_gap
-    
-    if method == "threshold":
-        threshold_used = max_gap
-        
-    elif method == "auto" and len(gaps) > 2:
-        try:
-            from sklearn.cluster import KMeans
-            # Try KMeans splitting into 2 clusters (short vs long gaps)
-            X = gaps.reshape(-1, 1)
-            # Use fixed random state for reproducibility
-            km = KMeans(n_clusters=2, random_state=0, n_init='auto').fit(X)
-            centers = km.cluster_centers_.reshape(-1)
-            
-            # Cluster with smaller center = within-phrase short gaps
-            short_cluster_idx = np.argmin(centers)
-            long_cluster_idx = np.argmax(centers)
-            
-            # Threshold = midpoint between the two cluster centers
-            auto_threshold = float((centers[short_cluster_idx] + centers[long_cluster_idx]) / 2.0)
-            
-            # Safety check: if threshold is too small, use robust fallback
-            if auto_threshold < 0.2:
-                raise ValueError("Auto threshold too small")
-                
-            threshold_used = auto_threshold
-            
-        except Exception:
-            # Fallback to robust IQR threshold
-            q1, q3 = np.percentile(gaps, [25, 75])
-            iqr = max(q3 - q1, 1e-9)
-            # 1.5 * IQR is standard for outlier detection
-            threshold_used = float(np.median(gaps) + 1.5 * iqr)
-            
-            # Clamp to reasonable range [0.5, 3.0] if purely statistical
-            threshold_used = max(0.5, min(threshold_used, 3.0))
 
-    # 3. Split into phrases
-    break_indices = np.where(gaps > threshold_used)[0]
-    
-    phrases_list = []
-    start_idx = 0
-    for b in break_indices:
-        end_idx = b + 1
-        phrases_list.append(notes_sorted[start_idx:end_idx])
-        start_idx = end_idx
-    phrases_list.append(notes_sorted[start_idx:])
-    
-    # 4. Post-processing: Merge tiny gaps & filter short phrases
-    
-    # Merge adjacent phrases with tiny gaps (e.g. broken notes)
-    if len(phrases_list) > 1:
-        merged = []
-        i = 0
-        while i < len(phrases_list):
-            cur = phrases_list[i]
-            j = i + 1
-            while j < len(phrases_list):
-                # Gap between end of cur and start of next
-                gap_between = phrases_list[j][0].start - cur[-1].end
-                if gap_between <= merge_gap_threshold:
-                    cur = cur + phrases_list[j]
-                    j += 1
-                else:
-                    break
-            merged.append(cur)
-            i = j
-        phrases_list = merged
-        
-    # Filter by duration and note count
-    final_phrases = []
-    i = 0
-    while i < len(phrases_list):
-        ph_notes = phrases_list[i]
-        dur = ph_notes[-1].end - ph_notes[0].start
-        
-        if (dur < min_phrase_duration) or (len(ph_notes) < min_length):
-            # Try merging with neighbor (prefer forward, then backward)
-            merged_here = False
-            
-            # Merge forward
-            if i + 1 < len(phrases_list):
-                phrases_list[i+1] = ph_notes + phrases_list[i+1]
-                merged_here = True
-            
-            # Merge backward
-            elif final_phrases:
-                 final_phrases[-1] = final_phrases[-1] + ph_notes
-                 merged_here = True
-                 
-            if merged_here:
-                i += 1
-                continue
-                
-            # Drop it
-            i += 1
-            continue
-        else:
-            final_phrases.append(ph_notes)
-            i += 1
-            
-    # Convert to Phrase objects
-    result_phrases = [Phrase(notes=ns) for ns in final_phrases]
-    return result_phrases
 
 
 def cluster_phrases(
@@ -963,3 +910,390 @@ def transcribe_notes(
 def transcribe_phrase(phrase: Phrase, tonic: Union[int, str]) -> str:
     """Transcribe a phrase to sargam string."""
     return transcribe_notes(phrase.notes, tonic)
+
+
+# =============================================================================
+# ADVANCED PATTERN ANALYSIS
+# =============================================================================
+
+def extract_aaroh_avroh_runs(
+    phrases: List[Phrase],
+    tonic: Union[int, str],
+    min_length: int = 3
+) -> Dict[str, Union[List[str], Dict[str, int]]]:
+    """
+    Extract long ascending (Aaroh) and descending (Avroh) runs.
+    
+    Identifies sequences of corrected notes that are strictly increasing
+    or decreasing in pitch.
+    
+    Args:
+        phrases: List of detected phrases
+        tonic: Tonic for sargam conversion
+        min_length: Minimum number of notes in a run
+        
+    Returns:
+        Dictionary containing:
+        - aaroh_runs: List of sargam strings for ascending runs
+        - avroh_runs: List of sargam strings for descending runs
+        - stats: Counts of top runs
+    """
+    aaroh_runs = []
+    avroh_runs = []
+    
+    for phrase in phrases:
+        notes = phrase.notes
+        if len(notes) < min_length:
+            continue
+            
+        # Segment phrase into monotonic runs
+        current_run = [notes[0]]
+        direction = 0 # 0: unknown, 1: up, -1: down
+        
+        for i in range(1, len(notes)):
+            prev_n = notes[i-1]
+            curr_n = notes[i]
+            
+            # Use raw pitch estimates or corrected info?
+            # Let's use corrected info for robustness
+            _, prev_midi, _ = extract_corrected_sargam_info(prev_n, tonic)
+            _, curr_midi, _ = extract_corrected_sargam_info(curr_n, tonic)
+            
+            # Skip if same note or large gap
+            if prev_midi == curr_midi:
+                continue
+            
+            diff = curr_midi - prev_midi
+            new_direction = 1 if diff > 0 else -1
+            
+            if direction == 0:
+                direction = new_direction
+                current_run.append(curr_n)
+            elif direction == new_direction:
+                current_run.append(curr_n)
+            else:
+                # Direction changed, save run if long enough
+                if len(current_run) >= min_length:
+                    run_str = transcribe_notes(current_run, tonic)
+                    if direction == 1:
+                        aaroh_runs.append(run_str)
+                    else:
+                        avroh_runs.append(run_str)
+                
+                # Start new run
+                current_run = [prev_n, curr_n]
+                direction = new_direction
+                
+        # Handle last run
+        if len(current_run) >= min_length and direction != 0:
+            run_str = transcribe_notes(current_run, tonic)
+            if direction == 1:
+                aaroh_runs.append(run_str)
+            else:
+                avroh_runs.append(run_str)
+    
+    # Analyze frequency
+    from collections import Counter
+    aaroh_counts = Counter(aaroh_runs)
+    avroh_counts = Counter(avroh_runs)
+    
+    return {
+        "aaroh_runs": aaroh_runs,
+        "avroh_runs": avroh_runs,
+        "stats": {
+            "aaroh_top": dict(aaroh_counts.most_common(5)),
+            "avroh_top": dict(avroh_counts.most_common(5))
+        }
+    }
+
+
+def analyze_raga_patterns(
+    phrases: List[Phrase],
+    tonic: Union[int, str],
+) -> Dict:
+    """
+    Comprehensive raga pattern analysis.
+    
+    Aggregates:
+    - Common melodic motifs (n-grams)
+    - Aaroh/Avroh runs
+    - Basic stats
+    
+    Args:
+        phrases: List of phrases
+        tonic: Detected tonic
+        
+    Returns:
+        Dictionary with full analysis results
+    """
+    # 1. Aaroh/Avroh
+    runs = extract_aaroh_avroh_runs(phrases, tonic)
+    
+    # 2. Motifs (n-grams)
+    sequences = extract_melodic_sequences(phrases, tonic, max_length=6)
+    common_motifs = find_common_patterns(sequences, min_length=3, min_frequency=2)
+    
+    # Format motifs for output
+    formatted_motifs = []
+    for seq_tuple, count in common_motifs[:10]: # Top 10
+        formatted_motifs.append({
+            "pattern": " ".join(seq_tuple),
+            "count": count
+        })
+        
+    return {
+        "aaroh_stats": runs["stats"]["aaroh_top"],
+        "avroh_stats": runs["stats"]["avroh_top"],
+        "common_motifs": formatted_motifs,
+        "total_phrases": len(phrases),
+        "total_aaroh_runs": len(runs["aaroh_runs"]),
+        "total_avroh_runs": len(runs["avroh_runs"])
+    }
+
+
+# =============================================================================
+# ADVANCED PHRASE DETECTION (User Methods)
+# =============================================================================
+
+def _extract_times_and_labels(notes: List[Union[Dict, Note]], label_key: str = 'sargam'):
+    """
+    Accepts notes: list-of-dicts with 'start','end' fields OR list of Note objects.
+    Returns arrays: starts, ends, mids, labels (strings), original indices.
+    """
+    starts, ends, mids, labels, idxs = [], [], [], [], []
+    for i, n in enumerate(notes):
+        if isinstance(n, dict):
+            if 'start' not in n or 'end' not in n:
+                raise ValueError("Each note dict must have 'start' and 'end' keys.")
+            s = float(n['start'])
+            e = float(n['end'])
+            m = int(n.get('midi') if n.get('midi') is not None else (round(n.get('midi_note')) if n.get('midi_note') is not None else 0))
+            l = str(n.get(label_key, n.get('sargam', n.get('midi',''))))
+        else:
+            # Assume Note object
+            s = n.start
+            e = n.end
+            m = int(round(n.pitch_midi))
+            l = getattr(n, label_key, n.sargam)
+            
+        starts.append(s)
+        ends.append(e)
+        mids.append(m)
+        labels.append(l)
+        idxs.append(i)
+    return np.array(starts), np.array(ends), np.array(mids), labels, np.array(idxs)
+
+
+def cluster_notes_into_phrases(
+    notes: List[Union[Dict, Note]],
+    method: str = 'auto',
+    fixed_threshold: Optional[float] = None,
+    iqr_factor: float = 1.5,
+    min_phrase_duration: float = 0.1,
+    min_notes_in_phrase: int = 1,
+    merge_gap_threshold: float = 0.1,
+    label_key: str = 'sargam',
+    plot_timeline: bool = False,
+    min_auto_threshold: float = 0.3,
+) -> Tuple[List[Phrase], List[int], float]:
+    """
+    Cluster timestamped notes into phrases using advanced methods (KMeans, DBSCAN).
+    
+    Args:
+        notes: list of Note objects or dicts
+        method: 'auto' | 'threshold' | 'kmeans' | 'dbscan'
+        fixed_threshold: seconds. If supplied it takes priority for 'threshold' or 'dbscan'.
+        iqr_factor: multiplier for IQR in robust threshold.
+        min_phrase_duration: drop phrases shorter than this (seconds).
+        min_notes_in_phrase: drop phrases with fewer notes.
+        merge_gap_threshold: merge adjacent phrases if gap is smaller than this.
+        label_key: label field name (default 'sargam').
+        plot_timeline: Whether to plot a debug timeline (requires matplotlib).
+        min_auto_threshold: minimum threshold for auto method.
+
+    Returns:
+        phrases (List[Phrase]), breaks_indices, threshold_used
+    """
+    import matplotlib.pyplot as plt
+    
+    # defensive copy & sort by start time
+    # Check type to sort correctly
+    if notes and isinstance(notes[0], dict):
+        notes_sorted = sorted(notes, key=lambda n: float(n['start']))
+    else:
+        notes_sorted = sorted(notes, key=lambda n: n.start)
+        
+    starts, ends, mids, labels, idxs = _extract_times_and_labels(notes_sorted, label_key=label_key)
+    n = len(starts)
+    if n == 0:
+        return [], [], 0.0
+
+    # compute inter-note gaps: end[i-1] -> start[i]
+    if n == 1:
+        gaps = np.array([])
+    else:
+        gaps = starts[1:] - ends[:-1]
+        # numerical safety
+        gaps = np.maximum(gaps, 0.0)
+
+    # pick threshold
+    threshold_used = 0.5 # default
+    actual_method_used = method  # Track what method was actually used
+    
+    if method == 'dbscan':
+        if fixed_threshold is None:
+            raise ValueError("dbscan method requires fixed_threshold (eps in seconds).")
+        threshold_used = float(fixed_threshold)
+
+    elif method == 'threshold':
+        if fixed_threshold is not None:
+            threshold_used = float(fixed_threshold)
+        else:
+            # robust IQR threshold
+            if gaps.size == 0:
+                threshold_used = 0.5
+            else:
+                q1, q3 = np.percentile(gaps, [25, 75])
+                iqr = max(q3 - q1, 1e-9)
+                threshold_used = float(np.median(gaps) + iqr_factor * iqr)
+
+    elif method in ('kmeans', 'auto'):
+        # try KMeans splitting into 2 clusters (short vs long gaps)
+        threshold_used = 0.5 # fallback
+        if gaps.size == 0:
+            threshold_used = 0.5
+        else:
+            try:
+                from sklearn.cluster import KMeans
+                X = gaps.reshape(-1, 1)
+                # n_init='auto' handles warning
+                km = KMeans(n_clusters=2, random_state=0, n_init='auto').fit(X)
+                centers = km.cluster_centers_.reshape(-1)
+                labels_km = km.labels_
+                # cluster with smaller center = within-phrase short gaps
+                short_cluster = np.argmin(centers)
+                long_cluster = np.argmax(centers)
+                # threshold = midpoint between the two cluster centers
+                auto_threshold = float((centers[short_cluster] + centers[long_cluster]) / 2.0)
+                
+                # Check if auto threshold is below minimum - if so, switch to dbscan
+                if auto_threshold < min_auto_threshold:
+                    threshold_used = min_auto_threshold
+                    actual_method_used = 'dbscan'
+                    print(f"[INFO] Auto threshold ({auto_threshold:.3f}s) below minimum ({min_auto_threshold:.3f}s), switching to dbscan with threshold {min_auto_threshold:.3f}s")
+                else:
+                    threshold_used = auto_threshold
+                    
+            except Exception as e:
+                # fallback to robust threshold
+                q1, q3 = np.percentile(gaps, [25, 75]) if gaps.size else (0.0, 0.0)
+                iqr = max(q3 - q1, 1e-9)
+                auto_threshold = float(np.median(gaps) + iqr_factor * iqr)
+                
+                # Check if fallback threshold is below minimum
+                if auto_threshold < min_auto_threshold:
+                    threshold_used = min_auto_threshold
+                    actual_method_used = 'dbscan'
+                    print(f"[INFO] Fallback threshold ({auto_threshold:.3f}s) below minimum ({min_auto_threshold:.3f}s), switching to dbscan with threshold {min_auto_threshold:.3f}s")
+                else:
+                    threshold_used = auto_threshold
+                    
+                # keep note of fallback
+                print(f"[WARN] KMeans unavailable or failed ({e}); using robust IQR threshold {threshold_used:.3f}s")
+
+    else:
+        raise ValueError("Unknown method: choose 'auto','threshold','kmeans','dbscan'")
+
+    # segmentation: break where gap > threshold_used
+    if gaps.size == 0:
+        break_positions = np.array([], dtype=int)
+    else:
+        break_positions = np.where(gaps > threshold_used)[0]  # indices in gaps; break between note i and i+1 for each index found
+
+    # form phrases (list of note lists)
+    raw_phrases = []
+    start_idx = 0
+    for b in break_positions:
+        end_idx = b + 1  # inclusive index for phrase slice
+        phrase_notes = notes_sorted[start_idx:end_idx]
+        raw_phrases.append(phrase_notes)
+        start_idx = end_idx
+    # last phrase
+    raw_phrases.append(notes_sorted[start_idx:])
+
+    # postprocess: merge tiny phrases or those with fewer notes than min_notes_in_phrase
+    def _phrase_duration_raw(ph):
+        if not ph: return 0.0
+        # handle dict/object diff
+        s = ph[0]['start'] if isinstance(ph[0], dict) else ph[0].start
+        e = ph[-1]['end'] if isinstance(ph[-1], dict) else ph[-1].end
+        return e - s
+
+    def _get_start(ph):
+        return ph[0]['start'] if isinstance(ph[0], dict) else ph[0].start
+
+    def _get_end(ph):
+        return ph[-1]['end'] if isinstance(ph[-1], dict) else ph[-1].end
+
+    # 1) merge phrases separated by very small gaps (< merge_gap_threshold)
+    if len(raw_phrases) > 1:
+        merged = []
+        i = 0
+        while i < len(raw_phrases):
+            cur = raw_phrases[i]
+            j = i + 1
+            while j < len(raw_phrases):
+                gap_between = _get_start(raw_phrases[j]) - _get_end(cur)
+                if gap_between <= merge_gap_threshold:
+                    # merge and advance
+                    cur = cur + raw_phrases[j]
+                    j += 1
+                else:
+                    break
+            merged.append(cur)
+            i = j
+        raw_phrases = merged
+
+    # 2) merge or drop too-short / too-few-note phrases
+    final_raw_phrases = []
+    i = 0
+    while i < len(raw_phrases):
+        ph = raw_phrases[i]
+        dur = _phrase_duration_raw(ph)
+        if (dur < min_phrase_duration) or (len(ph) < min_notes_in_phrase):
+            # try merging with neighbor: prefer merging forward, else backward, else drop
+            merged_here = False
+            if i + 1 < len(raw_phrases):
+                raw_phrases[i+1] = ph + raw_phrases[i+1]
+                merged_here = True
+            elif i - 1 >= 0 and final_raw_phrases:
+                final_raw_phrases[-1] = final_raw_phrases[-1] + ph
+                merged_here = True
+            # if merged, skip adding; else drop
+            if merged_here:
+                # do not append ph; move to next (which will be merged)
+                i += 1
+                continue
+            else:
+                # drop it
+                i += 1
+                continue
+        else:
+            final_raw_phrases.append(ph)
+            i += 1
+            
+    # produce break indices in original notes_sorted indexing
+    # compute cumulative sizes to reconstruct original break indices
+    cum_lens = np.cumsum([len(p) for p in final_raw_phrases])
+    breaks_indices = [int(x) for x in cum_lens[:-1]]  # indices in sorted notes where phrases break
+    
+    # Convert to Phrase objects if not already
+    phrases = []
+    for ph_notes in final_raw_phrases:
+        if ph_notes and isinstance(ph_notes[0], dict):
+            # If input was dicts, we probably can't create Notes easily without pitch_hz/confidence
+            # But the user asked to augment the pipeline. The pipeline uses Notes.
+            pass
+        phrases.append(Phrase(notes=ph_notes))
+
+    return phrases, breaks_indices, threshold_used

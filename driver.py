@@ -3,12 +3,11 @@
 Raga Detection Pipeline - Main Driver
 
 Run the complete raga detection pipeline on an audio file:
-    python driver.py --audio path/to/audio.mp3 --output path/to/output
+    python driver.py detect --audio path/to/audio.mp3 --output path/to/output
 
 Modes:
-    full      - Run both histogram and sequence analysis (default)
-    histogram - Run only histogram-based raga detection
-    sequence  - Run only note sequence analysis
+    detect  - Run histogram-based raga detection
+    analyze - Run note sequence analysis with known tonic/raga
 """
 
 import os
@@ -24,7 +23,7 @@ if __name__ == "__main__":
 import librosa
 
 from raga_pipeline.config import PipelineConfig, load_config_from_cli, create_config
-from raga_pipeline.audio import separate_stems, extract_pitch, extract_pitch_from_config
+from raga_pipeline.audio import separate_stems, extract_pitch, extract_pitch_from_config, load_audio_direct
 from raga_pipeline.analysis import (
     compute_cent_histograms, 
     detect_peaks, 
@@ -37,6 +36,7 @@ from raga_pipeline.raga import (
     generate_candidates, 
     RagaScorer,
     apply_raga_correction_to_notes,
+    get_tonic_candidates,
 )
 from raga_pipeline.sequence import (
     detect_notes, 
@@ -47,6 +47,7 @@ from raga_pipeline.sequence import (
     build_transition_matrix_corrected,
     extract_melodic_sequences,
     find_common_patterns,
+    analyze_raga_patterns,
 )
 from raga_pipeline.output import (
     AnalysisResults,
@@ -72,7 +73,11 @@ def run_pipeline(
     Modes:
     - detect: Run up to raga candidate scoring, generate summary report.
     - analyze: Load cached pitch, run sequence/phrase analysis using provided tonic/raga.
-    - full: Run both phases (auto-detect then analyze top candidate).
+    
+    Source Types:
+    - mixed: Use stem separation (default)
+    - instrumental: Skip stem separation, use full audio as melody
+    - vocal: Skip stem separation, use full audio as melody
     
     Args:
         config: Pipeline configuration
@@ -83,7 +88,7 @@ def run_pipeline(
     results = AnalysisResults(config=config)
     
     print("=" * 60)
-    print("🎵 RAGA DETECTION PIPELINE")
+    print("RAGA DETECTION PIPELINE")
     print(f"MODE: {config.mode.upper()}")
     print("=" * 60)
     print(f"Audio: {config.filename}")
@@ -158,55 +163,84 @@ def run_pipeline(
     else:
         # DETECT or FULL MODE: Run detection pipeline
         
-        # STEP 1: Stems
-        print("[STEP 1/7] Separating stems...")
-        vocals_path, accompaniment_path = separate_stems(
-            audio_path=config.audio_path,
-            output_dir=config.output_dir,
-            engine=config.separator_engine,
-            model=config.demucs_model,
-        )
+        # STEP 1: Stems (optionally skip for instrumental with --skip-separation)
+        print("[STEP 1/7] Audio preprocessing...")
+        
+        # Only skip stem separation for instrumental sources with explicit flag
+        skip_separation = config.source_type == "instrumental" and config.skip_separation
+        
+        if skip_separation:
+            print(f"  Source type: {config.source_type} - Skipping stem separation")
+            melody_path, accompaniment_path = load_audio_direct(
+                audio_path=config.audio_path,
+                output_dir=config.output_dir,
+                source_type=config.source_type,
+            )
+            # Update stem_dir reference for pitch cache location
+            stem_dir = os.path.dirname(melody_path)
+        else:
+            print(f"  Source type: mixed - Running stem separation")
+            melody_path, accompaniment_path = separate_stems(
+                audio_path=config.audio_path,
+                output_dir=config.output_dir,
+                engine=config.separator_engine,
+                model=config.demucs_model,
+            )
+            stem_dir = config.stem_dir
         
         # STEP 2: Pitch
         print("\n[STEP 2/7] Extracting pitch...")
         fmin = librosa.note_to_hz(config.fmin_note)
         fmax = librosa.note_to_hz(config.fmax_note)
         
-        print("  - Vocals...")
+        print("  - Melody...")
         results.pitch_data_vocals = extract_pitch(
-            audio_path=vocals_path,
-            output_dir=config.stem_dir,
-            prefix="vocals",
+            audio_path=melody_path,
+            output_dir=stem_dir,
+            prefix="vocals" if config.source_type == "vocal" else "melody",
             fmin=fmin,
             fmax=fmax,
             confidence_threshold=config.vocal_confidence,
             force_recompute=config.force_recompute,
         )
         
-        print("  - Accompaniment...")
-        results.pitch_data_accomp = extract_pitch(
-            audio_path=accompaniment_path,
-            output_dir=config.stem_dir,
-            prefix="accompaniment",
-            fmin=fmin,
-            fmax=fmax,
-            confidence_threshold=config.accomp_confidence,
-            force_recompute=config.force_recompute,
-        )
+        # Only extract accompaniment pitch if we did stem separation
+        if accompaniment_path is not None:
+            print("  - Accompaniment...")
+            results.pitch_data_accomp = extract_pitch(
+                audio_path=accompaniment_path,
+                output_dir=stem_dir,
+                prefix="accompaniment",
+                fmin=fmin,
+                fmax=fmax,
+                confidence_threshold=config.accomp_confidence,
+                force_recompute=config.force_recompute,
+            )
+        else:
+            print("  - No accompaniment (skipping - source is instrumental/vocal)")
+            results.pitch_data_accomp = None
         
-        # STEP 3: Histograms & Peaks
         print("\n[STEP 3/7] Computing histograms and detecting peaks...")
         results.histogram_vocals = compute_cent_histograms_from_config(results.pitch_data_vocals, config)
-        results.histogram_accomp = compute_cent_histograms_from_config(results.pitch_data_accomp, config)
+        if results.pitch_data_accomp is not None:
+            results.histogram_accomp = compute_cent_histograms_from_config(results.pitch_data_accomp, config)
         results.peaks_vocals = detect_peaks_from_config(results.histogram_vocals, config)
         
         print(f"  Detected {len(results.peaks_vocals.validated_indices)} validated peaks")
         
-        # Plot histograms
-        hist_path = os.path.join(config.stem_dir, "histogram_vocals.png")
-        plot_histograms(results.histogram_vocals, results.peaks_vocals, hist_path, title="Vocal Pitch Distribution")
+        # Plot histograms (vocals/melody)
+        hist_path = os.path.join(stem_dir, "histogram_melody.png")
+        plot_histograms(results.histogram_vocals, results.peaks_vocals, hist_path, title="Melody Pitch Distribution")
         results.plot_paths["histogram_vocals"] = hist_path
         print(f"  Saved: {hist_path}")
+        
+        # Plot histograms (accompaniment) - only if available
+        if results.histogram_accomp is not None:
+            hist_accomp_path = os.path.join(stem_dir, "histogram_accompaniment.png")
+            peaks_accomp = detect_peaks_from_config(results.histogram_accomp, config)
+            plot_histograms(results.histogram_accomp, peaks_accomp, hist_accomp_path, title="Accompaniment Pitch Distribution")
+            results.plot_paths["histogram_accomp"] = hist_accomp_path
+            print(f"  Saved: {hist_accomp_path}")
         
         # STEP 4 & 5: Raga Matching
         print("\n[STEP 4/7] Loading raga database...")
@@ -215,16 +249,26 @@ def run_pipeline(
             print(f"  Loaded {len(raga_db.all_ragas)} ragas")
             
             print("\n[STEP 5/7] Scoring candidates...")
+            
+            # Get tonic candidates based on source type
+            tonic_candidates = get_tonic_candidates(
+                source_type=config.source_type,
+                vocalist_gender=config.vocalist_gender,
+                instrument_type=config.instrument_type,
+            )
+            print(f"  Tonic candidates: {tonic_candidates}")
+            
             scorer = RagaScorer(raga_db=raga_db, model_path=config.model_path, use_ml=config.use_ml_model)
             results.candidates = scorer.score(
                 pitch_data_vocals=results.pitch_data_vocals,
                 pitch_data_accomp=results.pitch_data_accomp,
                 detected_peak_count=len(results.peaks_vocals.validated_indices),
-                instrument_mode=config.instrument_mode,
+                instrument_mode=config.source_type,
+                tonic_candidates=tonic_candidates,  # Pass the bias list!
             )
             
             # Save candidates
-            candidates_path = os.path.join(config.stem_dir, "candidates.csv")
+            candidates_path = os.path.join(stem_dir, "candidates.csv")
             results.candidates.to_csv(candidates_path, index=False)
             print(f"  Saved: {candidates_path}")
             
@@ -255,11 +299,30 @@ def run_pipeline(
         if config.mode == "detect":
             print("\n[STEP 7/7] Generating detection summary...")
             from raga_pipeline.output import generate_detection_report
-            report_path = os.path.join(config.stem_dir, "detection_report.html")
+            report_path = os.path.join(stem_dir, "detection_report.html")
             generate_detection_report(results, report_path)
             print(f"  Saved: {report_path}")
             print("\n✅ DETECTION COMPLETE")
-            print(f"Run 'analyze' mode with --tonic and --raga to continue.")
+            
+            # Print suggested analyze command
+            if results.detected_tonic is not None and results.detected_raga:
+                tonic_name = _tonic_name(results.detected_tonic)
+                # Use original paths as provided by user
+                audio_path_arg = config.audio_path
+                output_dir_arg = config.output_dir
+                
+                print("\n" + "=" * 60)
+                print("Next: Run analyze mode with detected parameters:")
+                print("=" * 60)
+                print(f"./run_pipeline.sh analyze \\")
+                print(f'  --audio "{audio_path_arg}" \\')
+                print(f'  --output "{output_dir_arg}" \\')
+                print(f'  --tonic "{tonic_name}" \\')
+                print(f'  --raga "{results.detected_raga}"')
+                print("=" * 60)
+            else:
+                print(f"Run 'analyze' mode with --tonic and --raga to continue.")
+            
             return results
 
     # =========================================================================
@@ -316,10 +379,17 @@ def run_pipeline(
         plot_transition_heatmap_v2(tm_matrix, tm_labels, tm_path)
         print(f"  Saved: {tm_path}")
         
-        # Motif Analysis
-        sequences = extract_melodic_sequences(results.phrases, results.detected_tonic)
-        common_motifs = find_common_patterns(sequences)
-        print(f"  Found {len(common_motifs)} common motifs")
+        # Advanced Pattern Analysis
+        # Includes sequences, motifs, and Aaroh/Avroh runs
+        pattern_results = analyze_raga_patterns(results.phrases, results.detected_tonic)
+        print(f"  Pattern Analysis:")
+        print(f"    - Common Motifs: {len(pattern_results['common_motifs'])}")
+        print(f"    - Aaroh Runs: {pattern_results['total_aaroh_runs']}")
+        print(f"    - Avroh Runs: {pattern_results['total_avroh_runs']}")
+        
+        # Display top motifs
+        if pattern_results['common_motifs']:
+            print("    Top Motif: " + pattern_results['common_motifs'][0]['pattern'])
         
         # Detailed Pitch Plot with Sargam Lines
         pp_path = os.path.join(config.stem_dir, "pitch_sargam.png")
@@ -344,7 +414,7 @@ def run_pipeline(
         # Prepare AnalysisStats
         stats_obj = AnalysisStats(
             correction_summary=correction_summary,
-            motif_analysis=common_motifs,
+            pattern_analysis=pattern_results,
             raga_name=results.detected_raga,
             tonic=_tonic_name(results.detected_tonic),
             transition_matrix_path=tm_path,

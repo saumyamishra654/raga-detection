@@ -25,8 +25,18 @@ class PipelineConfig:
     separator_engine: str = "demucs"  # 'demucs' or 'spleeter'
     demucs_model: str = "htdemucs"    # htdemucs, htdemucs_ft, mdx, mdx_extra
     
-    # Instrument mode (affects tonic search space)
-    instrument_mode: str = "autodetect"  # 'sitar', 'sarod', 'autodetect'
+    # Source type - determines stem separation behavior
+    source_type: str = "mixed"  # "mixed" (stem separation), "instrumental", "vocal"
+    
+    # Vocalist gender - only used when source_type="vocal" (affects tonic bias)
+    vocalist_gender: Optional[str] = None  # "male", "female", or None (auto)
+    
+    # Instrument type - only used when source_type="instrumental" (affects tonic bias)
+    instrument_type: str = "autodetect"  # "sitar", "sarod", "bansuri", "slide_guitar", "autodetect"
+    
+    # Skip stem separation - only effective when source_type="instrumental"
+    # When True, uses full audio as melody (for solo instrument recordings)
+    skip_separation: bool = False
     
     # Pitch extraction confidence thresholds
     vocal_confidence: float = 0.98
@@ -59,9 +69,9 @@ class PipelineConfig:
     phrase_max_gap: float = 2.0           # Max silence between notes in phrase
     phrase_min_length: int = 3            # Minimum notes per phrase
     
-    # Scoring parameters
-    use_ml_model: bool = True
-    model_path: Optional[str] = None      # Path to trained model (auto-detects if None)
+    # Scoring parameters (ML disabled - manual weights only)
+    use_ml_model: bool = False  # Disabled per migration plan
+    model_path: Optional[str] = None      # Path to trained model (unused)
     
     # Database paths (relative to package or absolute)
     raga_db_path: Optional[str] = None    # Auto-locates if None
@@ -74,8 +84,8 @@ class PipelineConfig:
     gmm_window_cents: float = 150.0
     gmm_components: int = 1
     
-    # Execution Mode
-    mode: str = "full"  # "full", "detect", "analyze"
+    # Execution Mode (only detect and analyze supported)
+    mode: str = "detect"  # "detect" or "analyze" only
     tonic_override: Optional[str] = None
     raga_override: Optional[str] = None
     keep_impure_notes: bool = False
@@ -131,7 +141,12 @@ class PipelineConfig:
     @property
     def stem_dir(self) -> str:
         """Directory where stems are saved."""
-        return os.path.join(self.output_dir, self.demucs_model, self.filename)
+        # Use different subdirectory for different separators
+        if self.separator_engine == "spleeter":
+            subdir = "spleeter"
+        else:
+            subdir = self.demucs_model  # e.g., htdemucs
+        return os.path.join(self.output_dir, subdir, self.filename)
     
     @property
     def vocals_path(self) -> str:
@@ -160,12 +175,20 @@ def load_config_from_cli() -> PipelineConfig:
         p.add_argument("--output", "-o", required=required, help="Output directory")
         p.add_argument("--separator", choices=["demucs", "spleeter"], default="demucs")
         p.add_argument("--demucs-model", default="htdemucs")
-        p.add_argument("--instrument", choices=["autodetect", "sitar", "sarod", "vocal"], default="autodetect")
+        # New source type arguments
+        p.add_argument("--source-type", choices=["mixed", "instrumental", "vocal"], 
+                       default="mixed", help="Audio source type (mixed requires stem separation)")
+        p.add_argument("--vocalist-gender", choices=["male", "female"], 
+                       help="Vocalist gender for tonic bias (only for source-type=vocal)")
+        p.add_argument("--instrument-type", 
+                       choices=["autodetect", "sitar", "sarod", "bansuri", "slide_guitar"],
+                       default="autodetect",
+                       help="Instrument type for tonic bias (only for source-type=instrumental)")
         p.add_argument("--vocal-confidence", type=float, default=0.98)
         p.add_argument("--accomp-confidence", type=float, default=0.80)
         p.add_argument("--force", "-f", action="store_true", help="Force recompute")
-        p.add_argument("--no-ml", action="store_true")
-        p.add_argument("--model-path", help="Path to trained model")
+        p.add_argument("--skip-separation", action="store_true",
+                       help="Skip stem separation (only for source-type=instrumental)")
         p.add_argument("--raga-db", help="Path to raga database CSV")
 
     # --- Detect Mode ---
@@ -180,15 +203,7 @@ def load_config_from_cli() -> PipelineConfig:
     analyze_parser.add_argument("--keep-impure-notes", action="store_true", 
                                 help="Keep notes not in raga (default: remove)")
     
-    # --- Full Mode (Explicit) ---
-    full_parser = subparsers.add_parser("full", help="Full pipeline (legacy)")
-    add_common_args(full_parser, required=True)
-    # Optional overrides for full mode
-    full_parser.add_argument("--tonic", help="Force tonic")
-    full_parser.add_argument("--raga", help="Force raga")
-
-    # --- Root Parser (Legacy/Implicit Full) ---
-    # Add common args to root but NOT required, so that subcommands don't fail immediately
+    # --- Root Parser (Legacy support - defaults to detect) ---
     add_common_args(parser, required=False)
     parser.add_argument("--tonic", help="Force tonic")
     parser.add_argument("--raga", help="Force raga")
@@ -196,30 +211,30 @@ def load_config_from_cli() -> PipelineConfig:
     args = parser.parse_args()
     
     # Validation logic
-    # If no subcommand used (implicit full), ensure audio/output are present
     if args.command is None:
         if not args.audio or not args.output:
             parser.error("the following arguments are required: --audio/-a, --output/-o")
             
-    # Determine effective mode
-    mode = args.command if args.command else "full"
+    # Determine effective mode (default to detect, no full mode)
+    mode = args.command if args.command in ["detect", "analyze"] else "detect"
     
     return PipelineConfig(
         audio_path=args.audio,
         output_dir=args.output,
         separator_engine=args.separator,
         demucs_model=args.demucs_model,
-        instrument_mode=args.instrument,
+        source_type=args.source_type,
+        vocalist_gender=args.vocalist_gender,
+        instrument_type=args.instrument_type,
+        skip_separation=args.skip_separation,
         vocal_confidence=args.vocal_confidence,
         accomp_confidence=args.accomp_confidence,
         force_recompute=args.force,
-        use_ml_model=not args.no_ml,
-        model_path=args.model_path,
         raga_db_path=args.raga_db,
         mode=mode,
-        tonic_override=args.tonic,
-        raga_override=args.raga,
-        keep_impure_notes=args.keep_impure_notes if hasattr(args, 'keep_impure_notes') else False,
+        tonic_override=getattr(args, 'tonic', None),
+        raga_override=getattr(args, 'raga', None),
+        keep_impure_notes=getattr(args, 'keep_impure_notes', False),
     )
 
 

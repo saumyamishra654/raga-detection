@@ -88,49 +88,71 @@ def plot_histograms(
     Returns:
         Path to saved figure
     """
-    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
+    import matplotlib.ticker as mtick
     
-    # High-resolution (100-bin)
+    NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    
+    fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+    
+    # === High-resolution (100-bin) with Gaussian smoothing ===
     ax1 = axes[0]
-    ax1.bar(histogram.bin_centers_high, histogram.smoothed_high_norm, 
-            width=12, alpha=0.7, color='steelblue', label='Smoothed')
-    ax1.bar(histogram.bin_centers_high, histogram.high_res_norm, 
-            width=12, alpha=0.3, color='gray', label='Raw')
     
-    # Mark peaks
+    # Normalize for probability mass display
+    raw_norm = histogram.high_res_norm / max(histogram.high_res_norm.sum(), 1e-10)
+    smoothed_norm = histogram.smoothed_high_norm / max(histogram.smoothed_high_norm.sum(), 1e-10)
+    
+    # Plot raw (faded) and smoothed (bold) histograms
+    ax1.plot(histogram.bin_centers_high, raw_norm, color='lightsteelblue', alpha=0.4, label='Raw (100-bin)')
+    ax1.plot(histogram.bin_centers_high, smoothed_norm, color='navy', linewidth=2, label='Smoothed (Gaussian)')
+    
+    # Mark validated peaks with X markers
     for idx in peaks.validated_indices:
         cent = histogram.bin_centers_high[idx]
-        height = histogram.smoothed_high_norm[idx]
-        ax1.axvline(cent, color='red', linestyle='--', alpha=0.5)
-        ax1.annotate(f'{cent:.0f}¢', (cent, height), 
-                    textcoords='offset points', xytext=(0, 5),
-                    ha='center', fontsize=8, color='red')
+        height = smoothed_norm[idx]
+        ax1.scatter([cent], [height], color='red', s=110, marker='x', zorder=6)
     
-    # Add semitone lines
-    for note in range(12):
-        cent = note * 100
-        ax1.axvline(cent, color='lightgray', linestyle=':', alpha=0.5)
+    # Add +/- 35 cent note zones (green shading)
+    tolerance_cents = 35
+    note_centers = np.arange(0, 1200, 100)
+    for i, center in enumerate(note_centers):
+        low = (center - tolerance_cents) % 1200
+        high = (center + tolerance_cents) % 1200
+        if low < high:
+            ax1.axvspan(low, high, color='green', alpha=0.12, label='+/-35c Zone' if i == 0 else "")
+        else:
+            ax1.axvspan(0, high, color='green', alpha=0.12)
+            ax1.axvspan(low, 1200, color='green', alpha=0.12)
+    
+    # Western note labels on X-axis
+    ax1.set_xticks(np.arange(0, 1200, 100))
+    ax1.set_xticklabels(NOTE_NAMES, fontsize=11)
+    ax1.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
     
     ax1.set_xlim(0, 1200)
-    ax1.set_xlabel('Cents')
-    ax1.set_ylabel('Normalized Count')
-    ax1.set_title(f'{title} (100-bin, 12¢ resolution)')
-    ax1.legend()
+    ax1.set_xlabel('Pitch class (Western notes)', fontsize=12)
+    ax1.set_ylabel('Probability mass (%)', fontsize=12)
+    ax1.set_title(f'{title} - High Resolution (100-bin, 12c)', fontsize=14)
+    ax1.legend(loc='upper right')
+    ax1.grid(True, linestyle='--', alpha=0.5)
     
-    # Low-resolution (33-bin)
+    # === Low-resolution (33-bin) ===
     ax2 = axes[1]
-    ax2.bar(histogram.bin_centers_low, histogram.smoothed_low / max(histogram.smoothed_low.max(), 1),
-            width=36, alpha=0.7, color='darkorange', label='Smoothed')
+    low_norm = histogram.smoothed_low / max(histogram.smoothed_low.max(), 1)
+    ax2.bar(histogram.bin_centers_low, low_norm,
+            width=36, alpha=0.7, color='darkorange', label='Stable Peaks (33-bin)')
     
     for idx in peaks.low_res_indices:
         cent = histogram.bin_centers_low[idx]
         ax2.axvline(cent, color='red', linestyle='--', alpha=0.5)
     
+    ax2.set_xticks(np.arange(0, 1200, 100))
+    ax2.set_xticklabels(NOTE_NAMES, fontsize=11)
     ax2.set_xlim(0, 1200)
-    ax2.set_xlabel('Cents')
+    ax2.set_xlabel('Pitch class (Western notes)', fontsize=12)
     ax2.set_ylabel('Normalized Count')
-    ax2.set_title(f'{title} (33-bin, 36¢ resolution)')
-    ax2.legend()
+    ax2.set_title(f'{title} - Low Resolution (33-bin, 36c)', fontsize=14)
+    ax2.legend(loc='upper right')
+    ax2.grid(True, linestyle='--', alpha=0.5)
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
@@ -509,16 +531,29 @@ def generate_detection_report(
     """
     sections = []
     
+    # Audio Players Section (all 3 tracks)
+    sections.append(_generate_audio_players_section(results))
+    
     # Metadata section
     sections.append(_generate_metadata_section(results))
     
-    # Histogram section
+    # Histogram section (vocals)
     if 'histogram_vocals' in results.plot_paths:
         sections.append(f'''
         <section id="histogram-analysis">
-            <h2>Pitch Distribution</h2>
+            <h2>Vocal Pitch Distribution</h2>
             <img src="{os.path.basename(results.plot_paths['histogram_vocals'])}" 
-                 alt="Pitch histogram" style="max-width: 100%;">
+                 alt="Vocal pitch histogram" style="max-width: 100%;">
+        </section>
+        ''')
+    
+    # Histogram section (accompaniment)
+    if 'histogram_accomp' in results.plot_paths:
+        sections.append(f'''
+        <section id="histogram-accomp">
+            <h2>Accompaniment Pitch Distribution</h2>
+            <img src="{os.path.basename(results.plot_paths['histogram_accomp'])}" 
+                 alt="Accompaniment pitch histogram" style="max-width: 100%;">
         </section>
         ''')
     
@@ -543,7 +578,7 @@ def generate_detection_report(
 </head>
 <body>
     <header>
-        <h1>🔍 Raga Detection Summary</h1>
+        <h1>Raga Detection Summary</h1>
         <p class="subtitle">{results.config.filename}</p>
     </header>
     <main>
@@ -694,7 +729,7 @@ def generate_html_report(
 </head>
 <body>
     <header>
-        <h1>🎵 Raga Detection Report</h1>
+        <h1>Raga Detection Report</h1>
         <p class="subtitle">{results.config.filename}</p>
     </header>
     <main>
@@ -872,6 +907,36 @@ def _generate_ranking_section(candidates: pd.DataFrame) -> str:
     '''
 
 
+def _generate_audio_players_section(results: AnalysisResults) -> str:
+    """Generate audio players section with all 3 tracks."""
+    config = results.config
+    
+    # Get relative paths from stem_dir
+    vocals_rel = os.path.basename(config.vocals_path)
+    accomp_rel = os.path.basename(config.accompaniment_path)
+    original_rel = os.path.relpath(config.audio_path, config.stem_dir)
+    
+    return f'''
+    <section id="audio-tracks">
+        <h2>Audio Tracks</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+            <div>
+                <p><strong>Original</strong></p>
+                <audio controls src="{original_rel}" style="width:100%"></audio>
+            </div>
+            <div>
+                <p><strong>Vocals</strong></p>
+                <audio controls src="{vocals_rel}" style="width:100%"></audio>
+            </div>
+            <div>
+                <p><strong>Accompaniment</strong></p>
+                <audio controls src="{accomp_rel}" style="width:100%"></audio>
+            </div>
+        </div>
+    </section>
+    '''
+
+
 def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], tonic: int) -> str:
     """Generate musical transcription section."""
     from .sequence import transcribe_notes
@@ -937,71 +1002,83 @@ def _tonic_name(tonic: Optional[int]) -> str:
 
 
 def _get_css_styles() -> str:
-    """Get CSS styles for the report."""
+    """Get CSS styles for the report - Dark mode with funky font."""
     return '''
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap');
+        
         * { box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Space Grotesk', 'JetBrains Mono', 'Fira Code', monospace;
             line-height: 1.6;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background: #f5f5f5;
+            background: #0d1117;
+            color: #c9d1d9;
         }
         header {
             text-align: center;
             padding: 30px 20px;
-            background: #2c3e50;
-            color: white;
-            border-radius: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e94560;
+            border-radius: 12px;
             margin-bottom: 30px;
-            border-bottom: 4px solid #3498db;
+            border: 1px solid #30363d;
         }
-        header h1 { margin: 0; }
-        header .subtitle { opacity: 0.9; }
+        header h1 { margin: 0; color: #e94560; font-weight: 700; letter-spacing: -1px; }
+        header .subtitle { opacity: 0.8; color: #8b949e; }
         section {
-            background: white;
-            padding: 20px;
+            background: #161b22;
+            padding: 24px;
             margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            border: 1px solid #30363d;
         }
         h2 {
-            color: #2c3e50;
-            border-bottom: 3px solid #3498db;
+            color: #58a6ff;
+            border-bottom: 2px solid #e94560;
             padding-bottom: 10px;
             margin-top: 0;
+            font-weight: 600;
         }
         .audio-player-container {
             padding: 15px;
-            background: #f9f9f9;
+            background: #21262d;
             border-radius: 8px;
         }
-        audio { width: 100%; margin-bottom: 10px; }
+        audio { 
+            width: 100%; 
+            margin-bottom: 10px; 
+            filter: invert(1) hue-rotate(180deg);
+        }
         .pitch-plot { width: 100%; height: 420px; }
         .time-display {
             padding: 10px;
-            background: #eee;
+            background: #21262d;
             border-radius: 4px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', monospace;
+            color: #e94560;
         }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { padding: 8px 12px; text-align: left; border: 1px solid #ddd; }
-        th { background: #34495e; color: white; font-weight: 600; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        .metadata-table td:first-child { font-weight: bold; width: 200px; }
+        th, td { padding: 8px 12px; text-align: left; border: 1px solid #30363d; }
+        th { background: #21262d; color: #e94560; font-weight: 600; }
+        tr:nth-child(even) { background: #161b22; }
+        tr:nth-child(odd) { background: #0d1117; }
+        .metadata-table td:first-child { font-weight: bold; width: 200px; color: #58a6ff; }
         .transition-table th, .transition-table td { 
             text-align: center; 
             padding: 4px 8px; 
             font-size: 12px;
         }
         .sargam-notation pre {
-            background: #f5f5f5;
+            background: #21262d;
+            color: #7ee787;
             padding: 15px;
-            border-radius: 4px;
+            border-radius: 8px;
             overflow-x: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
+            font-family: 'JetBrains Mono', monospace;
         }
         /* Ranking table styles */
         .table-scroll-container {
@@ -1023,29 +1100,38 @@ def _get_css_styles() -> str:
         }
         .ranking-table .score {
             font-weight: bold;
+            color: #7ee787;
         }
         .hidden-row {
             display: none;
         }
         #show-more-btn {
-            background: #3498db;
+            background: #e94560;
             color: white;
             border: none;
             padding: 10px 20px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             margin-top: 10px;
-            font-weight: 500;
-            transition: background 0.2s;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: all 0.2s;
         }
         #show-more-btn:hover {
-            background: #2980b9;
+            background: #f05a73;
+            transform: translateY(-1px);
         }
         footer {
             text-align: center;
             padding: 20px;
-            color: #666;
+            color: #8b949e;
         }
+        img {
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+        a { color: #58a6ff; }
+        a:hover { color: #e94560; }
     '''
 
 
@@ -1116,10 +1202,307 @@ def _get_audio_sync_js() -> str:
     '''
 
 
+
+# =============================================================================
+# SCROLLABLE PITCH PLOT (User Requested)
+# =============================================================================
+
+def plot_pitch_wide_to_base64_with_legend(
+    pitch_data: PitchData, 
+    tonic_ref: Union[int, str], 
+    raga_name: str = "Unknown",
+    raga_notes: Optional[Set[int]] = None,
+    figsize_width: int = 80, 
+    figsize_height: int = 7, 
+    dpi: int = 100, 
+    join_gap_threshold: float = 1.0
+) -> Tuple[str, str, int]:
+    """
+    Generate wide pitch contour and overlay sargam lines, returning base64 images.
+    Returns: (legend_b64, plot_b64, pixel_width)
+    """
+    import io
+    import base64
+    import librosa
+    from matplotlib.ticker import MultipleLocator
+    
+    # Resolve tonic
+    if isinstance(tonic_ref, (int, np.integer)):
+        tonic_midi = tonic_ref % 12
+        tonic_midi_base = tonic_midi + 60 # Default to middle C octave if int
+        tonic_label = _tonic_name(tonic_ref)
+    else:
+        try:
+            tonic_midi_base = librosa.note_to_midi(str(tonic_ref) + '4')
+            tonic_midi = int(tonic_midi_base) % 12
+            tonic_label = str(tonic_ref)
+        except Exception:
+            tonic_midi_base = 60
+            tonic_midi = 0
+            tonic_label = "C"
+
+    # Colors
+    OCTAVE_COLORS = {
+        -2: '#8B4513',  # Brown
+        -1: '#FF6B6B',  # Red
+        0:  '#2ECC71',  # Green
+        1:  '#3498DB',  # Blue
+        2:  '#9B59B6',  # Purple
+    }
+
+    # Prepare data
+    pitch_hz = pitch_data.pitch_hz
+    timestamps = pitch_data.timestamps
+    voiced_mask = pitch_data.voiced_mask
+    frame_period = pitch_data.frame_period
+    
+    if not np.any(voiced_mask):
+         # Return empty placeholders
+         return "", "", 100
+
+    voiced_midi = librosa.hz_to_midi(pitch_hz[voiced_mask])
+    
+    # Calculate range dynamically based on data min/max
+    data_min = np.min(voiced_midi)
+    data_max = np.max(voiced_midi)
+    
+    min_m = np.floor(data_min) - 2
+    max_m = np.ceil(data_max) + 2
+    
+    rng = np.arange(int(np.floor(min_m)), int(np.ceil(max_m)) + 1)
+    
+    # --- Main Plot ---
+    fig, ax = plt.subplots(figsize=(figsize_width, figsize_height), dpi=dpi)
+    fig.subplots_adjust(left=0.005, right=0.995, top=0.95, bottom=0.1) # Min margins
+    
+    voiced_times = timestamps[voiced_mask]
+    
+    # Plot contour segments
+    time_diffs = np.diff(voiced_times)
+    gap_trigger = frame_period * 4
+    gap_indices = np.where(time_diffs > gap_trigger)[0]
+    
+    segments = []
+    start_idx = 0
+    for gap_idx in gap_indices:
+        end_idx = gap_idx + 1
+        segments.append((start_idx, end_idx))
+        start_idx = end_idx
+    segments.append((start_idx, len(voiced_times)))
+    
+    # Join small gaps
+    joined_segments = []
+    if segments:
+        curr = segments[0]
+        for next_seg in segments[1:]:
+            # if gap < threshold, merge
+            t_end_prev = voiced_times[curr[1]-1]
+            t_start_next = voiced_times[next_seg[0]]
+            if t_start_next - t_end_prev <= join_gap_threshold:
+                curr = (curr[0], next_seg[1])
+            else:
+                joined_segments.append(curr)
+                curr = next_seg
+        joined_segments.append(curr)
+        
+    for seg in joined_segments:
+        s, e = seg
+        ax.plot(voiced_times[s:e], voiced_midi[s:e], color='tab:blue', linewidth=1.5, alpha=0.9)
+
+    ax.set_ylim(min_m - 1, max_m + 1)
+    ax.set_xlim(0, max(timestamps[-1], 1.0))
+    ax.set_xlabel('Time (s)')
+    ax.grid(alpha=0.3)
+    ax.xaxis.set_major_locator(MultipleLocator(2)) # Tick every 2 seconds
+    ax.set_title(f"Pitch Contour Analysis ({raga_name} / {tonic_label})")
+
+    # Horizontal Lines
+    for midi_val in rng:
+        pc = int(midi_val) % 12
+        offset = (pc - tonic_midi) % 12
+        
+        if raga_notes is None or pc in raga_notes:
+            octave_diff = int((midi_val - tonic_midi_base) // 12)
+            line_color = OCTAVE_COLORS.get(octave_diff, 'gray')
+            line_alpha = 0.4 if (raga_notes is not None and pc in raga_notes) else 0.15
+            linestyle = '--'
+            ax.axhline(y=midi_val, color=line_color, alpha=line_alpha, linewidth=0.8, linestyle=linestyle)
+
+    # Save Main
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=dpi, transparent=False)
+    plt.close(fig)
+    plot_b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+    pixel_width = int(figsize_width * dpi)
+
+    # --- Legend Plot (Sticky Side) ---
+    legend_fig, legend_ax = plt.subplots(figsize=(2, figsize_height), dpi=dpi)
+    legend_fig.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.1)
+    legend_ax.set_xlim(0, 1)
+    legend_ax.set_ylim(min_m - 1, max_m + 1)
+    legend_ax.axis('off')
+    
+    for midi_val in rng:
+        pc = int(midi_val) % 12
+        offset = (pc - tonic_midi) % 12
+        
+        if raga_notes is None or pc in raga_notes:
+            label = OFFSET_TO_SARGAM.get(offset, '')
+            octave_diff = int((midi_val - tonic_midi_base) // 12)
+            
+            # Markers
+            if octave_diff < 0: label += "'" * abs(octave_diff)
+            elif octave_diff > 0: label += "·" * octave_diff
+            
+            text_color = OCTAVE_COLORS.get(octave_diff, 'gray')
+            # Stronger text
+            legend_ax.axhline(y=midi_val, color=text_color, alpha=0.4, linewidth=0.8)
+            legend_ax.text(0.9, midi_val, label, fontsize=10, color=text_color, fontweight='bold',
+                           ha='right', va='center', 
+                           bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.9, edgecolor='none'))
+
+    lbuf = io.BytesIO()
+    legend_fig.savefig(lbuf, format='png', dpi=dpi, transparent=True)
+    plt.close(legend_fig)
+    legend_b64 = base64.b64encode(lbuf.getvalue()).decode('ascii')
+
+    return legend_b64, plot_b64, pixel_width
+
+
+    return html
+
+def create_scrollable_pitch_plot_html(
+    pitch_data: PitchData,
+    tonic: int,
+    raga_name: str,
+    audio_element_id: str,
+    raga_notes: Optional[Set[int]] = None
+) -> str:
+    """
+    Create HTML component for scrollable pitch plot with audio sync.
+    """
+    legend_b64, plot_b64, px_width = plot_pitch_wide_to_base64_with_legend(
+        pitch_data, tonic, raga_name, raga_notes
+    )
+    
+    if not plot_b64:
+        return "<p>No pitch data for validation plot.</p>"
+        
+    unique_id = f"sp_{uuid.uuid4().hex[:6]}"
+    duration = pitch_data.timestamps[-1] if len(pitch_data.timestamps) > 0 else 1.0
+    
+    html = f"""
+    <div class="scroll-plot-wrapper" id="{unique_id}-wrapper" style="border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin: 20px 0; background: #0d1117;">
+        <div style="display: flex; height: 700px; position: relative;">
+            <!-- Legend (Sticky) -->
+            <div style="flex: 0 0 200px; background: #161b22; border-right: 1px solid #30363d; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                <img src="data:image/png;base64,{legend_b64}" style="height: 100%; object-fit: contain; width: 100%;">
+            </div>
+            
+            <!-- Scrollable Content -->
+            <div id="{unique_id}-container" style="flex: 1; overflow-x: auto; position: relative; background: #0d1117;">
+                <div style="width: {px_width}px; height: 100%; position: relative;">
+                    <img src="data:image/png;base64,{plot_b64}" style="width: 100%; height: 100%; display: block;">
+                    <!-- Cursor Line -->
+                    <div id="{unique_id}-cursor" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e94560; box-shadow: 0 0 5px #e94560; pointer-events: none; z-index: 5;"></div>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 10px; background: #161b22; border-top: 1px solid #30363d; display: flex; justify-content: space-between; color: #8b949e; font-size: 12px;">
+             <span>Total Duration: {duration:.2f}s</span>
+             <span id="{unique_id}-status">Synced to Audio</span>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {{
+        const audio = document.getElementById("{audio_element_id}");
+        const container = document.getElementById("{unique_id}-container");
+        const cursor = document.getElementById("{unique_id}-cursor");
+        const status = document.getElementById("{unique_id}-status");
+        
+        const totalDuration = {duration};
+        const pixelWidth = {px_width};
+        
+        if (!audio) {{
+            console.error("Audio element not found: {audio_element_id}");
+            if (status) status.textContent = "Error: Audio player not found";
+            return;
+        }}
+        
+        if (audio && container && cursor) {{
+            console.log("Initializing sync for {unique_id}");
+            
+            // Plot margins (matches python subplots_adjust)
+            const marginL = 0.005;
+            const marginR = 0.995;
+            const plotContentWidthPct = marginR - marginL;
+            
+            // Sync Loop
+            function updateSync() {{
+                if (!audio.paused) {{
+                    const t = audio.currentTime;
+                    // Safety: clamp t
+                    const t_safe = Math.max(0, Math.min(t, totalDuration));
+                    
+                    // Map time to x position accounting for margins
+                    // t=0 -> marginL
+                    // t=dur -> marginR
+                    const pct = t_safe / totalDuration;
+                    const x_pct = marginL + (pct * plotContentWidthPct);
+                    const x = x_pct * pixelWidth;
+                    
+                    // Move cursor
+                    cursor.style.left = x + 'px';
+                    
+                    // Auto-scroll request (only if playing)
+                    const viewWidth = container.clientWidth;
+                    const targetScroll = x - (viewWidth / 2);
+                    
+                    // Smooth vs instant scroll
+                    if (Math.abs(container.scrollLeft - targetScroll) > 100) {{
+                        // Jump if far behind
+                        container.scrollLeft = targetScroll;
+                    }} else {{
+                         // Smooth follow
+                         container.scrollLeft = container.scrollLeft * 0.95 + targetScroll * 0.05;
+                    }}
+                }}
+                requestAnimationFrame(updateSync);
+            }}
+            updateSync();
+            
+            // Allow click to seek
+            container.addEventListener('click', function(e) {{
+                const rect = container.getBoundingClientRect();
+                const clickX = e.clientX - rect.left + container.scrollLeft;
+                
+                // Inverse mapping: x -> t
+                const x_pct = clickX / pixelWidth;
+                const pct = (x_pct - marginL) / plotContentWidthPct;
+                const seekT = pct * totalDuration;
+                
+                if (isFinite(seekT) && seekT >= 0 && seekT <= totalDuration) {{
+                    console.log("Seeking to:", seekT);
+                    audio.currentTime = seekT;
+                    // Update cursor immediately
+                    cursor.style.left = clickX + 'px';
+                }}
+            }});
+            
+            // Debug info
+            audio.addEventListener('play', () => console.log("Audio started"));
+            audio.addEventListener('pause', () => console.log("Audio paused"));
+        }}
+    }});
+    </script>
+    """
+    return html
+
 @dataclass
 class AnalysisStats:
     correction_summary: dict
-    motif_analysis: List[Tuple[Tuple[str], int]]
+    pattern_analysis: dict  # Replaced minimal motif list with full dict
     raga_name: str
     tonic: str
     transition_matrix_path: str
@@ -1136,26 +1519,63 @@ def generate_analysis_report(
     """
     report_path = os.path.join(output_dir, "analysis_report.html")
     
-    # Relative paths for assets
-    audio_path = results.config.vocals_path
-    audio_rel = os.path.relpath(audio_path, output_dir)
+    # Relative paths for audio assets
+    vocals_rel = os.path.relpath(results.config.vocals_path, output_dir)
+    accomp_rel = os.path.relpath(results.config.accompaniment_path, output_dir)
+    original_rel = os.path.relpath(results.config.audio_path, output_dir)
     
+    # Audio IDs for sync
+    vocals_id = "vocals-player"
+    accomp_id = "accomp-player"
+    
+    # Scrollable Plot HTML
+    scroll_plot_html = ""
+    if results.pitch_data_vocals:
+        # Generate the scrollable plot synced to vocals
+        try:
+            scroll_plot_html = create_scrollable_pitch_plot_html(
+                results.pitch_data_vocals,
+                tonic=results.detected_tonic or 0,
+                raga_name=stats.raga_name,
+                audio_element_id=vocals_id
+            )
+        except Exception as e:
+            scroll_plot_html = f"<p>Error generating scrollable plot: {e}</p>"
+
     # Transcription html
     transcription_html = _generate_transcription_section(results.notes, results.phrases, results.detected_tonic)
     
-    # Motifs HTML
-    motif_html = ""
-    if stats.motif_analysis:
+    # Pattern Analysis HTML (Motifs + Aaroh/Avroh)
+    pattern_html = ""
+    if stats.pattern_analysis:
+        p = stats.pattern_analysis
+        
+        # Motifs
         motif_items = []
-        for pattern, count in stats.motif_analysis[:10]: # Top 10
-            pat_str = " -> ".join(pattern)
-            motif_items.append(f"<li><strong>{pat_str}</strong>: {count} times</li>")
-        motif_html = f"""
-        <section id="motifs">
-            <h2>Common Melodic Patterns (Motifs)</h2>
-            <ul>
-                {"".join(motif_items)}
-            </ul>
+        if 'common_motifs' in p:
+            for m in p['common_motifs']:
+                motif_items.append(f"<li><strong>{m['pattern']}</strong>: {m['count']} occurrences</li>")
+        
+        # Aaroh RUns
+        aaroh_items = []
+        if 'aaroh_stats' in p:
+            for run, count in p['aaroh_stats'].items():
+                aaroh_items.append(f"<li><strong>{run}</strong>: {count}</li>")
+
+        # Avroh Runs
+        avroh_items = []
+        if 'avroh_stats' in p:
+            for run, count in p['avroh_stats'].items():
+                avroh_items.append(f"<li><strong>{run}</strong>: {count}</li>")
+                
+        pattern_html = f"""
+        <section id="patterns">
+            <h2>Pattern Analysis</h2>
+            <div class="stats-grid">
+                 <div class="stat-box"><strong>Common Motifs</strong><ul>{"".join(motif_items) or "<li>None</li>"}</ul></div>
+                 <div class="stat-box"><strong>Aaroh (Ascending) Runs</strong><ul>{"".join(aaroh_items) or "<li>None</li>"}</ul></div>
+                 <div class="stat-box"><strong>Avroh (Descending) Runs</strong><ul>{"".join(avroh_items) or "<li>None</li>"}</ul></div>
+            </div>
         </section>
         """
         
@@ -1175,16 +1595,17 @@ def generate_analysis_report(
             </div>
         </section>
         """
-    
     # Images HTML
     images_html = ""
     tm_rel = os.path.relpath(stats.transition_matrix_path, output_dir)
+    # Pitch contour static image (optional, since we have scrollable one now)
+    # But user might still want the standard one.
     pp_rel = os.path.relpath(stats.pitch_plot_path, output_dir)
     images_html = f"""
     <section id="visualizations">
         <h2>Detailed Visualizations</h2>
         <div class="viz-container">
-            <h3>Pitch Contour with Sargam</h3>
+            <h3>Standard Pitch Contour</h3>
             <img src="{pp_rel}" alt="Pitch Contour" style="width:100%; max-width:1000px;">
         </div>
         <div class="viz-container">
@@ -1196,37 +1617,65 @@ def generate_analysis_report(
 
     html_content = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Raga Analysis Report: {stats.raga_name}</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #333; }}
-            h1, h2, h3 {{ color: #2c3e50; }}
-            section {{ background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-            .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }}
-            .stat-box {{ background: #ecf0f1; padding: 15px; border-radius: 6px; text-align: center; }}
-            audio {{ width: 100%; margin: 10px 0; }}
-            pre {{ white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px; }}
-            ul {{ list-style-type: none; padding: 0; }}
-            li {{ padding: 8px 0; border-bottom: 1px solid #eee; }}
-            .viz-container {{ margin-bottom: 20px; text-align: center; }}
+            {_get_css_styles()}
+            /* Custom styles for scroll plot */
+            .scroll-plot-wrapper {{
+                transition: box-shadow 0.3s ease;
+            }}
+            .scroll-plot-wrapper:hover {{
+                box-shadow: 0 0 15px rgba(233, 69, 96, 0.2);
+            }}
         </style>
     </head>
     <body>
-        <h1>Raga Analysis Report</h1>
-        <p><strong>Target Raga:</strong> {stats.raga_name}</p>
-        <p><strong>Tonic:</strong> {stats.tonic}</p>
-        
-        <section>
-            <h2>Audio</h2>
-            <audio controls src="{audio_rel}"></audio>
-        </section>
-        
-        {correction_html}
-        {transcription_html}
-        {motif_html}
-        {images_html}
-        
+        <header>
+            <h1>Raga Analysis Report</h1>
+            <p class="subtitle">{stats.raga_name} (Tonic: {stats.tonic})</p>
+        </header>
+
+        <main>
+            <!-- Audio Tracks Section with IDs -->
+            <section id="audio-tracks">
+                <h2>Audio Tracks & Interactive Analysis</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <p><strong>Original</strong></p>
+                        <audio controls src="{original_rel}" style="width:100%"></audio>
+                    </div>
+                    <div>
+                        <p><strong>Vocals (Analysis Source)</strong></p>
+                        <audio id="{vocals_id}" controls src="{vocals_rel}" style="width:100%"></audio>
+                    </div>
+                    <div>
+                        <p><strong>Accompaniment</strong></p>
+                        <audio id="{accomp_id}" controls src="{accomp_rel}" style="width:100%"></audio>
+                    </div>
+                </div>
+                
+                <!-- Scrollable Plot -->
+                <h3>Interactive Pitch Analysis (Synced to Vocals)</h3>
+                <p style="font-size: 0.9em; color: #8b949e;">Scroll horizontally or play audio to follow the analysis. Color-coded by octave.</p>
+                {scroll_plot_html}
+            </section>
+
+            {correction_html}
+
+            {transcription_html}
+
+            {pattern_html}
+
+            {images_html}
+        </main>
+
+        <footer>
+            <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+        </footer>
     </body>
     </html>
     """

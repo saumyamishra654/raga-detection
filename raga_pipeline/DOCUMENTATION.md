@@ -91,14 +91,11 @@ python -c "from raga_pipeline import PipelineConfig; print('OK')"
 ### Command Line
 
 ```bash
-# Full analysis (histogram + sequence)
-python driver.py --audio /path/to/song.mp3 --output /path/to/results
+# Run detection phase
+./run_pipeline.sh detect --audio /path/to/song.mp3 --output /path/to/results
 
-# Histogram-only (faster, no note detection)
-python driver.py --audio song.mp3 --output ./results --mode histogram
-
-# Force recompute (ignore cached results)
-python driver.py --audio song.mp3 --output ./results --force
+# Run analysis phase (after detection)
+./run_pipeline.sh analyze --audio /path/to/song.mp3 --output /path/to/results --tonic "C#" --raga "Bhairavi"
 ```
 
 ### Python API

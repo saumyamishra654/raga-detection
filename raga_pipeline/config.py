@@ -47,13 +47,13 @@ class PipelineConfig:
     
     # Pitch range (MIDI notes)
     fmin_note: str = "G1"   # ~49 Hz (notebook default)
-    fmax_note: str = "C5"   # Increased to C5 to capture C#4, D4, E4 which are > C4 (261Hz)
+    fmax_note: str = "C6"   # Increased to C5 to capture C#4, D4, E4 which are > C4 (261Hz)
     
     # Histogram parameters
     histogram_bins_high: int = 100   # High-res: 12 cents per bin
     histogram_bins_low: int = 33     # Low-res: 33 bins (matches notebook ssje_tweaked)
     smoothing_sigma: float = 0.8     # Gaussian smoothing kernel width
-    use_confidence_weights: bool = False  # Notebook uses unweighted histograms
+    use_confidence_weights: bool = True  # Notebook uses unweighted histograms
     
     # Peak detection parameters
     tolerance_cents: float = 35.0         # ±35¢ for note mapping

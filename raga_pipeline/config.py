@@ -47,18 +47,19 @@ class PipelineConfig:
     
     # Pitch range (MIDI notes)
     fmin_note: str = "G1"   # ~49 Hz (notebook default)
-    fmax_note: str = "C4"   # ~262 Hz (notebook default)
+    fmax_note: str = "C5"   # Increased to C5 to capture C#4, D4, E4 which are > C4 (261Hz)
     
     # Histogram parameters
-    histogram_bins_high: int = 100   # High-res: 12¢ per bin
-    histogram_bins_low: int = 33     # Low-res: ~36¢ per bin
+    histogram_bins_high: int = 100   # High-res: 12 cents per bin
+    histogram_bins_low: int = 33     # Low-res: 33 bins (matches notebook ssje_tweaked)
     smoothing_sigma: float = 0.8     # Gaussian smoothing kernel width
+    use_confidence_weights: bool = False  # Notebook uses unweighted histograms
     
     # Peak detection parameters
     tolerance_cents: float = 35.0         # ±35¢ for note mapping
     peak_tolerance_cents: float = 45.0    # Cross-resolution validation window
-    prominence_high_factor: float = 0.03  # min prominence = factor * max
-    prominence_low_factor: float = 0.01
+    prominence_high_factor: float = 0.01  # min prominence = factor * max (lowered to catch weak peaks)
+    prominence_low_factor: float = 0.03  # (lowered to catch weak peaks)
     
     # Note detection parameters (will evolve with new stationary point methods)
     note_min_duration: float = 0.1        # Minimum note duration (seconds)
@@ -85,7 +86,7 @@ class PipelineConfig:
     raga_db_path: Optional[str] = None    # Auto-locates if None
     
     # Processing options
-    force_recompute: bool = False         # Ignore cached results
+    force_recompute: bool = False         # Force pitch extraction only (stems reused if present)
     save_intermediates: bool = True       # Save CSVs, plots, etc.
     
     # GMM parameters

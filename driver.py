@@ -257,6 +257,7 @@ def run_pipeline(
         results.peaks_vocals = detect_peaks_from_config(results.histogram_vocals, config)
         
         print(f"  Detected {len(results.peaks_vocals.validated_indices)} validated peaks")
+        print(f"  [DEBUG] Detected pitch classes: {sorted(results.peaks_vocals.pitch_classes)}")
         
         # Plot histograms (vocals/melody)
         hist_path = os.path.join(stem_dir, "histogram_melody.png")

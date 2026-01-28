@@ -485,10 +485,10 @@ def score_candidates_full(
     df = pd.DataFrame(final_results)
     
     if len(df) > 0:
-        # Sort by salience -> fit_score -> primary_score
-        # This matches the notebook behavior where high-salience tonics (like D) win
+        # Sort by fit_score -> primary_score -> salience
+        # This matches the notebook behavior (fusion=False mode)
         df = df.sort_values(
-            by=["salience", "fit_score", "primary_score"],
+            by=["fit_score", "primary_score", "salience"],
             ascending=[False, False, False]
         ).reset_index(drop=True)
         df["rank"] = df.index + 1

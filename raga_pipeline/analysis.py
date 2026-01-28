@@ -103,15 +103,17 @@ def compute_cent_histograms(
     bins_high: int = 100,
     bins_low: int = 33,
     sigma: float = 0.8,
+    use_confidence_weights: bool = False,
 ) -> HistogramData:
     """
     Compute dual-resolution cent histograms with Gaussian smoothing.
     
     Args:
-        pitch_data: PitchData containing midi_vals
+        pitch_data: PitchData containing midi_vals and optionally confidence
         bins_high: Number of bins for high-resolution histogram (default 100)
         bins_low: Number of bins for low-resolution histogram (default 33)
         sigma: Gaussian smoothing kernel width
+        use_confidence_weights: If True, weight histogram by confidence values
         
     Returns:
         HistogramData with raw and smoothed histograms
@@ -119,15 +121,24 @@ def compute_cent_histograms(
     # Convert MIDI to cents (0-1200 range, one octave)
     cent_vals = (pitch_data.midi_vals % 12) * 100.0
     
-    # High-resolution histogram (12¢ per bin with 100 bins)
+    # Prepare weights (confidence * frame_duration if available)
+    weights = None
+    if use_confidence_weights and pitch_data.confidence is not None and len(pitch_data.confidence) == len(cent_vals):
+        weights = pitch_data.confidence
+        # Optionally multiply by frame duration for time-weighted histogram
+        if pitch_data.timestamps is not None and len(pitch_data.timestamps) > 1:
+            frame_duration = np.median(np.diff(pitch_data.timestamps[:min(50, len(pitch_data.timestamps))]))
+            weights = weights * frame_duration
+    
+    # High-resolution histogram (12 per bin with 100 bins)
     high_res, bin_edges_high = np.histogram(
-        cent_vals, bins=bins_high, range=(0.0, 1200.0)
+        cent_vals, bins=bins_high, range=(0.0, 1200.0), weights=weights
     )
     bin_centers_high = (bin_edges_high[:-1] + bin_edges_high[1:]) / 2.0
     
-    # Low-resolution histogram (~36¢ per bin with 33 bins)
+    # Low-resolution histogram (~36 per bin with 33 bins)
     low_res, bin_edges_low = np.histogram(
-        cent_vals, bins=bins_low, range=(0.0, 1200.0)
+        cent_vals, bins=bins_low, range=(0.0, 1200.0), weights=weights
     )
     bin_centers_low = (bin_edges_low[:-1] + bin_edges_low[1:]) / 2.0
     
@@ -158,6 +169,7 @@ def compute_cent_histograms_from_config(
         bins_high=config.histogram_bins_high,
         bins_low=config.histogram_bins_low,
         sigma=config.smoothing_sigma,
+        use_confidence_weights=getattr(config, 'use_confidence_weights', True),
     )
 
 
@@ -171,6 +183,7 @@ def detect_peaks(
     peak_tolerance_cents: float = 45.0,
     prominence_high_factor: float = 0.03,
     prominence_low_factor: float = 0.01,
+    debug: bool = False,
 ) -> PeakData:
     """
     Detect and cross-validate peaks, map to pitch classes.
@@ -181,12 +194,14 @@ def detect_peaks(
         peak_tolerance_cents: Window for cross-validation between resolutions
         prominence_high_factor: Prominence threshold factor for high-res
         prominence_low_factor: Prominence threshold factor for low-res
+        debug: If True, print diagnostic information
         
     Returns:
         PeakData with validated peaks and pitch classes
     """
     # High-resolution peak detection
-    prom_high = max(1.0, prominence_high_factor * histogram.smoothed_high.max())
+    # Notebook: prom_high = max(1.0, 0.03 * float(smoothed_H_100.max()))
+    prom_high = max(1.0, prominence_high_factor * float(histogram.smoothed_high.max()))
     high_peaks, high_props = find_peaks(
         histogram.smoothed_high, prominence=prom_high, distance=2
     )
@@ -196,8 +211,16 @@ def detect_peaks(
     
     high_cents = histogram.bin_centers_high[high_peaks]
     
+    if debug:
+        print(f"\n=== PEAK DETECTION DEBUG ===")
+        print(f"High-res histogram max: {histogram.smoothed_high.max():.2f}")
+        print(f"Prominence threshold (high-res): {prom_high:.2f} ({prominence_high_factor*100:.1f}% of max)")
+        print(f"High-res peaks found: {len(high_peaks)}")
+        print(f"High-res peak positions (cents): {high_cents}")
+    
     # Low-resolution peak detection (on RAW histogram, per notebook)
-    prom_low = max(0.0, prominence_low_factor * histogram.low_res.max())
+    # Notebook: prom_low = max(0, 0.01 * float(H_mel_25.max()))
+    prom_low = max(0.0, prominence_low_factor * float(histogram.low_res.max()))
     low_peaks, low_props = find_peaks(
         histogram.low_res, prominence=prom_low, distance=1
     )
@@ -207,47 +230,113 @@ def detect_peaks(
     
     low_cents = histogram.bin_centers_low[low_peaks]
     
+    if debug:
+        print(f"\nLow-res histogram max: {histogram.low_res.max():.2f}")
+        print(f"Prominence threshold (low-res): {prom_low:.2f} ({prominence_low_factor*100:.1f}% of max)")
+        print(f"Low-res peaks found: {len(low_peaks)}")
+        print(f"Low-res peak positions (cents): {low_cents}")
+    
     # Cross-validate: high-res peaks must align with low-res within tolerance
     validated_indices = []
     validated_cents_list = []
+    filtered_peaks = []  # Track filtered peaks for debug
+    
+    # Notebook logic:
+    # is_validated = any(abs(sp_cent - rp_cent) <= peak_tolerance_cents for rp_cent in raw_peaks_cents)
+    # The existing pipeline logic was functionally equivalent but used min() check
     
     for idx, cent in zip(high_peaks, high_cents):
         if len(low_cents) == 0:
-            # No low-res peaks - accept all high-res peaks
+            # No low-res peaks - accept all high-res peaks? (Notebook doesn't explicit handle this but loop would fail)
+            # Safe fallback:
             validated_indices.append(idx)
             validated_cents_list.append(cent)
         else:
             # Circular distance to nearest low-res peak
             dists = np.abs((cent - low_cents + 600) % 1200 - 600)
             min_dist = np.min(dists)
+            
+            # NOTE: notebook doesn't explicitly wrap for cross-validation distance?
+            # "abs(sp_cent - rp_cent) <= peak_tolerance_cents"
+            # If peaks are near 0/1200 boundary, direct abs diff works if both are e.g. 10 and 1190? No.
+            # 10 and 1190 are 20 cents apart circularly. abs(10-1190)=1180.
+            # So notebook MIGHT have a bug if it doesn't wrap dists here, 
+            # UNLESS peak_tolerance is small and peaks are well-centered.
+            # BUT the pipeline logic IS circular-safe, which is better.
+            # We stick to the pipeline's circular distance logic.
+            
             if min_dist <= peak_tolerance_cents:
                 validated_indices.append(idx)
                 validated_cents_list.append(cent)
+            else:
+                filtered_peaks.append((cent, min_dist))
+    
+    if debug and filtered_peaks:
+        print(f"\n⚠ FILTERED PEAKS (failed cross-validation):")
+        for cent, dist in filtered_peaks:
+            pc = int(round(cent / 100)) % 12
+            print(f"  - {cent:.1f}¢ (PC={pc}) → nearest low-res peak: {dist:.1f}¢ away (max allowed: {peak_tolerance_cents}¢)")
     
     validated_indices = np.array(validated_indices, dtype=int)
     validated_cents = np.array(validated_cents_list)
     
-    # Map to pitch classes
+    # Map to pitch classes and remove duplicates (keep best match per note)
     note_centers = np.arange(0, 1200, 100)  # 0, 100, 200, ..., 1100
-    pitch_classes = set()
-    peak_details = []
+    
+    # Temporary storage for grouping by pitch class
+    peaks_by_note = {} # note_idx -> list of (distance, detail_dict, original_idx, cent)
     
     for idx, cent in zip(validated_indices, validated_cents):
         # Circular distance to nearest semitone center
         diffs = np.abs((cent - note_centers + 600) % 1200 - 600)
-        nearest_note = int(np.argmin(diffs))
+        nearest_note = int(np.argmin(diffs)) # 0-11
         note_dist = float(diffs[nearest_note])
         
-        if note_dist <= tolerance_cents:
-            pitch_classes.add(nearest_note % 12)
-        
-        peak_details.append({
+        detail = {
             "bin_idx": int(idx),
             "cent_position": float(cent),
             "mapped_pc": nearest_note % 12,
             "distance_to_note": note_dist,
             "within_tolerance": note_dist <= tolerance_cents,
-        })
+        }
+        
+        # Only consider peaks within tolerance for merging logic?
+        # If outside tolerance, they are just noise, or microtonal.
+        # But we still want to report them in peak_details usually.
+        # User requirement: "if two peaks are same note, count as single note"
+        
+        if nearest_note not in peaks_by_note:
+            peaks_by_note[nearest_note] = []
+        peaks_by_note[nearest_note].append(detail)
+
+    # Filter duplicates
+    final_validated_indices = []
+    final_validated_cents = []
+    pitch_classes = set()
+    peak_details = []
+    
+    for note_idx in sorted(peaks_by_note.keys()):
+        candidates = peaks_by_note[note_idx]
+        
+        # Sort candidates by distance to note center (prefer closer to pure note)
+        # Alternatively, could sort by peak prominence (magnitude in histogram)
+        # But distance is safer for "identity" of the note.
+        candidates.sort(key=lambda x: x["distance_to_note"])
+        
+        # Select best one
+        best = candidates[0]
+        
+        # Add to final lists
+        final_validated_indices.append(best["bin_idx"])
+        final_validated_cents.append(best["cent_position"])
+        peak_details.append(best)
+        
+        if best["within_tolerance"]:
+            pitch_classes.add(best["mapped_pc"])
+            
+    # Overwrite return arrays with filtered ones
+    validated_indices = np.array(final_validated_indices, dtype=int) if final_validated_indices else np.array([], dtype=int)
+    validated_cents = np.array(final_validated_cents) if final_validated_cents else np.array([])
     
     return PeakData(
         high_res_indices=high_peaks,
@@ -288,7 +377,7 @@ def _add_edge_peaks(
 
 
 def detect_peaks_from_config(
-    histogram: HistogramData, config: PipelineConfig
+    histogram: HistogramData, config: PipelineConfig, debug: bool = False
 ) -> PeakData:
     """Detect peaks using configuration parameters."""
     return detect_peaks(
@@ -297,6 +386,7 @@ def detect_peaks_from_config(
         peak_tolerance_cents=config.peak_tolerance_cents,
         prominence_high_factor=config.prominence_high_factor,
         prominence_low_factor=config.prominence_low_factor,
+        debug=debug,
     )
 
 

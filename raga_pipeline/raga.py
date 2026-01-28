@@ -172,7 +172,10 @@ class RagaDatabase:
             
             if mask_abs is None:
                 try:
-                    mask_abs = tuple(int(row[i]) for i in range(12))
+                    # Try positional lookup using iloc (safest for 0-11 columns)
+                    # We look for 12 columns that might hold the pitch class mask
+                    # Assuming they are the first 12 or named 0-11
+                    mask_abs = tuple(int(row.iloc[i]) for i in range(12))
                 except Exception:
                     try:
                         mask_abs = tuple(int(row[str(i)]) for i in range(12))
@@ -503,53 +506,41 @@ def get_raga_notes(raga_db: RagaDatabase, raga_name: str, tonic: Union[int, str]
     
     Args:
         raga_db: RagaDatabase instance
-        raga_name: Name of the raga
+        raga_name: Name of the raga (can be comma-separated list, first match used)
         tonic: Tonic pitch class (0-11) or note name
         
     Returns:
         List of pitch classes (0-11) valid in this raga
     """
-    if not raga_db.name_to_mask or raga_name.lower() not in raga_db.name_to_mask:
-         # Fallback to fuzzy search if not exact
-         found = False
-         for r in raga_db.all_ragas:
-             for n in r["names"]:
-                 if raga_name.lower() in n.lower():
-                     mask_abs = r["mask"]
-                     found = True
-                     break
-             if found: break
-         
-         if not found:
-             # Just return all notes if not found (or raise error?)
-             print(f"[WARN] Raga '{raga_name}' not found in DB. Allowing all notes.")
-             return list(range(12))
-    else:
-        mask_abs = raga_db.name_to_mask[raga_name.lower()]
+    candidate_names = [n.strip() for n in raga_name.split(',')]
+    mask_abs = None
+    matched_name = None
+    
+    for name in candidate_names:
+        # 1. Exact match
+        if raga_db.name_to_mask and name.lower() in raga_db.name_to_mask:
+            mask_abs = raga_db.name_to_mask[name.lower()]
+            matched_name = name
+            break
+            
+        # 2. Fuzzy match
+        for r in raga_db.all_ragas:
+            for db_name in r["names"]:
+                # Check if input name is part of DB name, or DB name is part of input name
+                if name.lower() in db_name.lower() or db_name.lower() in name.lower():
+                    mask_abs = r["mask"]
+                    matched_name = db_name
+                    break
+            if mask_abs: break
+        if mask_abs: break
+    
+    if mask_abs is None:
+         print(f"[WARN] Raga '{raga_name}' (or sub-names) not found in DB. Allowing all notes.")
+         return list(range(12))
+    
+    print(f"  [INFO] Found raga match: '{matched_name}'")
     
     tonic_pc = _parse_tonic(tonic) if isinstance(tonic, str) else int(tonic)
-    
-    # Identify relative indices (0..11) that are 1
-    # The mask is ABSOLUTE (C-based) in current RagaDatabase implementation? 
-    # Let's check RagaDatabase._build_lookups()
-    # It says: "Get pitch classes from mask... mask_abs = tuple(int(row[i]) for i in range(12))"
-    # The mask in CSV seems to be absolute C-based PITCH CLASSES based on context, OR relative?
-    # Actually, RagaDatabase uses interval matching, creating candidates by shifting.
-    # If the CSV has 0-11 columns, they are usually Absolute Pitch Classes if no tonic is specified,
-    # OR they are Relative Pitch Classes (Sa=0) if the dataset is normalized.
-    #
-    # Looking at `generate_candidates`:
-    #   intervals = ... from input pitch classes
-    #   rotated_intervals = np.roll(intervals, -j)
-    #   canonical = ...
-    #   matching_ragas = ... if r["intervals"] == rotated_intervals.
-    #
-    # This implies the DB stores Canonical/Relative intervals in `intervals` field.
-    # The `mask` field in `all_ragas` comes from "mask" column or 0-11 cols.
-    # If standard raga datasets are used, usually 0=Sa, 1=r, etc. (Relative).
-    #
-    # Let's assume the mask in DB (and raga definitions) is RELATIVE to Sa (0, 1, ..., 11).
-    # If so, `mask_abs` in `get_raga_notes` (from `name_to_mask`) is effectively a RELATIVE mask.
     
     mask_arr = np.array(mask_abs)
     relative_indices = np.where(mask_arr == 1)[0]

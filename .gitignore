@@ -82,7 +82,7 @@ raga_pipeline/LLM_REFERENCE.md
 raga_pipeline/CHANGELOG.md
 raga_pipeline/NOTEBOOK_VS_PIPELINE_COMPARISON.md
 raga_pipeline/DOCUMENTATION.md
-
+primer/
 # Trained models
 *.pkl
 *_model.pkl

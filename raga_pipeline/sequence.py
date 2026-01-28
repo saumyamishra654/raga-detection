@@ -190,6 +190,7 @@ class Note:
     pitch_midi: float     # MIDI note number
     pitch_hz: float       # Frequency (Hz)
     confidence: float     # Detection confidence
+    energy: float = 0.0   # RMS Energy
     
     # Populated after tonic is known
     sargam: str = ""
@@ -208,6 +209,7 @@ class Note:
             pitch_midi=self.pitch_midi,
             pitch_hz=self.pitch_hz,
             confidence=self.confidence,
+            energy=self.energy,
             sargam=midi_to_sargam(self.pitch_midi, tonic),
             pitch_class=int(round(self.pitch_midi)) % 12,
         )
@@ -452,15 +454,36 @@ def detect_stationary_points(
         region_pitches = voiced_pitches[start_idx:end_idx]
         median_midi = float(np.median(region_pitches))
         
+        # Calculate mean energy
+        region_energy_indices = voiced_indices[start_idx:end_idx]
+        if len(pitch_data.energy) > 0 and len(pitch_data.energy) >= max(region_energy_indices):
+            # Safe access
+            try:
+                mean_energy = float(np.mean(pitch_data.energy[region_energy_indices]))
+            except IndexError:
+                mean_energy = 0.0
+        else:
+            mean_energy = 0.0
+        
         # Check if we should merge with previous note
         if notes and abs(median_midi - notes[-1].pitch_midi) < pitch_threshold:
             # Merge: extend previous note
+            # Update weighted energy? Simple average for now
+            prev_dur = notes[-1].end - notes[-1].start
+            curr_dur = end_time - start_time
+            total_dur = prev_dur + curr_dur
+            if total_dur > 0:
+                merged_energy = (notes[-1].energy * prev_dur + mean_energy * curr_dur) / total_dur
+            else:
+                merged_energy = mean_energy
+                
             notes[-1] = Note(
                 start=notes[-1].start,
                 end=end_time,
                 pitch_midi=np.median([notes[-1].pitch_midi, median_midi]),
                 pitch_hz=librosa.midi_to_hz(median_midi),
                 confidence=float(np.mean(pitch_data.confidence[voiced_indices[start_idx:end_idx]])),
+                energy=merged_energy,
             )
         else:
             # Create new note
@@ -471,6 +494,7 @@ def detect_stationary_points(
                 pitch_midi=median_midi,
                 pitch_hz=librosa.midi_to_hz(median_midi),
                 confidence=float(np.mean(confidence_vals)) if len(confidence_vals) > 0 else 0.0,
+                energy=mean_energy,
             ))
     
     return notes
@@ -612,6 +636,48 @@ def filter_notes_by_octave_range(
 # =============================================================================
 # PHRASE DETECTION & CLUSTERING
 # =============================================================================
+
+
+def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tolerance: float = 0.6) -> List[Note]:
+    """
+    Merge consecutive notes that have similar pitch and small gaps.
+    
+    Args:
+        notes: List of Note objects, sorted by start time.
+        max_gap: Maximum time gap (seconds) between notes to consider for merging.
+        pitch_tolerance: Maximum pitch difference (semitones) to consider equal.
+        
+    Returns:
+        List of merged Note objects.
+    """
+    if not notes:
+        return []
+    
+    merged = []
+    current_note = notes[0]
+    
+    for i in range(1, len(notes)):
+        next_note = notes[i]
+        
+        # Check for same pitch (pitch_midi) and small gap
+        # We assume notes are sorted by start time
+        gap = next_note.start - current_note.end
+        
+        # Merge if similar pitch and close enough
+        if (abs(next_note.pitch_midi - current_note.pitch_midi) < pitch_tolerance and 
+            gap <= max_gap):
+            
+            # Extend current note
+            current_note.end = next_note.end
+            # Optionally update pitch to be weighted average? 
+            # For now, sticking to the first note's pitch is stable for "holding" a note.
+        else:
+            merged.append(current_note)
+            current_note = next_note
+            
+    merged.append(current_note)
+    return merged
+
 
 def detect_phrases(
     notes: List[Note],

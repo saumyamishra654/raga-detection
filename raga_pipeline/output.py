@@ -16,6 +16,8 @@ from typing import List, Dict, Set, Optional, Any, Union, Tuple
 import os
 import json
 import uuid
+import io
+import base64
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -25,6 +27,7 @@ import matplotlib.pyplot as plt
 
 from .config import PipelineConfig
 from .audio import PitchData
+from . import transcription
 from .analysis import HistogramData, PeakData, GMMResult
 from .sequence import Note, Phrase, OFFSET_TO_SARGAM
 
@@ -42,6 +45,7 @@ class AnalysisResults:
     # Pitch data
     pitch_data_vocals: Optional[PitchData] = None
     pitch_data_accomp: Optional[PitchData] = None
+    pitch_data_composite: Optional[PitchData] = None # New field for composite/full-mix pitch
     
     # Histogram analysis
     histogram_vocals: Optional[HistogramData] = None
@@ -317,6 +321,12 @@ def create_pitch_contour_plotly(
     voiced_midi = librosa.hz_to_midi(pitch_data.pitch_hz[voiced_mask]).tolist()
     
     # Determine pitch range
+    if isinstance(tonic, str):
+         # If tonic passed as string name? shouldn't be, but safer
+         # We need int 0-11
+         pass # Assume it's an int for now or handled upstream but let's cast
+    
+    tonic = int(tonic) if tonic is not None else 0
     tonic_midi_base = tonic + 48  # Octave 4
     median_midi = float(np.median(voiced_midi))
     median_octave = int((median_midi - tonic_midi_base) // 12)
@@ -330,6 +340,26 @@ def create_pitch_contour_plotly(
     traces = []
     
     # Main pitch contour
+    # Extract energy for voiced frames
+    voiced_energy = []
+    if len(pitch_data.energy) > 0:
+        # Check alignment
+        if len(pitch_data.energy) == len(pitch_data.timestamps):
+            e_vals = pitch_data.energy[voiced_mask]
+            # Sanitize: Replace nan/inf with 0.0
+            e_vals = np.nan_to_num(e_vals, nan=0.0, posinf=1.0, neginf=0.0)
+            voiced_energy = e_vals.tolist()
+        else:
+             # Fallback if length mismatch
+             voiced_energy = [1.0] * len(voiced_midi)
+    else:
+        voiced_energy = [1.0] * len(voiced_midi)
+
+    # Sanity check length
+    if len(voiced_energy) != len(voiced_midi):
+         voiced_energy = [1.0] * len(voiced_midi)
+
+    # Main pitch contour
     traces.append({
         "x": voiced_times,
         "y": voiced_midi,
@@ -337,6 +367,8 @@ def create_pitch_contour_plotly(
         "line": {"color": "royalblue", "width": 1.5},
         "name": "Pitch contour",
         "type": "scattergl",
+        "customdata": voiced_energy,
+        "hovertemplate": "Time: %{x:.2f}s<br>Pitch: %{y:.1f}<br>Energy: %{customdata:.2f}<extra></extra>",
     })
     
     # Build shapes (sargam lines)
@@ -405,6 +437,44 @@ def create_pitch_contour_plotly(
     }
     
     return json.dumps({"data": traces, "layout": layout})
+
+
+def plot_energy_distribution(
+    energy_vals: np.ndarray,
+    output_path: str,
+    title: str = "Energy Distribution (RMS)",
+    threshold: float = None
+):
+    """
+    Plot histogram of energy values.
+    
+    Args:
+        energy_vals: Array of normalized energy values (0-1)
+        output_path: Path to save plot
+        title: Plot title
+        threshold: Optional threshold to mark with a vertical line
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    
+    plt.figure(figsize=(10, 6))
+    
+    # Plot histogram
+    sns.histplot(energy_vals, bins=50, kde=True, color='skyblue', edgecolor='black')
+    
+    if threshold is not None and threshold > 0:
+        plt.axvline(x=threshold, color='red', linestyle='--', label=f'Threshold: {threshold:.2f}')
+        plt.legend()
+        
+    plt.title(title)
+    plt.xlabel("Energy (Normalized RMS)")
+    plt.ylabel("Frame Count")
+    plt.grid(True, alpha=0.3)
+    plt.xlim(0, 1)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=100)
+    plt.close()
 
 
 def plot_pitch_with_sargam_lines(
@@ -789,6 +859,13 @@ def _generate_audio_player_section(
             <audio id="{player_id}-audio" controls>
                 <source src="{audio_filename}" type="audio/wav">
             </audio>
+            
+            <div class="controls-container" style="margin-bottom: 10px; padding: 10px; background: #161b22; border-radius: 4px; display: flex; gap: 10px; align-items: center;">
+                <label for="{player_id}-energy-slider" style="font-size: 12px; color: #8b949e;">Energy Filter:</label>
+                <input type="range" id="{player_id}-energy-slider" min="0" max="100" value="0" style="flex-grow: 1;">
+                <span id="{player_id}-energy-val" style="font-family: monospace; font-size: 12px; min-width: 40px; text-align: right;">0%</span>
+            </div>
+
             <div id="{player_id}-plot" class="pitch-plot"></div>
             <div class="time-display">
                 <span id="{player_id}-time">0.00s</span> | 
@@ -1155,10 +1232,45 @@ def _get_audio_sync_js() -> str:
             var plotDiv = document.getElementById(playerId + '-plot');
             var timeDisplay = document.getElementById(playerId + '-time');
             var sargamDisplay = document.getElementById(playerId + '-sargam');
+            var slider = document.getElementById(playerId + '-energy-slider');
+            var sliderVal = document.getElementById(playerId + '-energy-val');
             
             if (!audio || !plotDiv) return;
             
             var SARGAM = {0:'Sa',1:'re',2:'Re',3:'ga',4:'Ga',5:'ma',6:'Ma',7:'Pa',8:'dha',9:'Dha',10:'ni',11:'Ni'};
+            
+            // Store original Y data to restore later
+            if (plotDiv.data && plotDiv.data[0] && !plotDiv._originalY) {
+                plotDiv._originalY = plotDiv.data[0].y.slice();
+            }
+            
+            // Slider Logic
+            if (slider && sliderVal) {
+                slider.addEventListener('input', function() {
+                    var thresh = parseInt(this.value) / 100.0;
+                    sliderVal.textContent = this.value + '%';
+                    
+                    var trace = plotDiv.data[0];
+                    if (!trace || !plotDiv._originalY) return;
+                    
+                    var energy = trace.customdata;
+                    var originalY = plotDiv._originalY;
+                    var newY = [];
+                    
+                    // If no energy data, do nothing
+                    if (!energy || energy.length !== originalY.length) return;
+                    
+                    for (var i = 0; i < originalY.length; i++) {
+                        if (energy[i] >= thresh) {
+                            newY.push(originalY[i]);
+                        } else {
+                            newY.push(null); // Gap
+                        }
+                    }
+                    
+                    Plotly.restyle(plotDiv, {'y': [newY]}, [0]);
+                });
+            }
             
             // Get cursor shape index (last shape)
             var shapes = plotDiv.layout.shapes || [];
@@ -1184,9 +1296,14 @@ def _get_audio_sync_js() -> str:
                         var idx = trace.x.findIndex(function(x) { return x >= t; });
                         if (idx > 0) {
                             var midi = trace.y[idx];
-                            var offset = Math.round(midi - tonic) % 12;
-                            if (offset < 0) offset += 12;
-                            sargamDisplay.textContent = SARGAM[offset] || '--';
+                            // Handle nulls (filtered points)
+                            if (midi === null || midi === undefined) {
+                                sargamDisplay.textContent = '--';
+                            } else {
+                                var offset = Math.round(midi - tonic) % 12;
+                                if (offset < 0) offset += 12;
+                                sargamDisplay.textContent = SARGAM[offset] || '--';
+                            }
                         }
                     }
                 } catch(e) {}
@@ -1212,6 +1329,9 @@ def plot_pitch_wide_to_base64_with_legend(
     tonic_ref: Union[int, str], 
     raga_name: str = "Unknown",
     raga_notes: Optional[Set[int]] = None,
+    transcription_smoothing_ms: float = 70.0,
+    transcription_min_duration: float = 0.04,
+    transcription_derivative_threshold: float = 2.0,
     figsize_width: int = 80, 
     figsize_height: int = 7, 
     dpi: int = 100, 
@@ -1309,6 +1429,68 @@ def plot_pitch_wide_to_base64_with_legend(
         s, e = seg
         ax.plot(voiced_times[s:e], voiced_midi[s:e], color='tab:blue', linewidth=1.5, alpha=0.9)
 
+    # --- Transcription Overlay ---
+    # Detect events
+    transcription_events = transcription.detect_stationary_events(
+        pitch_hz=pitch_hz,
+        timestamps=timestamps,
+        voicing_mask=voiced_mask, # Note: voiced_mask is boolean array same length as pitch_hz
+        tonic=tonic_midi_base,
+        snap_mode='chromatic', # Default to chromatic for now
+        smoothing_sigma_ms=transcription_smoothing_ms,
+        derivative_threshold=transcription_derivative_threshold,
+        min_event_duration=transcription_min_duration
+    )
+    
+    # Plot events
+    for event in transcription_events:
+        # Draw horizontal line for the note
+        ax.hlines(
+            y=event.snapped_midi,
+            xmin=event.start,
+            xmax=event.end,
+            colors='orange',
+            linewidth=3,
+            alpha=0.8,
+            label='Transcribed' if event == transcription_events[0] else None 
+        )
+
+    # --- Inflection Points Overlay ---
+    # Detect turning points (derivative = 0)
+    inflection_times, inflection_pitches = transcription.detect_pitch_inflection_points(
+        pitch_hz=pitch_hz,
+        timestamps=timestamps,
+        voicing_mask=voiced_mask,
+        smoothing_sigma_ms=transcription_smoothing_ms, # Use same smoothing as transcription
+    )
+    
+    # Filter out inflection points that are already covered by stationary events (orange bars)
+    if len(inflection_times) > 0 and transcription_events:
+        keep_mask = np.ones(len(inflection_times), dtype=bool)
+        for event in transcription_events:
+            # Mark points inside this event's duration as False
+            # We use a small buffer or strict inequality? Strict is fine: start <= t <= end
+            overlap = (inflection_times >= event.start) & (inflection_times <= event.end)
+            keep_mask[overlap] = False
+            
+        inflection_times = inflection_times[keep_mask]
+        inflection_pitches = inflection_pitches[keep_mask]
+    
+    if len(inflection_times) > 0:
+         # Plot vertical lines for inflection points
+         ax.vlines(
+             x=inflection_times,
+             ymin=min_m,
+             ymax=max_m,
+             colors='red',
+             linestyles=':',
+             linewidth=0.8,
+             alpha=0.4,
+             label='Inflection'
+         )
+         # Optionally mark points
+         ax.scatter(inflection_times, inflection_pitches, c='red', s=10, alpha=0.5, zorder=3)
+
     ax.set_ylim(min_m - 1, max_m + 1)
     ax.set_xlim(0, max(timestamps[-1], 1.0))
     ax.set_xlabel('Time (s)')
@@ -1375,14 +1557,20 @@ def create_scrollable_pitch_plot_html(
     pitch_data: PitchData,
     tonic: int,
     raga_name: str,
-    audio_element_id: str,
-    raga_notes: Optional[Set[int]] = None
+    audio_element_ids: List[str],
+    raga_notes: Optional[Set[int]] = None,
+    transcription_smoothing_ms: float = 70.0,
+    transcription_min_duration: float = 0.04,
+    transcription_derivative_threshold: float = 2.0
 ) -> str:
     """
     Create HTML component for scrollable pitch plot with audio sync.
     """
     legend_b64, plot_b64, px_width = plot_pitch_wide_to_base64_with_legend(
-        pitch_data, tonic, raga_name, raga_notes
+        pitch_data, tonic, raga_name, raga_notes, 
+        transcription_smoothing_ms=transcription_smoothing_ms,
+        transcription_min_duration=transcription_min_duration,
+        transcription_derivative_threshold=transcription_derivative_threshold
     )
     
     if not plot_b64:
@@ -1416,7 +1604,7 @@ def create_scrollable_pitch_plot_html(
     
     <script>
     document.addEventListener("DOMContentLoaded", function() {{
-        const audio = document.getElementById("{audio_element_id}");
+        const trackIds = {json.dumps(audio_element_ids)};
         const container = document.getElementById("{unique_id}-container");
         const cursor = document.getElementById("{unique_id}-cursor");
         const status = document.getElementById("{unique_id}-status");
@@ -1424,13 +1612,7 @@ def create_scrollable_pitch_plot_html(
         const totalDuration = {duration};
         const pixelWidth = {px_width};
         
-        if (!audio) {{
-            console.error("Audio element not found: {audio_element_id}");
-            if (status) status.textContent = "Error: Audio player not found";
-            return;
-        }}
-        
-        if (audio && container && cursor) {{
+        if (container && cursor) {{
             console.log("Initializing sync for {unique_id}");
             
             // Plot margins (matches python subplots_adjust)
@@ -1440,8 +1622,17 @@ def create_scrollable_pitch_plot_html(
             
             // Sync Loop
             function updateSync() {{
-                if (!audio.paused) {{
-                    const t = audio.currentTime;
+                let activeAudio = null;
+                for (const id of trackIds) {{
+                    const el = document.getElementById(id);
+                    if (el && !el.paused) {{
+                        activeAudio = el;
+                        break;
+                    }}
+                }}
+            
+                if (activeAudio) {{
+                    const t = activeAudio.currentTime;
                     // Safety: clamp t
                     const t_safe = Math.max(0, Math.min(t, totalDuration));
                     
@@ -1484,20 +1675,53 @@ def create_scrollable_pitch_plot_html(
                 
                 if (isFinite(seekT) && seekT >= 0 && seekT <= totalDuration) {{
                     console.log("Seeking to:", seekT);
-                    audio.currentTime = seekT;
+                    // Seek ALL tracks to keep them in sync if swapped
+                    trackIds.forEach(id => {{
+                        const el = document.getElementById(id);
+                        if (el) el.currentTime = seekT;
+                    }});
+                    
                     // Update cursor immediately
                     cursor.style.left = clickX + 'px';
                 }}
             }});
-            
-            // Debug info
-            audio.addEventListener('play', () => console.log("Audio started"));
-            audio.addEventListener('pause', () => console.log("Audio paused"));
         }}
     }});
     </script>
     """
     return html
+
+
+def save_notes_to_csv(notes: List['Note'], output_path: str):
+    """
+    Save list of Note objects to CSV.
+    """
+    import csv
+    if not notes:
+        return
+
+    fieldnames = [
+        'start', 'end', 'duration', 
+        'pitch_midi', 'pitch_hz', 'confidence',
+        'pitch_class', 'sargam', 'energy'
+    ]
+    
+    with open(output_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for note in notes:
+            writer.writerow({
+                'start': f"{note.start:.3f}",
+                'end': f"{note.end:.3f}",
+                'duration': f"{note.duration:.3f}",
+                'pitch_midi': f"{note.pitch_midi:.2f}",
+                'pitch_hz': f"{note.pitch_hz:.1f}",
+                'confidence': f"{note.confidence:.2f}",
+                'pitch_class': note.pitch_class,
+                'sargam': note.sargam,
+                'energy': f"{getattr(note, 'energy', 0.0):.4f}"
+            })
+
 
 @dataclass
 class AnalysisStats:
@@ -1527,6 +1751,7 @@ def generate_analysis_report(
     # Audio IDs for sync
     vocals_id = "vocals-player"
     accomp_id = "accomp-player"
+    original_id = "original-player"
     
     # Scrollable Plot HTML
     scroll_plot_html = ""
@@ -1537,10 +1762,94 @@ def generate_analysis_report(
                 results.pitch_data_vocals,
                 tonic=results.detected_tonic or 0,
                 raga_name=stats.raga_name,
-                audio_element_id=vocals_id
+                audio_element_ids=[original_id, vocals_id, accomp_id],
+                transcription_smoothing_ms=results.config.transcription_smoothing_ms,
+                transcription_min_duration=results.config.transcription_min_duration,
+                transcription_derivative_threshold=results.config.transcription_derivative_threshold
             )
         except Exception as e:
             scroll_plot_html = f"<p>Error generating scrollable plot: {e}</p>"
+
+        # 1. Interactive Plotly Player
+        try:
+             plot_json = create_pitch_contour_plotly(
+                results.pitch_data_vocals,
+                tonic=results.detected_tonic or 0,
+                raga_notes=None, # or restrict if we have filtered raga
+                audio_duration=results.pitch_data_vocals.duration if results.pitch_data_vocals else 0
+            )
+             interactive_player_html = f'''
+             <div id="interactive-pitch-plot" style="width:100%; height:450px;"></div>
+             <script>
+                 var plotData = {plot_json};
+                 Plotly.newPlot('interactive-pitch-plot', plotData.data, plotData.layout, {{responsive: true}});
+                 
+                 // Sync with audio
+                 var trackIds = ['{original_id}', '{vocals_id}', '{accomp_id}'];
+                 var plotDiv = document.getElementById('interactive-pitch-plot');
+                 var cursorShapeIndex = {len(json.loads(plot_json)["layout"]["shapes"])-1};
+                 
+                 trackIds.forEach(function(id) {{
+                     var audio = document.getElementById(id);
+                     if(audio && plotDiv) {{
+                         audio.ontimeupdate = function() {{
+                             // Only sync if this audio is actually playing (to avoid conflict if multiple loaded?)
+                             // Actually ontimeupdate only fires when playing/seeking.
+                             if (!audio.paused || audio.seeking) {{
+                                 var time = audio.currentTime;
+                                 Plotly.relayout(plotDiv, {{
+                                     ['shapes[' + cursorShapeIndex + '].x0']: time,
+                                     ['shapes[' + cursorShapeIndex + '].x1']: time
+                                 }});
+                             }}
+                         }};
+                     }}
+                 }});
+                 
+                 // Allow click on plot to seek audio (Graph -> Audio sync)
+                 plotDiv.on('plotly_click', function(data){{
+                     if (data.points && data.points.length > 0) {{
+                         var time = data.points[0].x;
+                         console.log("Plotly click seek to:", time);
+                         trackIds.forEach(function(id) {{
+                             var el = document.getElementById(id);
+                             if(el) el.currentTime = time;
+                         }});
+                     }}
+                 }});
+             </script>
+             '''
+        except Exception as e:
+            interactive_player_html = f"<p>Error generating interactive plot: {e}</p>"
+
+        # 2. Energy Histogram
+        energy_histogram_html = ""
+        try:
+            energy_hist_path = os.path.join(output_dir, "energy_histogram.png")
+            # Filter valid energy values (remove -1 or 0 placeholders if any, though sanitized are 0-1)
+            e_vals = results.pitch_data_vocals.energy
+            if len(e_vals) > 0:
+                plot_energy_distribution(
+                    e_vals, 
+                    energy_hist_path, 
+                    title=f"Vocal Energy Distribution (Threshold: {results.config.energy_threshold})",
+                    threshold=results.config.energy_threshold
+                )
+                e_hist_rel = os.path.relpath(energy_hist_path, output_dir)
+                energy_histogram_html = f'''
+                <div class="stat-box" style="text-align: center; background: #0d1117; margin-top: 20px;">
+                    <h3>Energy Analysis</h3>
+                    <p style="font-size:0.9em; color:#8b949e">Distribution of RMS energy. Used to filter silence/noise.</p>
+                    <img src="{e_hist_rel}" style="max-width: 100%; border-radius: 6px;">
+                </div>
+                '''
+            else:
+                energy_histogram_html = "<p>No energy data available.</p>"
+        except Exception as e:
+             energy_histogram_html = f"<p>Error generating energy plot: {e}</p>"
+    else:
+        interactive_player_html = ""
+        energy_histogram_html = ""
 
     # Transcription html
     transcription_html = _generate_transcription_section(results.notes, results.phrases, results.detected_tonic)
@@ -1622,6 +1931,7 @@ def generate_analysis_report(
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Raga Analysis Report: {stats.raga_name}</title>
+        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
         <style>
             {_get_css_styles()}
             /* Custom styles for scroll plot */
@@ -1646,7 +1956,7 @@ def generate_analysis_report(
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
                     <div>
                         <p><strong>Original</strong></p>
-                        <audio controls src="{original_rel}" style="width:100%"></audio>
+                        <audio id="{original_id}" controls src="{original_rel}" style="width:100%"></audio>
                     </div>
                     <div>
                         <p><strong>Vocals (Analysis Source)</strong></p>
@@ -1658,10 +1968,16 @@ def generate_analysis_report(
                     </div>
                 </div>
                 
+                <!-- Interactive Plotly Player (with Slider) -->
+                {interactive_player_html}
+                
                 <!-- Scrollable Plot -->
-                <h3>Interactive Pitch Analysis (Synced to Vocals)</h3>
+                <h3>Static Pitch Analysis (High-Res, Synced)</h3>
                 <p style="font-size: 0.9em; color: #8b949e;">Scroll horizontally or play audio to follow the analysis. Color-coded by octave.</p>
                 {scroll_plot_html}
+                
+                <!-- Energy Histogram -->
+                {energy_histogram_html}
             </section>
 
             {correction_html}

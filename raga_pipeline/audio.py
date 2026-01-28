@@ -9,7 +9,7 @@ Provides:
 Note: torch and demucs are imported lazily to avoid import errors if not installed.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Tuple, Optional
 import os
@@ -33,6 +33,7 @@ class PitchData:
     # Derived data
     valid_freqs: np.ndarray      # Voiced frequencies only (Hz)
     midi_vals: np.ndarray        # Voiced MIDI note values
+    energy: np.ndarray = field(default_factory=lambda: np.array([]))  # Normalized RMS energy (0-1)
     
     # Metadata
     frame_period: float = 0.01   # Frame period (seconds)
@@ -48,6 +49,13 @@ class PitchData:
         """Timestamps for voiced frames only."""
         return self.timestamps[self.voiced_mask]
     
+    @property
+    def duration(self) -> float:
+        """Total duration in seconds."""
+        if len(self.timestamps) > 0:
+            return self.timestamps[-1]
+        return 0.0
+
     @property
     def cent_vals(self) -> np.ndarray:
         """Cent values (0-1200) for voiced frames."""
@@ -67,6 +75,7 @@ class PitchData:
             voicing=new_voicing,
             valid_freqs=new_valid_freqs,
             midi_vals=new_midi_vals,
+            energy=self.energy,
             frame_period=self.frame_period,
             audio_path=self.audio_path,
         )
@@ -100,7 +109,9 @@ def separate_stems(
         Results are cached - if stems already exist, separation is skipped.
     """
     filename = os.path.splitext(os.path.basename(audio_path))[0]
-    stem_dir = os.path.join(output_dir, model, filename)
+    # Use 'spleeter' or the Demucs model name as the subdirectory
+    subdir = "spleeter" if engine.lower() == "spleeter" else model
+    stem_dir = os.path.join(output_dir, subdir, filename)
     
     vocals_path = os.path.join(stem_dir, "vocals.wav")
     accompaniment_path = os.path.join(stem_dir, "accompaniment.wav")
@@ -326,7 +337,7 @@ def extract_pitch(
         force_recompute: Ignore cached results
         
     Returns:
-        PitchData containing pitch extraction results
+        PitchData containing pitch extraction results with energy
     """
     csv_path = os.path.join(output_dir, f"{prefix}_pitch_data.csv")
     
@@ -350,22 +361,66 @@ def extract_pitch(
     detector = SwiftF0(fmin=fmin, fmax=fmax, confidence_threshold=confidence_threshold)
     result = detector.detect_from_file(audio_path)
     
-    # Export to CSV
+    # Calculate RMS Energy
+    print("[AUDIO] Calculating RMS energy...")
+    y, sr = librosa.load(audio_path, sr=None)
+    # Align energy frames with pitch frames (hop_length=sr*frame_period)
+    frame_period = result.frame_period if hasattr(result, "frame_period") else 0.01
+    hop_length = int(sr * frame_period)
+    rms = librosa.feature.rms(y=y, hop_length=hop_length, center=True)[0]
+    
+    # Match length with pitch data
+    # (SwiftF0 might have slightly different length due to padding)
+    pitch_hz = np.asarray(result.pitch_hz)
+    target_len = len(pitch_hz)
+    
+    if len(rms) > target_len:
+        rms = rms[:target_len]
+    elif len(rms) < target_len:
+        rms = np.pad(rms, (0, target_len - len(rms)), mode='edge')
+        
+    # Normalize energy (0-1)
+    energy_max = rms.max() if rms.max() > 0 else 1.0
+    energy_norm = rms / energy_max
+    
+    # Modify result object to include energy before export (if supported) or just save separately?
+    # SwiftF0 result is a custom object, might not be flexible. 
+    # We will export standard CSV first, then manually add energy column.
+    
+    # Export to CSV first
     os.makedirs(output_dir, exist_ok=True)
     export_to_csv(result, csv_path)
-    print(f"[WRITE] Exported CSV: {csv_path}")
+    
+    # Append energy to CSV
+    df = pd.read_csv(csv_path)
+    # Ensure lengths match
+    if len(df) != len(energy_norm):
+        print(f"[WARN] Length mismatch: CSV={len(df)}, Energy={len(energy_norm)}")
+        min_len = min(len(df), len(energy_norm))
+        df = df.iloc[:min_len]
+        energy_norm = energy_norm[:min_len]
+        
+    df['energy'] = energy_norm
+    df.to_csv(csv_path, index=False)
+    print(f"[WRITE] Exported CSV with energy: {csv_path}")
     
     # Convert to PitchData
-    pitch_hz = np.asarray(result.pitch_hz)
     timestamps = np.asarray(result.timestamps) if hasattr(result, "timestamps") else np.arange(len(pitch_hz)) * 0.01
     confidence = np.asarray(result.confidence) if hasattr(result, "confidence") else np.ones_like(pitch_hz)
     voicing = np.asarray(result.voicing) if hasattr(result, "voicing") else (pitch_hz > 0)
     
+    # Ensure all arrays match min_len if truncation occurred
+    if len(pitch_hz) != len(energy_norm):
+        min_len = min(len(pitch_hz), len(energy_norm))
+        pitch_hz = pitch_hz[:min_len]
+        timestamps = timestamps[:min_len]
+        confidence = confidence[:min_len]
+        voicing = voicing[:min_len]
+        energy_norm = energy_norm[:min_len]
+    
     voiced_mask = (pitch_hz > 0) & voicing & (confidence >= confidence_threshold)
     valid_freqs = pitch_hz[voiced_mask]
     midi_vals = librosa.hz_to_midi(valid_freqs) if len(valid_freqs) > 0 else np.array([])
-    
-    frame_period = result.frame_period if hasattr(result, "frame_period") else 0.01
     
     return PitchData(
         timestamps=timestamps,
@@ -374,6 +429,7 @@ def extract_pitch(
         voicing=voicing,
         valid_freqs=valid_freqs,
         midi_vals=midi_vals,
+        energy=energy_norm,
         frame_period=frame_period,
         audio_path=audio_path,
     )
@@ -407,6 +463,13 @@ def load_pitch_from_csv(csv_path: str, audio_path: str = "") -> PitchData:
     confidence = pd.to_numeric(df[conf_col], errors="coerce").to_numpy()
     confidence = np.nan_to_num(confidence, nan=0.0)
     
+    # Load energy if exists
+    if 'energy' in df.columns:
+        energy = pd.to_numeric(df['energy'], errors="coerce").to_numpy()
+        energy = np.nan_to_num(energy, nan=0.0)
+    else:
+        energy = np.ones_like(pitch_hz)  # Default to max energy if missing
+    
     if voiced_col and voiced_col in df.columns:
         voiced_raw = df[voiced_col].astype(str).fillna("").str.strip().str.lower()
         voicing = voiced_raw.isin(["1", "1.0", "true", "t", "yes", "y"]).to_numpy()
@@ -431,6 +494,7 @@ def load_pitch_from_csv(csv_path: str, audio_path: str = "") -> PitchData:
         voicing=voicing,
         valid_freqs=valid_freqs,
         midi_vals=midi_vals,
+        energy=energy,
         frame_period=frame_period,
         audio_path=audio_path,
     )

@@ -15,30 +15,33 @@ import os
 
 @dataclass
 class PipelineConfig:
-    """Configuration for the raga detection pipeline."""
+    """config for raga detection pipeline"""
     
-    # Required paths
+    # mandatory paths
     audio_path: str
     output_dir: str
     
-    # Separator settings
+    # separator settings
     separator_engine: str = "demucs"  # 'demucs' or 'spleeter'
     demucs_model: str = "htdemucs"    # htdemucs, htdemucs_ft, mdx, mdx_extra
     
-    # Source type - determines stem separation behavior
+    # source type - determines stem separation behavior
     source_type: str = "mixed"  # "mixed" (stem separation), "instrumental", "vocal"
     
-    # Vocalist gender - only used when source_type="vocal" (affects tonic bias)
+    # Melody source - determines which audio to use for melody analysis
+    melody_source: str = "separated" # "separated" (vocals stem), "composite" (original mix)
+    
+    # vocalist gender - only used when source_type="vocal" (affects tonic bias)
     vocalist_gender: Optional[str] = None  # "male", "female", or None (auto)
     
-    # Instrument type - only used when source_type="instrumental" (affects tonic bias)
+    # instrument type - only used when source_type="instrumental" (affects tonic bias)
     instrument_type: str = "autodetect"  # "sitar", "sarod", "bansuri", "slide_guitar", "autodetect"
     
-    # Skip stem separation - only effective when source_type="instrumental"
-    # When True, uses full audio as melody (for solo instrument recordings)
+    # skip stem separation - only effective when source_type="instrumental"
+    # when true, uses full audio as melody (for solo instrument recordings)
     skip_separation: bool = False
     
-    # Pitch extraction confidence thresholds
+    # pitch extraction confidence thresholds
     vocal_confidence: float = 0.98
     accomp_confidence: float = 0.80
     
@@ -64,6 +67,11 @@ class PipelineConfig:
     smoothing_method: str = "gaussian"    # 'gaussian' or 'median'
     smoothing_note_sigma: float = 1.5     # Smoothing kernel for note detection
     snap_to_semitones: bool = True
+    transcription_smoothing_ms: float = 70.0 # Transcription pre-smoothing sigma (ms)
+    transcription_min_duration: float = 0.04 # Min duration for stationary notes (40ms)
+    transcription_min_duration: float = 0.04 # Min duration for stationary notes (40ms)
+    transcription_derivative_threshold: float = 2.0 # Stability threshold (semitones/sec)
+    energy_threshold: float = 0.0 # Normalized energy threshold (0-1) for filtering
     
     # Phrase detection parameters
     phrase_max_gap: float = 2.0           # Max silence between notes in phrase
@@ -172,12 +180,14 @@ def load_config_from_cli() -> PipelineConfig:
     # --- Common arguments function ---
     def add_common_args(p, required=True):
         p.add_argument("--audio", "-a", required=required, help="Input audio file")
-        p.add_argument("--output", "-o", required=required, help="Output directory")
+        p.add_argument("--output", "-o", default="results", help="Output directory")
         p.add_argument("--separator", choices=["demucs", "spleeter"], default="demucs")
         p.add_argument("--demucs-model", default="htdemucs")
         # New source type arguments
         p.add_argument("--source-type", choices=["mixed", "instrumental", "vocal"], 
                        default="mixed", help="Audio source type (mixed requires stem separation)")
+        p.add_argument("--melody-source", choices=["separated", "composite"],
+                       default="separated", help="Source for melody pitch extraction")
         p.add_argument("--vocalist-gender", choices=["male", "female"], 
                        help="Vocalist gender for tonic bias (only for source-type=vocal)")
         p.add_argument("--instrument-type", 
@@ -202,6 +212,15 @@ def load_config_from_cli() -> PipelineConfig:
     analyze_parser.add_argument("--raga", required=True, help="Raga name")
     analyze_parser.add_argument("--keep-impure-notes", action="store_true", 
                                 help="Keep notes not in raga (default: remove)")
+    analyze_parser.add_argument("--transcription-smoothing-ms", type=float, default=70.0,
+                                help="Smoothing sigma (ms) for transcription. Set to 0 to disable.")
+    analyze_parser.add_argument("--transcription-min-duration", type=float, default=0.04,
+                                help="Minimum duration (s) for a transcribed note.")
+    analyze_parser.add_argument("--transcription-stability-threshold", type=float, default=2.0,
+                                help="Max pitch change (semitones/sec) to be considered stable.")
+    analyze_parser.add_argument("--energy-threshold", type=float, default=0.0,
+                                help="Energy threshold (0.0-1.0) for filtering unvoiced segments.")
+    analyze_parser.add_argument("--no-smoothing", action="store_true", help="Disable transcription smoothing")
     
     # --- Root Parser (Legacy support - defaults to detect) ---
     add_common_args(parser, required=False)
@@ -212,8 +231,8 @@ def load_config_from_cli() -> PipelineConfig:
     
     # Validation logic
     if args.command is None:
-        if not args.audio or not args.output:
-            parser.error("the following arguments are required: --audio/-a, --output/-o")
+        if not args.audio:
+            parser.error("the following arguments are required: --audio/-a")
             
     # Determine effective mode (default to detect, no full mode)
     mode = args.command if args.command in ["detect", "analyze"] else "detect"
@@ -235,6 +254,12 @@ def load_config_from_cli() -> PipelineConfig:
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),
         keep_impure_notes=getattr(args, 'keep_impure_notes', False),
+        transcription_smoothing_ms=0.0 if getattr(args, 'no_smoothing', False) else getattr(args, 'transcription_smoothing_ms', 70.0),
+        transcription_min_duration=getattr(args, 'transcription_min_duration', 0.04),
+        transcription_derivative_threshold=getattr(args, 'transcription_stability_threshold', 2.0),
+
+        energy_threshold=getattr(args, 'energy_threshold', 0.0),
+        melody_source=getattr(args, 'melody_source', "separated"),
     )
 
 

@@ -8,12 +8,15 @@ A robust, pipeline-based system for automatic Hindustani raga identification and
 *   **Flexible Audio Processing**: Handles **Vocal**, **Instrumental**, and **Mixed** recordings with integrated stem separation (using `htdemucs` or `spleeter`).
 *   **High-Precision Analysis**:
     *   **Pitch Extraction**: Uses SwiftF0 for accurate framewise pitch tracking (10ms resolution).
-    *   **Advanced Phrasing**: Utilizing **KMeans** and **DBSCAN** clustering to identify musical phrases and motifs.
+    *   **Unified Transcription**: A hybrid engine combining **Stationary Point** detection and **Inflection Point** analysis to capture both stable notes and rapid melodic runs (tans). 
+    *   **Energy-Based Gating**: Integrated RMS energy analysis for automatic noise/silence removal and breath detection.
     *   **Microtonal Analysis**: GMM-based analysis of pitch distributions.
 *   **Interactive Reporting**: Generates detailed HTML reports with:
-    *   **Scrollable Pitch Contours**: Wide, zoomable visualizations of the singer's pitch curves.
-    *   **Audio Sync**: Click-to-seek functionality and a synchronized cursor that follows the audio playback.
+    *   **Multi-Track Audio Sync**: Synchronized visualization with **Original**, **Vocals**, and **Accompaniment** stems.
+    *   **Bidirectional Navigation**: Click-to-seek functionality (Plot -> Audio) and a real-time cursor that follows the audio playback (Audio -> Plot).
+    *   **Energy Analysis**: Visual distribution of note energy to help fine-tune transcription accuracy.
     *   **Dynamic Scaling**: Visualizations automatically adapt to the singer's vocal range.
+*   **Technical Primer**: A multi-page [Technical Case Study](primer/index.html) explaining the system's inner workings for developers.
 
 ---
 
@@ -48,14 +51,14 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 ```bash
 ./run_pipeline.sh detect \
   --audio "path/to/song.mp3" \
-  --output "./results" \
-  --source-type mixed
+  --source-type instrumental
 ```
 
 **Common Options:**
+*   `--output`: Defaults to `./results` (optional).
 *   `--source-type`: `mixed` (default), `vocal`, or `instrumental`.
-*   `--vocalist-gender`: `male` or `female` (helps with tonic detection bias).
-*   `--instrument-type`: `sitar`, `sarod`, `bansuri`, etc. (for instrumental mode).
+*   `--melody-source`: `separated` (default) or `composite`. Use `composite` for instrumental recordings with poor stem separation.
+*   `--separator`: `demucs` (default) or `spleeter`.
 
 **Output:**
 *   `detection_report.html`: Summary of detected candidates.
@@ -69,7 +72,6 @@ Performs deep sequence analysis, phrasing, and generating the interactive report
 ```bash
 ./run_pipeline.sh analyze \
   --audio "path/to/song.mp3" \
-  --output "./results" \
   --tonic "C#" \
   --raga "Bhairavi"
 ```

@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 """
-Raga Detection Pipeline - Main Driver
+driver file for raga detection pipeline - do not run directly, run using run_pipeline.sh
 
-Run the complete raga detection pipeline on an audio file:
-    python driver.py detect --audio path/to/audio.mp3 --output path/to/output
-
-Modes:
-    detect  - Run histogram-based raga detection
-    analyze - Run note sequence analysis with known tonic/raga
+modes:
+    detect  - run phase 1 of analysis (histogram-based raga filtering/ranking)
+    analyze - run phase 2 of analysis (note sequence analysis given tonic/raga)
 """
 
 import os
 import sys
 from pathlib import Path
 
-# Add package to path if running directly
+# add package to path if running directly
 if __name__ == "__main__":
     package_dir = Path(__file__).parent
     if str(package_dir) not in sys.path:
@@ -48,6 +45,7 @@ from raga_pipeline.sequence import (
     extract_melodic_sequences,
     find_common_patterns,
     analyze_raga_patterns,
+    merge_consecutive_notes,
 )
 from raga_pipeline.output import (
     AnalysisResults,
@@ -58,8 +56,11 @@ from raga_pipeline.output import (
     generate_html_report,
     generate_analysis_report,
     plot_pitch_with_sargam_lines,
+    plot_pitch_with_sargam_lines,
     plot_transition_heatmap_v2,
+    save_notes_to_csv,
 )
+from raga_pipeline import transcription
 
 
 def run_pipeline(
@@ -68,21 +69,20 @@ def run_pipeline(
     run_sequence_analysis: bool = True,   # Legacy flag
 ) -> AnalysisResults:
     """
-    Run the raga detection pipeline in the configured mode.
-    
-    Modes:
+    run the raga detection pipeline in the configured mode
+ 
     - detect: Run up to raga candidate scoring, generate summary report.
     - analyze: Load cached pitch, run sequence/phrase analysis using provided tonic/raga.
     
     Source Types:
-    - mixed: Use stem separation (default)
-    - instrumental: Skip stem separation, use full audio as melody
-    - vocal: Skip stem separation, use full audio as melody
+    - mixed: uses stem separation (default)
+    - instrumental: skips stem separation if --skip-separation is set, otherwise uses stem separation
+    - vocal: uses stem separation (vocal isolation) + gender-specific tonic bias
     
-    Args:
-        config: Pipeline configuration
+    args:
+        config: pipeline configuration
         
-    Returns:
+    outputs:
         AnalysisResults with computed data
     """
     results = AnalysisResults(config=config)
@@ -95,7 +95,7 @@ def run_pipeline(
     print(f"Output: {config.output_dir}")
     print()
     
-    # Check Raga DB path early
+    # check ragaDB path early
     raga_db = None
     if config.raga_db_path and os.path.isfile(config.raga_db_path):
         raga_db = RagaDatabase(config.raga_db_path)
@@ -105,54 +105,75 @@ def run_pipeline(
     # =========================================================================
     
     if config.mode == "analyze":
-        # ANALYZE MODE: Skip detection, load cache
+        # ANALYZE MODE: skip detection, load cache
         print("[PHASE 1] Skipping detection (Analyze Mode)")
         
-        # Load pitch data from cache
+        # load pitch data from cache
         print("[CACHE] Loading pitch data...")
-        # Re-initialize pitch data objects from cache files
-        # We need to construct paths manually since they are usually returned by extract_pitch
-        vocals_pitch_csv = os.path.join(config.stem_dir, "vocals_pitch_data.csv")
+        
+        # Determine correct prefix based on source type (matches detect mode logic)
+        melody_prefix = "vocals" if config.source_type == "vocal" else "melody"
+        melody_pitch_csv = os.path.join(config.stem_dir, f"{melody_prefix}_pitch_data.csv")
         accomp_pitch_csv = os.path.join(config.stem_dir, "accompaniment_pitch_data.csv")
+        composite_pitch_csv = os.path.join(config.stem_dir, "composite_pitch_data.csv")
         
-        if not os.path.exists(vocals_pitch_csv):
-            raise FileNotFoundError(f"Cached pitch data not found at {vocals_pitch_csv}. Run 'detect' phase first.")
+        if not os.path.exists(melody_pitch_csv):
+             raise FileNotFoundError(f"Cached melody pitch data not found at {melody_pitch_csv}. Run 'detect' phase first.")
             
-        # We need to re-load pitch data. existing extract_pitch function handles cache loading
-        # if we call it with same params and files exist.
-        # But we need the stem paths.
-        vocals_path = config.vocals_path
-        accomp_path = config.accompaniment_path
-        
-        # Create dummy wrapper for loading
+        # dummy wrapper for loading parameters
         fmin = librosa.note_to_hz(config.fmin_note)
         fmax = librosa.note_to_hz(config.fmax_note)
         
-        results.pitch_data_vocals = extract_pitch(
-            audio_path=vocals_path,
+        # Load Primary Melody Stem
+        pitch_data_stems = extract_pitch(
+            audio_path=config.vocals_path, # Path reference for metadata
             output_dir=config.stem_dir,
-            prefix="vocals",
+            prefix=melody_prefix,
             fmin=fmin,
             fmax=fmax,
             confidence_threshold=config.vocal_confidence,
-            force_recompute=False # Always load cache
-        )
-        
-        results.pitch_data_accomp = extract_pitch(
-            audio_path=accomp_path,
-            output_dir=config.stem_dir,
-            prefix="accompaniment",
-            fmin=fmin,
-            fmax=fmax,
-            confidence_threshold=config.accomp_confidence,
             force_recompute=False
         )
         
-        # Validate required inputs for analysis
+        # Load Composite if exists
+        if os.path.exists(composite_pitch_csv):
+            results.pitch_data_composite = extract_pitch(
+                audio_path=config.audio_path,
+                output_dir=config.stem_dir,
+                prefix="composite",
+                fmin=fmin,
+                fmax=fmax,
+                confidence_threshold=config.vocal_confidence,
+                force_recompute=False
+            )
+            
+        # Assign primary melody based on config
+        if config.melody_source == "composite" and results.pitch_data_composite:
+            print(f"  [CACHE] Using COMPOSITE pitch for melody analysis")
+            results.pitch_data_vocals = results.pitch_data_composite
+        else:
+            print(f"  [CACHE] Using SEPARATED STEM pitch for melody analysis")
+            results.pitch_data_vocals = pitch_data_stems
+
+        # Load Accompaniment
+        if os.path.exists(accomp_pitch_csv):
+            results.pitch_data_accomp = extract_pitch(
+                audio_path=config.accompaniment_path,
+                output_dir=config.stem_dir,
+                prefix="accompaniment",
+                fmin=fmin,
+                fmax=fmax,
+                confidence_threshold=config.accomp_confidence,
+                force_recompute=False
+            )
+        else:
+            results.pitch_data_accomp = None
+        
+        # validate required inputs for analysis
         if not config.tonic_override or not config.raga_override:
              raise ValueError("Analyze mode requires --tonic and --raga arguments")
             
-        # Parse tonic
+        # parse tonic
         from raga_pipeline.raga import _parse_tonic
         results.detected_tonic = _parse_tonic(config.tonic_override)
         results.detected_raga = config.raga_override
@@ -161,40 +182,42 @@ def run_pipeline(
         print(f"  Using Force Raga: {config.raga_override}")
 
     else:
-        # DETECT or FULL MODE: Run detection pipeline
+        # DETECT or FULL MODE: run detection pipeline
         
-        # STEP 1: Stems (optionally skip for instrumental with --skip-separation)
+        # STEP 1: Stems
         print("[STEP 1/7] Audio preprocessing...")
         
-        # Only skip stem separation for instrumental sources with explicit flag
-        skip_separation = config.source_type == "instrumental" and config.skip_separation
-        
-        if skip_separation:
-            print(f"  Source type: {config.source_type} - Skipping stem separation")
-            melody_path, accompaniment_path = load_audio_direct(
-                audio_path=config.audio_path,
-                output_dir=config.output_dir,
-                source_type=config.source_type,
-            )
-            # Update stem_dir reference for pitch cache location
-            stem_dir = os.path.dirname(melody_path)
-        else:
-            print(f"  Source type: mixed - Running stem separation")
-            melody_path, accompaniment_path = separate_stems(
-                audio_path=config.audio_path,
-                output_dir=config.output_dir,
-                engine=config.separator_engine,
-                model=config.demucs_model,
-            )
-            stem_dir = config.stem_dir
+        # Always run stem separation for all modes (mixed, vocal, instrumental)
+        # unless specifically skipped for debugging (but we remove the skip-separation flag logic for instrumental)
+        print(f"  Source type: {config.source_type} - Running stem separation")
+        melody_path, accompaniment_path = separate_stems(
+            audio_path=config.audio_path,
+            output_dir=config.output_dir,
+            engine=config.separator_engine,
+            model=config.demucs_model,
+        )
+        stem_dir = config.stem_dir
         
         # STEP 2: Pitch
         print("\n[STEP 2/7] Extracting pitch...")
         fmin = librosa.note_to_hz(config.fmin_note)
         fmax = librosa.note_to_hz(config.fmax_note)
         
-        print("  - Melody...")
-        results.pitch_data_vocals = extract_pitch(
+        # 2a. Composite Pitch (Always computed)
+        print("  - Composite (Original Mix)...")
+        results.pitch_data_composite = extract_pitch(
+            audio_path=config.audio_path,
+            output_dir=stem_dir,
+            prefix="composite",
+            fmin=fmin,
+            fmax=fmax,
+            confidence_threshold=config.vocal_confidence, # Use vocal confidence for now
+            force_recompute=config.force_recompute,
+        )
+        
+        # 2b. Stem Pitch (Vocals/Melody) - Always computed for reference/fallback
+        print("  - Separated Melody Stem...")
+        pitch_data_stems = extract_pitch(
             audio_path=melody_path,
             output_dir=stem_dir,
             prefix="vocals" if config.source_type == "vocal" else "melody",
@@ -204,7 +227,7 @@ def run_pipeline(
             force_recompute=config.force_recompute,
         )
         
-        # Only extract accompaniment pitch if we did stem separation
+        # 2c. Accompaniment Pitch
         if accompaniment_path is not None:
             print("  - Accompaniment...")
             results.pitch_data_accomp = extract_pitch(
@@ -217,8 +240,15 @@ def run_pipeline(
                 force_recompute=config.force_recompute,
             )
         else:
-            print("  - No accompaniment (skipping - source is instrumental/vocal)")
             results.pitch_data_accomp = None
+            
+        # 2d. Assign Primary Melody Data based on Configuration
+        if config.melody_source == "composite":
+            print(f"  [CONFIG] Using COMPOSITE pitch for melody analysis")
+            results.pitch_data_vocals = results.pitch_data_composite
+        else:
+            print(f"  [CONFIG] Using SEPARATED STEM pitch for melody analysis")
+            results.pitch_data_vocals = pitch_data_stems
         
         print("\n[STEP 3/7] Computing histograms and detecting peaks...")
         results.histogram_vocals = compute_cent_histograms_from_config(results.pitch_data_vocals, config)
@@ -302,7 +332,7 @@ def run_pipeline(
             report_path = os.path.join(stem_dir, "detection_report.html")
             generate_detection_report(results, report_path)
             print(f"  Saved: {report_path}")
-            print("\n✅ DETECTION COMPLETE")
+            print("\n DETECTION COMPLETE")
             
             # Print suggested analyze command
             if results.detected_tonic is not None and results.detected_raga:
@@ -338,9 +368,30 @@ def run_pipeline(
         print("  [WARN] No tonic detected/provided. Skipping sargam analysis.")
     else:
         # Note detection
-        raw_notes = detect_notes(results.pitch_data_vocals, config)
+        # Note detection - Unified Transcription
+        print(f"  Using Unified Transcription (Stationary + Inflection)")
+        raw_notes = transcription.transcribe_to_notes(
+            pitch_hz=results.pitch_data_vocals.pitch_hz,
+            timestamps=results.pitch_data_vocals.timestamps,
+            voicing_mask=results.pitch_data_vocals.voiced_mask,
+            tonic=results.detected_tonic,
+            energy=results.pitch_data_vocals.energy,
+            energy_threshold=config.energy_threshold,
+            smoothing_sigma_ms=config.transcription_smoothing_ms,
+            min_event_duration=config.transcription_min_duration,
+            derivative_threshold=config.transcription_derivative_threshold,
+            snap_mode='chromatic', # Or 'raga' if we wanted strict snapping here
+            transcription_min_duration=config.transcription_min_duration
+        )
         print(f"  Detected {len(raw_notes)} raw notes")
         
+        # Energy Filtering
+        if config.energy_threshold > 0:
+            original_count = len(raw_notes)
+            raw_notes = [n for n in raw_notes if n.energy >= config.energy_threshold]
+            filtered_count = len(raw_notes)
+            print(f"  Energy Filter ({config.energy_threshold}): Kept {filtered_count}/{original_count} notes")
+            
         # Apply Raga Correction
         correction_summary = {}
         if raga_db and results.detected_raga:
@@ -359,6 +410,15 @@ def run_pipeline(
             results.notes = raw_notes
             print("  [WARN] Raga DB or name missing, skipping correction.")
         
+        # Merge consecutive notes to fix fragmentation
+        results.notes = merge_consecutive_notes(results.notes, max_gap=0.1, pitch_tolerance=0.7)
+        print(f"  Merged {len(results.notes)} notes (joined consecutive identical notes)")
+        
+        # Save transcription to CSV
+        csv_path = os.path.join(config.stem_dir, "transcribed_notes.csv")
+        save_notes_to_csv(results.notes, csv_path)
+        print(f"  Saved notes: {csv_path}")
+
         # Phrase detection (using corrected notes)
         results.phrases = detect_phrases(
             results.notes,
@@ -469,7 +529,7 @@ def run_pipeline(
     # SUMMARY
     # =========================================================================
     print("\n" + "=" * 60)
-    print("✅ ANALYSIS COMPLETE")
+    print("ANALYSIS COMPLETE")
     print("=" * 60)
     print(f"Detected Raga: {results.detected_raga}")
     print(f"Detected Tonic: {_tonic_name(results.detected_tonic)}")

@@ -89,10 +89,11 @@ Performs deep sequence analysis, phrasing, and generating the interactive report
     *   Transition matrices.
 
 **Analyze Options:**
-*   `--energy-metric`: `rms` (peak-normalized) or `log_amp` (dBFS with percentile normalization).
-*   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes.
-*   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence.
-*   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases.
+*   `--energy-metric`: `rms` (peak-normalized, default) or `log_amp` (dBFS with percentile normalization).
+*   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes. Default: 0.0.
+*   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10.
+*   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases. Default: 0.25.
+*   **Snapping behavior**: Notes are snapped to the nearest chromatic target by default. In raga mode, if the nearest chromatic target is outside the raga, the second-closest target is used if it is inside the raga; otherwise the note is skipped.
 
 ### Batch Processing
 

@@ -114,13 +114,29 @@ def run_pipeline(
         print("[CACHE] Loading pitch data...")
         
         # Determine correct prefix based on source type (matches detect mode logic)
-        melody_prefix = "vocals" if config.source_type == "vocal" else "melody"
-        melody_pitch_csv = os.path.join(config.stem_dir, f"{melody_prefix}_pitch_data.csv")
+        preferred_prefix = "vocals" if config.source_type == "vocal" else "melody"
+        fallback_prefix = "melody" if preferred_prefix == "vocals" else "vocals"
+        prefix_candidates = [preferred_prefix, fallback_prefix]
+
+        melody_prefix = None
+        melody_pitch_csv = None
+        for prefix in prefix_candidates:
+            candidate_csv = os.path.join(config.stem_dir, f"{prefix}_pitch_data.csv")
+            if os.path.exists(candidate_csv):
+                melody_prefix = prefix
+                melody_pitch_csv = candidate_csv
+                break
+
+        if melody_prefix is None:
+            melody_prefix = preferred_prefix
+            melody_pitch_csv = os.path.join(config.stem_dir, f"{melody_prefix}_pitch_data.csv")
         accomp_pitch_csv = os.path.join(config.stem_dir, "accompaniment_pitch_data.csv")
         composite_pitch_csv = os.path.join(config.stem_dir, "composite_pitch_data.csv")
         
         if not os.path.exists(melody_pitch_csv):
-             raise FileNotFoundError(f"Cached melody pitch data not found at {melody_pitch_csv}. Run 'detect' phase first.")
+            raise FileNotFoundError(
+                f"Cached melody pitch data not found at {melody_pitch_csv}. Run 'detect' phase first."
+            )
             
         # dummy wrapper for loading parameters
         fmin = float(librosa.note_to_hz(config.fmin_note))
@@ -177,7 +193,7 @@ def run_pipeline(
         
         # validate required inputs for analysis
         if not config.tonic_override or not config.raga_override:
-             raise ValueError("Analyze mode requires --tonic and --raga arguments")
+            raise ValueError("Analyze mode requires --tonic and --raga arguments")
             
         # parse tonic
         from raga_pipeline.raga import _parse_tonic

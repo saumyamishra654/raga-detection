@@ -13,9 +13,14 @@
 - [x] Add optional RMS overlay on pitch plots in reports
 - [x] Split phrases using silence thresholds from RMS energy
 - [x] Update README CLI flags for energy overlay and silence splitting
+- [x] Set analyze-mode defaults for energy and silence thresholds
+- [x] Fix analyze-mode cache validation indentation error
+- [x] Update transcription snapping to raga fallback or skip
 - [ ] Add CLI flags to expose `cluster_notes_into_phrases` parameters (method, threshold, etc.)
 - [ ] Tune energy-based gating for different instrument types (sitar vs vocal)
 - [ ] Refactor and clean up redundancies in `raga_pipeline/sequence.py` (legacy transition matrices, overlapping note detection methods, duplicate sargam logic)
+- [ ] Implement aaroh/avroh reconstruction from directional note context (see `aaroh-avroh-reconstruction.md`)
+- [ ] Implement sequence mining for raga identification (see `sequence-mining-plan.md`)
 
 ## Future Ideas
 - [ ] Integration with more pitch tracking engines (e.g., CREPE), and stem separation engines

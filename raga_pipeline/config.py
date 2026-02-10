@@ -82,7 +82,7 @@ class PipelineConfig:
     # When > 0, phrases are additionally split at points where vocal RMS
     # drops below this fraction of the track's peak energy for at least
     # silence_min_duration seconds.
-    silence_threshold: float = 0.0        # 0 = disabled; 0.05 = 5% of peak energy
+    silence_threshold: float = 0.10       # 0 = disabled; 0.10 = 10% of peak energy
     silence_min_duration: float = 0.25    # Min consecutive low-energy seconds to count as silence
 
     # RMS overlay on pitch plots
@@ -259,7 +259,7 @@ def load_config_from_cli() -> PipelineConfig:
                                 default="rms",
                                 help="Energy metric: 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-scaled). "
                                      "log_amp gives better dynamic range for quiet passages.")
-    analyze_parser.add_argument("--silence-threshold", type=float, default=0.0,
+    analyze_parser.add_argument("--silence-threshold", type=float, default=0.10,
                                 help="RMS energy threshold (0.0-1.0) for silence-based phrase splitting. 0 disables.")
     analyze_parser.add_argument("--silence-min-duration", type=float, default=0.25,
                                 help="Minimum silence duration (seconds) to trigger a phrase break.")

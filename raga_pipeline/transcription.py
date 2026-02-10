@@ -16,6 +16,7 @@ Key Concepts:
 
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict, Union, Literal
+import math
 import numpy as np
 import librosa
 from scipy import ndimage
@@ -70,7 +71,7 @@ def detect_stationary_events(
         min_event_duration: Minimum seconds for a region to be a note.
         snap_mode: 'chromatic' (12-tone) or 'raga' (restricted set).
         allowed_raga_notes: List of allowed pitch classes (0-11) if snap_mode='raga'.
-        snap_tolerance_cents: Max deviation to allow snapping.
+        snap_tolerance_cents: Max deviation to allow snapping (legacy).
         
     Returns:
         List of TranscriptionEvent objects.
@@ -152,13 +153,15 @@ def detect_stationary_events(
                 mean_energy = float(np.mean(energy[seg_start:seg_end]))
         
         # 6. Snapping
-        snapped_pitch, error, label = _snap_pitch(
+        snapped_pitch, error, label, keep_note = _snap_pitch(
             float(median_pitch),
             tonic_midi_val, 
             snap_mode, 
             allowed_raga_notes, 
             snap_tolerance_cents
         )
+        if not keep_note:
+            continue
         
         event = TranscriptionEvent(
             start=timestamps[start_idx],
@@ -264,10 +267,10 @@ def _snap_pitch(
     mode: str,
     allowed_pcs: Optional[List[int]],
     tolerance_cents: float
-) -> Tuple[float, float, str]:
+) -> Tuple[Optional[float], float, str, bool]:
     """
     Snap a raw MIDI pitch to a target scale.
-    Returns: (snapped_pitch, error_in_cents, label)
+    Returns: (snapped_pitch, error_in_cents, label, keep_note)
     """
     # 1. Normalize to 0-11 relative to tonic
     # Note: tonic_midi might be e.g. 61.5 (if microtonal tonic)
@@ -275,57 +278,32 @@ def _snap_pitch(
     
     semitone_offset = pitch - tonic_midi
     
-    # Round to nearest chromatic semitone
-    rounded_offset = round(semitone_offset)
-    chromatic_target = tonic_midi + rounded_offset
-    
-    # Chromatic Pitch Class
-    pc = int(rounded_offset % 12)
-    
-    error_chromatic = (pitch - chromatic_target) * 100
-    
-    # Determine Raga Snap Targets
-    # If mode is 'raga' and allowed_pcs given, we must find nearest ALLOWED note
-    if mode == 'raga' and allowed_pcs:
-        # Find nearest enabled pitch class
-        # This is tricky because we need to check neighbors in circular space (0-11)
-        # But we also need to respect Octave.
-        
-        # Simple approach: Check candidates: [chromatic_target - 1, chromatic_target, chromatic_target + 1]
-        # (Assuming allowed notes are at least 1 semitone apart usually, though some ragas have adjacent)
-        # Better: Search all allowed PCs in relative octave range
-        
-        candidates = []
-        base_octave = int(np.floor(rounded_offset / 12))
-        
-        # Check current octave, prev, next to be safe
-        for oct_shift in [-1, 0, 1]:
-            for apc in allowed_pcs:
-                # relative offset from tonic for this candidate
-                cand_offset = (base_octave + oct_shift) * 12 + apc
-                # absolute midi
-                cand_midi = tonic_midi + cand_offset
-                candidates.append(cand_midi)
-        
-        # Find closest candidate
-        best_cand = min(candidates, key=lambda x: abs(x - pitch))
-        error_raga = (pitch - best_cand) * 100
-        
-        if abs(error_raga) <= tolerance_cents:
-            # Snap to Raga note
-            return best_cand, error_raga, _get_sargam_label(best_cand, tonic_midi)
-        else:
-            # Out of tolerance.
-            # When the pitch deviates too far from the raga, fall back to raw pitch.
-            # Plan says: "Only snap if... else mark microtonal"
-            return pitch, 0.0, "Microtonal" # No snap
-            
-    else:
-        # Chromatic Mode
-        if abs(error_chromatic) <= tolerance_cents:
-            return chromatic_target, error_chromatic, _get_sargam_label(chromatic_target, tonic_midi)
-        else:
-             return pitch, 0.0, "Microtonal"
+    # Determine nearest and second-nearest chromatic semitones
+    lower = int(math.floor(semitone_offset))
+    upper = int(math.ceil(semitone_offset))
+    candidate_offsets = [lower] if lower == upper else [lower, upper]
+    candidate_offsets.sort(key=lambda x: abs(semitone_offset - x))
+
+    closest_offset = candidate_offsets[0]
+    closest_pitch = tonic_midi + closest_offset
+    closest_pc = int(closest_offset % 12)
+    error_closest = (pitch - closest_pitch) * 100
+
+    if mode == "raga" and allowed_pcs:
+        if closest_pc in allowed_pcs:
+            return closest_pitch, error_closest, _get_sargam_label(closest_pitch, tonic_midi), True
+
+        if len(candidate_offsets) > 1:
+            second_offset = candidate_offsets[1]
+            second_pitch = tonic_midi + second_offset
+            second_pc = int(second_offset % 12)
+            error_second = (pitch - second_pitch) * 100
+            if second_pc in allowed_pcs:
+                return second_pitch, error_second, _get_sargam_label(second_pitch, tonic_midi), True
+
+        return None, 0.0, "", False
+
+    return closest_pitch, error_closest, _get_sargam_label(closest_pitch, tonic_midi), True
 
 
 def _get_sargam_label(midi_val: float, tonic_midi: float) -> str:
@@ -450,9 +428,11 @@ def transcribe_to_notes(
     
     for t, p in zip(inf_times, inf_pitches):
         # Still snap inflection points so they can show sargam labels.
-        snapped, _, sargam = _snap_pitch(
+        snapped, _, sargam, keep_note = _snap_pitch(
             p, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
         )
+        if not keep_note or snapped is None:
+            continue
         
         n = Note(
             start=t,

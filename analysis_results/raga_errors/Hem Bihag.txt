@@ -1,7 +1,0 @@
-File: Hem Bihag_1
-GT Raga: Hem Bihag
-Top-1 Pred: bilawal (Score: 3.57)
-Correct Raga Rank: 1
-Correct Raga Score: 3.57
-✅ CORRECT
-------------------------------

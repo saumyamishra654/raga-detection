@@ -15,7 +15,7 @@ Provides:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Set, Dict, Tuple, Optional, Union
+from typing import List, Set, Dict, Tuple, Optional, Union, Sequence, Any, cast
 import numpy as np
 import librosa
 from scipy import ndimage
@@ -467,8 +467,7 @@ def detect_stationary_points(
         
         # Check if we should merge with previous note
         if notes and abs(median_midi - notes[-1].pitch_midi) < pitch_threshold:
-            # Merge: extend previous note
-            # Update weighted energy? Simple average for now
+            # Merge: extend previous note and average energy over the merged duration
             prev_dur = notes[-1].end - notes[-1].start
             curr_dur = end_time - start_time
             total_dur = prev_dur + curr_dur
@@ -480,8 +479,8 @@ def detect_stationary_points(
             notes[-1] = Note(
                 start=notes[-1].start,
                 end=end_time,
-                pitch_midi=np.median([notes[-1].pitch_midi, median_midi]),
-                pitch_hz=librosa.midi_to_hz(median_midi),
+                pitch_midi=float(np.median([notes[-1].pitch_midi, median_midi])),
+                pitch_hz=float(librosa.midi_to_hz(median_midi)),
                 confidence=float(np.mean(pitch_data.confidence[voiced_indices[start_idx:end_idx]])),
                 energy=merged_energy,
             )
@@ -492,7 +491,7 @@ def detect_stationary_points(
                 start=start_time,
                 end=end_time,
                 pitch_midi=median_midi,
-                pitch_hz=librosa.midi_to_hz(median_midi),
+                pitch_hz=float(librosa.midi_to_hz(median_midi)),
                 confidence=float(np.mean(confidence_vals)) if len(confidence_vals) > 0 else 0.0,
                 energy=mean_energy,
             ))
@@ -563,7 +562,7 @@ def detect_melodic_peaks(
             start=start_time,
             end=end_time,
             pitch_midi=pitch_midi,
-            pitch_hz=librosa.midi_to_hz(pitch_midi),
+            pitch_hz=float(librosa.midi_to_hz(pitch_midi)),
             confidence=1.0,  # Peak-based detection doesn't have confidence
         ))
     
@@ -669,8 +668,7 @@ def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tole
             
             # Extend current note
             current_note.end = next_note.end
-            # Optionally update pitch to be weighted average? 
-            # For now, sticking to the first note's pitch is stable for "holding" a note.
+            # Keep the original pitch so the held note stays stable.
         else:
             merged.append(current_note)
             current_note = next_note
@@ -760,10 +758,6 @@ def cluster_phrases(
 # TRANSITION MATRIX
 # =============================================================================
 
-# =============================================================================
-# TRANSITION MATRIX
-# =============================================================================
-
 def compute_transition_matrix(
     notes: List[Note],
     tonic: Union[int, str],
@@ -785,7 +779,7 @@ def compute_transition_matrix(
     return counts / row_sums
 
 
-def extract_corrected_sargam_info(note: Note, tonic: Union[int, str]) -> Tuple[Optional[int], Optional[int], str]:
+def extract_corrected_sargam_info(note: Note, tonic: Union[int, str]) -> Tuple[int, int, str]:
     """Extract sargam information from corrected notes."""
     # Convert tonic to MIDI class
     tonic_midi = tonic_to_midi_class(tonic)
@@ -986,7 +980,7 @@ def extract_aaroh_avroh_runs(
     phrases: List[Phrase],
     tonic: Union[int, str],
     min_length: int = 3
-) -> Dict[str, Union[List[str], Dict[str, int]]]:
+) -> Dict[str, Any]:
     """
     Extract long ascending (Aaroh) and descending (Avroh) runs.
     
@@ -1020,8 +1014,7 @@ def extract_aaroh_avroh_runs(
             prev_n = notes[i-1]
             curr_n = notes[i]
             
-            # Use raw pitch estimates or corrected info?
-            # Let's use corrected info for robustness
+            # Use corrected pitch values for more stable run detection
             _, prev_midi, _ = extract_corrected_sargam_info(prev_n, tonic)
             _, curr_midi, _ = extract_corrected_sargam_info(curr_n, tonic)
             
@@ -1076,7 +1069,7 @@ def extract_aaroh_avroh_runs(
 def analyze_raga_patterns(
     phrases: List[Phrase],
     tonic: Union[int, str],
-) -> Dict:
+) -> Dict[str, Any]:
     """
     Comprehensive raga pattern analysis.
     
@@ -1121,7 +1114,7 @@ def analyze_raga_patterns(
 # ADVANCED PHRASE DETECTION (User Methods)
 # =============================================================================
 
-def _extract_times_and_labels(notes: List[Union[Dict, Note]], label_key: str = 'sargam'):
+def _extract_times_and_labels(notes: Sequence[Union[Dict[str, Any], Note]], label_key: str = 'sargam'):
     """
     Accepts notes: list-of-dicts with 'start','end' fields OR list of Note objects.
     Returns arrays: starts, ends, mids, labels (strings), original indices.
@@ -1133,7 +1126,10 @@ def _extract_times_and_labels(notes: List[Union[Dict, Note]], label_key: str = '
                 raise ValueError("Each note dict must have 'start' and 'end' keys.")
             s = float(n['start'])
             e = float(n['end'])
-            m = int(n.get('midi') if n.get('midi') is not None else (round(n.get('midi_note')) if n.get('midi_note') is not None else 0))
+            midi_val = n.get('midi')
+            if midi_val is None:
+                midi_val = n.get('midi_note')
+            m = int(round(float(midi_val))) if midi_val is not None else 0
             l = str(n.get(label_key, n.get('sargam', n.get('midi',''))))
         else:
             # Assume Note object
@@ -1151,7 +1147,7 @@ def _extract_times_and_labels(notes: List[Union[Dict, Note]], label_key: str = '
 
 
 def cluster_notes_into_phrases(
-    notes: List[Union[Dict, Note]],
+    notes: Sequence[Union[Dict[str, Any], Note]],
     method: str = 'auto',
     fixed_threshold: Optional[float] = None,
     iqr_factor: float = 1.5,
@@ -1185,9 +1181,9 @@ def cluster_notes_into_phrases(
     # defensive copy & sort by start time
     # Check type to sort correctly
     if notes and isinstance(notes[0], dict):
-        notes_sorted = sorted(notes, key=lambda n: float(n['start']))
+        notes_sorted = sorted(cast(Sequence[Dict[str, Any]], notes), key=lambda n: float(n['start']))
     else:
-        notes_sorted = sorted(notes, key=lambda n: n.start)
+        notes_sorted = sorted(cast(Sequence[Note], notes), key=lambda n: n.start)
         
     starts, ends, mids, labels, idxs = _extract_times_and_labels(notes_sorted, label_key=label_key)
     n = len(starts)

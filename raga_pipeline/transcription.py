@@ -94,6 +94,10 @@ def detect_stationary_events(
 
     # 1. Convert to MIDI (semitones)
     # We use a mutable copy for smoothing
+    valid_pitch_mask = np.isfinite(pitch_hz) & (pitch_hz > 0)
+    voicing_mask = voicing_mask & valid_pitch_mask
+    if not np.any(voicing_mask):
+        return []
     pitch_midi = np.zeros_like(pitch_hz)
     pitch_midi[voicing_mask] = librosa.hz_to_midi(pitch_hz[voicing_mask])
     
@@ -107,7 +111,7 @@ def detect_stationary_events(
     
     # 3. Calculate Derivative
     # d(pitch) / dt (semitones per second)
-    # Use central difference or simple diff? np.gradient is central.
+    # np.gradient uses central differences to keep the derivative smooth.
     d_pitch = np.gradient(smoothed_midi, timestamps)
     
     # 4. Find Stable Regions
@@ -131,7 +135,12 @@ def detect_stationary_events(
             
         # Extract segment data
         segment_pitches = smoothed_midi[start_idx:end_idx]
+        segment_pitches = segment_pitches[np.isfinite(segment_pitches)]
+        if segment_pitches.size == 0:
+            continue
         median_pitch = np.median(segment_pitches)
+        if not np.isfinite(median_pitch):
+            continue
         
         # Calculate mean energy for the segment
         mean_energy = 0.0
@@ -144,7 +153,7 @@ def detect_stationary_events(
         
         # 6. Snapping
         snapped_pitch, error, label = _snap_pitch(
-            median_pitch, 
+            float(median_pitch),
             tonic_midi_val, 
             snap_mode, 
             allowed_raga_notes, 
@@ -185,7 +194,7 @@ def detect_pitch_inflection_points(
     pitch_midi = np.zeros_like(pitch_hz)
     pitch_midi[voicing_mask] = librosa.hz_to_midi(pitch_hz[voicing_mask])
     
-    # Smoothing? Usually Inflection points are requested on RAW data or slightly smoothed
+    # Optional smoothing before inflection detection for vibrato reduction
     if smoothing_sigma_ms > 0:
         sigma_frames = (smoothing_sigma_ms / 1000.0) / frame_period_s
         pitch_curve = _smooth_pitch_contour(pitch_midi, voicing_mask, sigma_frames)
@@ -210,7 +219,7 @@ def detect_pitch_inflection_points(
     sign_diff = np.diff(signs)
     
     # Indices where sign changes and both neighbors are voiced (not NaN)
-    # We rely on NaN propagation in diff? No, diff(NaN) is NaN.
+    # Preserve NaNs so derivative crossings can be ignored for unvoiced gaps.
     # So valid indices have finite diff
     
     crossing_indices = np.where(np.isfinite(sign_diff) & (sign_diff != 0))[0]
@@ -307,7 +316,7 @@ def _snap_pitch(
             return best_cand, error_raga, _get_sargam_label(best_cand, tonic_midi)
         else:
             # Out of tolerance.
-            # Fallback behavior? usually return raw or snap to chromatic but flag it.
+            # When the pitch deviates too far from the raga, fall back to raw pitch.
             # Plan says: "Only snap if... else mark microtonal"
             return pitch, 0.0, "Microtonal" # No snap
             
@@ -336,14 +345,14 @@ def _resolve_tonic(tonic: Union[int, str, float]) -> float:
     # Helper to get MIDI float from various tonic formats
     # Copy logic from sequence.tonic_to_midi_class but keep absolute value if float
     if isinstance(tonic, (int, float)):
-        # Assume MIDI input if in reasonable range (20-108), else Hz?
+        # Interpret large tonic values as Hz and convert to MIDI, otherwise use as-is.
         # The user pipeline usually passes MIDI or Letter.
         # Let's assume standard MIDI or Hz -> MIDI
-        if tonic > 200: # Hz
-             return librosa.hz_to_midi(tonic)
-        return float(tonic)
+           if tonic > 200: # Hz
+               return float(librosa.hz_to_midi(tonic))
+           return float(tonic)
     elif isinstance(tonic, str):
-        return librosa.note_to_midi(tonic)
+           return float(librosa.note_to_midi(tonic))
     return 60.0 # Fallback C4
 
 
@@ -363,7 +372,7 @@ def transcribe_to_notes(
     snap_mode: Literal["chromatic", "raga"] = "chromatic",
     allowed_raga_notes: Optional[List[int]] = None,
     snap_tolerance_cents: float = 35.0,
-    transcription_min_duration: float = 0.04,  # Alias for min_event_duration if passed via explicit config
+    transcription_min_duration: float = 0.0,  # Alias for min_event_duration if passed via explicit config
 ) -> List[Note]:
     """
     Unified entry point: Combines Stationary Events + Inflection Points.
@@ -374,7 +383,7 @@ def transcribe_to_notes(
     4. Convert all to Note objects.
     """
     # Prefer explicit min_duration if distinct, but usually they map to same config
-    # Use the stricter (smaller) one if ambiguity? Or just use min_event_duration
+    # Respect the smallest duration threshold supplied.
     # Let's trust the passed args.
     
     # 1. Stationary Events
@@ -422,33 +431,25 @@ def transcribe_to_notes(
         n = Note(
             start=evt.start,
             end=evt.end,
-            pitch_midi=evt.pitch_midi, # Use actual median or snapped? Usually actual for stats, snapped for playback?
-                                      # Analysis usually prefers corrected/snapped, but let's store actual
-                                      # and let raga correction downstream handle snapping?
-                                      # Actually, detect_stationary_events ALREADY has snapping info.
-                                      # But Note class standard usually starts with raw pitch.
-                                      # Let's use the MEDIAN pitch (evt.pitch_midi) as the note's pitch.
-            pitch_hz=librosa.midi_to_hz(evt.pitch_midi),
+            pitch_midi=evt.pitch_midi,
+            pitch_hz=float(librosa.midi_to_hz(evt.pitch_midi)),
             confidence=1.0, 
             sargam=evt.sargam, # Pre-calculated
             energy=evt.energy
         )
-        # Store pitch class?
+        # Keep pitch class handy for downstream analysis.
         n.pitch_class = int(round(evt.snapped_midi)) % 12
         final_notes.append(n)
         
     # Add Inflection Notes
     # These are instant points. We give them a tiny duration (e.g. 10ms)
-    # or should we try to span valid voicing? 
-    # For now: 10ms centered or trailing.
+    # Point notes get a small fixed duration for visualization.
     point_duration = 0.01 
     
     tonic_midi_val = _resolve_tonic(tonic)
     
     for t, p in zip(inf_times, inf_pitches):
-        # Snap these too? 
-        # For analysis, we probably want raw pitch.
-        # But populate sargam.
+        # Still snap inflection points so they can show sargam labels.
         snapped, _, sargam = _snap_pitch(
             p, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
         )
@@ -457,7 +458,7 @@ def transcribe_to_notes(
             start=t,
             end=t + point_duration,
             pitch_midi=p,
-            pitch_hz=librosa.midi_to_hz(p),
+            pitch_hz=float(librosa.midi_to_hz(p)),
             confidence=0.8, # Lower confidence for transient points
             sargam=sargam,
             pitch_class=int(round(snapped)) % 12

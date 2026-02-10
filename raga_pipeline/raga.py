@@ -37,7 +37,7 @@ class ScoringParams:
     BETA_PRESENCE: float = 0.25        # presence coefficient
     GAMMA_LOGLIKE: float = 1.0         # log-likelihood coefficient
     DELTA_EXTRA: float = 1.10          # extra mass penalty (-ve)
-    COMPLEX_PENALTY: float = 0.4       # complexity penalty (-ve)
+    COMPLEX_PENALTY: float = 0.1       # complexity penalty (-ve)
     MATCH_SIZE_GAMMA: float = 0.25     # size mismatch coefficient
     TONIC_SALIENCE_WEIGHT: float = 0.12  # tonic salience weight
     SCALE: float = 1000.0
@@ -73,8 +73,8 @@ TONIC_BIAS = {
 
 def get_tonic_candidates(
     source_type: str,
-    vocalist_gender: str = None,
-    instrument_type: str = "autodetect",
+    vocalist_gender: Optional[str] = None,
+    instrument_type: Optional[str] = "autodetect",
 ) -> List[int]:
     """
     Get list of valid tonic candidates based on source configuration.
@@ -298,6 +298,7 @@ def score_candidates_full(
     instrument_mode: str = "autodetect",
     params: ScoringParams = DEFAULT_SCORING_PARAMS,
     tonic_candidates: Optional[List[int]] = None,
+    bias_cents: Optional[float] = None,
 ) -> pd.DataFrame:
     """
     Full scoring pipeline matching the notebook exactly.
@@ -319,6 +320,8 @@ def score_candidates_full(
     # === Build cent-level histogram for melody ===
     midi_vals_mel = pitch_data_vocals.midi_vals
     cent_vals_mel = (midi_vals_mel % 12) * 100.0
+    if bias_cents is not None:
+        cent_vals_mel = (cent_vals_mel - bias_cents) % 1200
     
     num_bins = int(1200 / 1.0)  # 1-cent bins
     bin_edges = np.linspace(0.0, 1200.0, num_bins + 1)
@@ -342,6 +345,7 @@ def score_candidates_full(
     has_accompaniment = pitch_data_accomp is not None and len(pitch_data_accomp.midi_vals) > 0
     
     if has_accompaniment:
+        assert pitch_data_accomp is not None
         midi_vals_acc = pitch_data_accomp.midi_vals
         pitch_classes_acc = np.mod(np.round(midi_vals_acc), 12).astype(int)
         H_acc, _ = np.histogram(pitch_classes_acc, bins=12, range=(0, 12))
@@ -654,7 +658,12 @@ def apply_raga_correction_to_notes(
         midi_val = note.pitch_midi
         
         # Use snap logic on single note
-        _, info_list = snap_to_raga_notes([midi_val], valid_pcs, max_distance, discard_far=not keep_impure)
+        _, info_list = snap_to_raga_notes(
+            np.array([midi_val], dtype=float),
+            valid_pcs,
+            max_distance,
+            discard_far=not keep_impure
+        )
         if not info_list:
             # Implicitly discarded if logic returned nothing
              stats['discarded'] += 1
@@ -674,51 +683,16 @@ def apply_raga_correction_to_notes(
              corrected_sequence.append(note)
              
         elif action == 'corrected':
-             if keep_impure:
-                 # If keeping impure, we might just tag it or keep original? 
-                 # User said: "make a flag to not delete the notes outside the raga? default behaviour should be to delete"
-                 # Implicitly, if we KEEP them, we probably shouldn't correct them forcefully if they are far, 
-                 # but 'corrected' implies they were close enough (within max_distance).
-                 # If they are 'corrected', they are snapped.
-                 # If they were far (> max_distance), 'snap_to' would mark them 'unchanged_far' if discard_far=False.
-                 
-                 # Logic for 'corrected' (within 1 semitone):
-                 # We essentially quantize them to the raga.
-                 # Let's create a NEW note with corrected pitch.
-                 new_pitch = info['corrected_midi']
-                 stats['corrected'] += 1
-                 
-                 # Create copy of note with new pitch
-
-                 # Just instantiate new Note
-                 new_note = Note(
-                     start=note.start,
-                     end=note.end,
-                     pitch_midi=new_pitch,
-                     pitch_hz=librosa.midi_to_hz(new_pitch),
-                     confidence=note.confidence
-                 )
-                 corrected_sequence.append(new_note)
-             else:
-                 # Default behavior: Delete notes outside raga?
-                 # Wait, user said "delete notes outside the raga".
-                 # Notes "outside" are usually those FAR from raga notes.
-                 # Notes close (within 1 st) are usually intonation errors designated for CORRECTION.
-                 # So:
-                 #   Close -> Correct (Snap)
-                 #   Far -> Discard (Delete)
-                 
-                 # Case: Corrected (Close)
-                 new_pitch = info['corrected_midi']
-                 stats['corrected'] += 1
-                 new_note = Note(
-                     start=note.start,
-                     end=note.end,
-                     pitch_midi=new_pitch,
-                     pitch_hz=librosa.midi_to_hz(new_pitch),
-                     confidence=note.confidence
-                 )
-                 corrected_sequence.append(new_note)
+            new_pitch = info['corrected_midi']
+            stats['corrected'] += 1
+            new_note = Note(
+                start=note.start,
+                end=note.end,
+                pitch_midi=new_pitch,
+                pitch_hz=librosa.midi_to_hz(new_pitch),
+                confidence=note.confidence
+            )
+            corrected_sequence.append(new_note)
                  
     stats['remaining'] = len(corrected_sequence)
     return corrected_sequence, stats, all_corrections
@@ -736,7 +710,7 @@ def _parse_tonic(tonic_str: str) -> int:
         
     # Handle integer input
     if isinstance(tonic_str, int):
-        return tonic_str % 12
+        return int(tonic_str) % 12
         
     s = str(tonic_str).strip().upper()
     
@@ -806,10 +780,11 @@ class RagaScorer:
     def score(
         self,
         pitch_data_vocals: PitchData,
-        pitch_data_accomp: PitchData,
+        pitch_data_accomp: Optional[PitchData],
         detected_peak_count: int,
         instrument_mode: str = "autodetect",
         tonic_candidates: Optional[List[int]] = None,
+        bias_cents: Optional[float] = None,
     ) -> pd.DataFrame:
         """
         Score all raga candidates.
@@ -824,4 +799,5 @@ class RagaScorer:
             instrument_mode,
             self.params,
             tonic_candidates,
+            bias_cents,
         )

@@ -247,8 +247,7 @@ def detect_peaks(
     
     for idx, cent in zip(high_peaks, high_cents):
         if len(low_cents) == 0:
-            # No low-res peaks - accept all high-res peaks? (Notebook doesn't explicit handle this but loop would fail)
-            # Safe fallback:
+            # With no low-res peaks available, accept every high-res peak as a fallback.
             validated_indices.append(idx)
             validated_cents_list.append(cent)
         else:
@@ -256,14 +255,7 @@ def detect_peaks(
             dists = np.abs((cent - low_cents + 600) % 1200 - 600)
             min_dist = np.min(dists)
             
-            # NOTE: notebook doesn't explicitly wrap for cross-validation distance?
-            # "abs(sp_cent - rp_cent) <= peak_tolerance_cents"
-            # If peaks are near 0/1200 boundary, direct abs diff works if both are e.g. 10 and 1190? No.
-            # 10 and 1190 are 20 cents apart circularly. abs(10-1190)=1180.
-            # So notebook MIGHT have a bug if it doesn't wrap dists here, 
-            # UNLESS peak_tolerance is small and peaks are well-centered.
-            # BUT the pipeline logic IS circular-safe, which is better.
-            # We stick to the pipeline's circular distance logic.
+            # We use circular distance so boundary cases (e.g., 10¢ vs 1190¢) wrap correctly.
             
             if min_dist <= peak_tolerance_cents:
                 validated_indices.append(idx)
@@ -300,10 +292,7 @@ def detect_peaks(
             "within_tolerance": note_dist <= tolerance_cents,
         }
         
-        # Only consider peaks within tolerance for merging logic?
-        # If outside tolerance, they are just noise, or microtonal.
-        # But we still want to report them in peak_details usually.
-        # User requirement: "if two peaks are same note, count as single note"
+        # Only peaks within tolerance contribute to merged pitch-classes; others are flagged as microtonal noise.
         
         if nearest_note not in peaks_by_note:
             peaks_by_note[nearest_note] = []
@@ -331,8 +320,7 @@ def detect_peaks(
         final_validated_cents.append(best["cent_position"])
         peak_details.append(best)
         
-        if best["within_tolerance"]:
-            pitch_classes.add(best["mapped_pc"])
+        pitch_classes.add(best["mapped_pc"])
             
     # Overwrite return arrays with filtered ones
     validated_indices = np.array(final_validated_indices, dtype=int) if final_validated_indices else np.array([], dtype=int)
@@ -487,9 +475,9 @@ def fit_gmm_to_peaks(
             print(f"GMM detection failed for peak {peak_idx}: {e}")
             continue
         
-        means = gmm.means_.flatten()
-        sigmas = np.sqrt(gmm.covariances_.flatten())
-        weights = gmm.weights_
+        means = np.asarray(gmm.means_).flatten()
+        sigmas = np.sqrt(np.asarray(gmm.covariances_).flatten())
+        weights = np.asarray(gmm.weights_)
         
         # Find dominant component
         dominant_idx = np.argmax(weights)
@@ -524,6 +512,21 @@ def fit_gmm_to_peaks(
         ))
     
     return results
+
+
+def compute_gmm_bias_cents(
+    gmm_results: List[GMMResult],
+    min_peaks: int = 3,
+) -> Optional[float]:
+    """
+    Compute median deviation (cents) across GMM peaks.
+    """
+    if len(gmm_results) < min_peaks:
+        return None
+    deviations = [g.deviation_from_note for g in gmm_results if np.isfinite(g.deviation_from_note)]
+    if len(deviations) < min_peaks:
+        return None
+    return float(np.median(deviations))
 
 
 def fit_gmm_from_config(

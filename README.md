@@ -58,12 +58,16 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 *   `--output`: Defaults to `./results` (optional).
 *   `--source-type`: `mixed` (default), `vocal`, or `instrumental`.
 *   `--melody-source`: `separated` (default) or `composite`. Use `composite` for instrumental recordings with poor stem separation.
+*   `--vocalist-gender`: When provided, `--source-type` is auto-set to `vocal`.
 *   `--separator`: `demucs` (default) or `spleeter`.
+*   `--fmin-note` / `--fmax-note`: Override default pitch extraction range (e.g. `G1` to `C6`).
+*   `--prominence-high` / `--prominence-low`: Fine-tune peak detection sensitivity.
+*   `--bias-rotation`: Rotate histograms by median GMM deviation before scoring/plots.
 
 **Output:**
 *   `detection_report.html`: Summary of detected candidates.
 *   `candidates.csv`: Ranked list of likely ragas.
-*   Pitch data and stems saved in `results/htdemucs/<song_name>/`.
+*   Pitch data and stems saved in `results/htdemucs/<song_name>/` (stems are saved as MP3).
 
 ### Phase 2: Analysis (`analyze`)
 
@@ -82,6 +86,10 @@ Performs deep sequence analysis, phrasing, and generating the interactive report
     *   Phrase analysis and common motifs.
     *   Raga correction statistics.
     *   Transition matrices.
+
+### Batch Processing
+
+Batch mode walks a directory of `.mp3`, `.wav`, `.flac`, or `.m4a` files and runs `run_pipeline.sh` on each one. The script now defaults to storing the ground-truth CSV alongside the input directory using the directory name (for example, `audio_test_files_gt.csv`). Run `python -m raga_pipeline.batch <audio_dir> --init-csv` from the project root to create that file, then rerun without `--init-csv` to process the directory; the batch tool will also read the same directory-level CSV unless you override `--ground-truth`.
 
 ---
 

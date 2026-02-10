@@ -29,6 +29,7 @@ from .config import PipelineConfig
 from .audio import PitchData
 from . import transcription
 from .analysis import HistogramData, PeakData, GMMResult
+from .raga import _parse_tonic
 from .sequence import Note, Phrase, OFFSET_TO_SARGAM
 
 
@@ -59,6 +60,7 @@ class AnalysisResults:
     
     # GMM analysis
     gmm_results: List[GMMResult] = field(default_factory=list)
+    gmm_bias_cents: Optional[float] = None
     
     # Sequence analysis
     notes: List[Note] = field(default_factory=list)
@@ -79,6 +81,7 @@ def plot_histograms(
     peaks: PeakData,
     output_path: str,
     title: str = "Pitch Class Histogram",
+    bias_cents: Optional[float] = None,
 ) -> str:
     """
     Plot dual-resolution histograms with peak annotations.
@@ -106,12 +109,23 @@ def plot_histograms(
     smoothed_norm = histogram.smoothed_high_norm / max(histogram.smoothed_high_norm.sum(), 1e-10)
     
     # Plot raw (faded) and smoothed (bold) histograms
-    ax1.plot(histogram.bin_centers_high, raw_norm, color='lightsteelblue', alpha=0.4, label='Raw (100-bin)')
-    ax1.plot(histogram.bin_centers_high, smoothed_norm, color='navy', linewidth=2, label='Smoothed (Gaussian)')
+    bin_centers_high = histogram.bin_centers_high
+    raw_plot = raw_norm
+    smoothed_plot = smoothed_norm
+    if bias_cents is not None:
+        rotated = (bin_centers_high - bias_cents) % 1200
+        order = np.argsort(rotated)
+        bin_centers_high = rotated[order]
+        raw_plot = raw_plot[order]
+        smoothed_plot = smoothed_plot[order]
+    ax1.plot(bin_centers_high, raw_plot, color='lightsteelblue', alpha=0.4, label='Raw (100-bin)')
+    ax1.plot(bin_centers_high, smoothed_plot, color='navy', linewidth=2, label='Smoothed (Gaussian)')
     
     # Mark validated peaks with X markers
     for idx in peaks.validated_indices:
         cent = histogram.bin_centers_high[idx]
+        if bias_cents is not None:
+            cent = (cent - bias_cents) % 1200
         height = smoothed_norm[idx]
         ax1.scatter([cent], [height], color='red', s=110, marker='x', zorder=6)
     
@@ -142,11 +156,20 @@ def plot_histograms(
     # === Low-resolution (33-bin) ===
     ax2 = axes[1]
     low_norm = histogram.smoothed_low / max(histogram.smoothed_low.max(), 1)
-    ax2.bar(histogram.bin_centers_low, low_norm,
+    bin_centers_low = histogram.bin_centers_low
+    low_plot = low_norm
+    if bias_cents is not None:
+        rotated_low = (bin_centers_low - bias_cents) % 1200
+        order_low = np.argsort(rotated_low)
+        bin_centers_low = rotated_low[order_low]
+        low_plot = low_plot[order_low]
+    ax2.bar(bin_centers_low, low_plot,
             width=36, alpha=0.7, color='darkorange', label='Stable Peaks (33-bin)')
     
     for idx in peaks.low_res_indices:
         cent = histogram.bin_centers_low[idx]
+        if bias_cents is not None:
+            cent = (cent - bias_cents) % 1200
         ax2.axvline(cent, color='red', linestyle='--', alpha=0.5)
     
     ax2.set_xticks(np.arange(0, 1200, 100))
@@ -169,6 +192,8 @@ def plot_gmm_overlay(
     histogram: HistogramData,
     gmm_results: List[GMMResult],
     output_path: str,
+    tonic: Optional[int] = None,
+    bias_cents: Optional[float] = None,
 ) -> str:
     """
     Plot histogram with GMM fits overlaid.
@@ -185,28 +210,54 @@ def plot_gmm_overlay(
     
     fig, ax = plt.subplots(figsize=(14, 6))
     
-    # Plot histogram
-    ax.bar(histogram.bin_centers_high, histogram.smoothed_high_norm,
-           width=12, alpha=0.6, color='steelblue', label='Histogram')
+    # Plot histogram (optionally tonic-rotated)
+    bin_centers = histogram.bin_centers_high
+    counts = histogram.smoothed_high_norm
+    if tonic is not None:
+        offset = (tonic % 12) * 100.0
+        bin_centers = (bin_centers - offset) % 1200
+        order = np.argsort(bin_centers)
+        bin_centers = bin_centers[order]
+        counts = counts[order]
+    if bias_cents is not None:
+        bin_centers = (bin_centers - bias_cents) % 1200
+        order = np.argsort(bin_centers)
+        bin_centers = bin_centers[order]
+        counts = counts[order]
+    ax.bar(bin_centers, counts, width=12, alpha=0.6, color='steelblue', label='Histogram')
     
     # Overlay GMM fits
     x = np.linspace(0, 1200, 1200)
+    x_plot = x
+    if bias_cents is not None:
+        x_plot = (x - bias_cents) % 1200
+        order_x = np.argsort(x_plot)
+        x_plot = x_plot[order_x]
     
     for gmm in gmm_results:
-        color = plt.cm.Set2(gmm.nearest_note / 12)
+        color = plt.get_cmap("Set2")(gmm.nearest_note / 12)
         
-        # Plot Gaussian for each component
+        # Plot Gaussian components scaled as a mixture to the local peak height
+        components = []
         for mean, sigma, weight in zip(gmm.means, gmm.sigmas, gmm.weights):
-            y = weight * stats.norm.pdf(x, mean, sigma)
-            y = y * histogram.smoothed_high_norm[gmm.peak_idx] / max(y.max(), 1e-10)
-            ax.plot(x, y, color=color, linewidth=1.5, alpha=0.8)
+            components.append(weight * stats.norm.pdf(x, mean, sigma))
+        mixture = np.sum(components, axis=0) if components else np.zeros_like(x)
+        scale = histogram.smoothed_high_norm[gmm.peak_idx] / max(mixture.max(), 1e-10)
+        for comp in components:
+            if bias_cents is not None:
+                ax.plot(x_plot, (comp * scale)[order_x], color=color, linewidth=1.5, alpha=0.8)
+            else:
+                ax.plot(x, comp * scale, color=color, linewidth=1.5, alpha=0.8)
         
         # Annotate with Western notation
         western_notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
         western = western_notes[gmm.nearest_note]
+        peak_x = gmm.peak_cent
+        if bias_cents is not None:
+            peak_x = (peak_x - bias_cents) % 1200
         ax.annotate(
             f'{western}\nμ={gmm.primary_mean:.0f}¢\nσ={gmm.primary_sigma:.1f}¢',
-            (gmm.peak_cent, histogram.smoothed_high_norm[gmm.peak_idx]),
+            (peak_x, histogram.smoothed_high_norm[gmm.peak_idx]),
             textcoords='offset points', xytext=(0, 20),
             ha='center', fontsize=8,
             arrowprops=dict(arrowstyle='->', color='gray', alpha=0.5)
@@ -255,7 +306,7 @@ def plot_note_segments(
         ax.scatter(times, midi, c='lightblue', s=1, alpha=0.5, label='Pitch contour')
     
     # Plot note segments
-    colors = plt.cm.Set3(np.linspace(0, 1, 12))
+    colors = plt.get_cmap("Set3")(np.linspace(0, 1, 12))
     
     for note in notes:
         pc = int(round(note.pitch_midi)) % 12
@@ -443,7 +494,7 @@ def plot_energy_distribution(
     energy_vals: np.ndarray,
     output_path: str,
     title: str = "Energy Distribution (RMS)",
-    threshold: float = None
+    threshold: Optional[float] = None
 ):
     """
     Plot histogram of energy values.
@@ -474,6 +525,35 @@ def plot_energy_distribution(
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=100)
+    plt.close()
+
+
+def plot_energy_over_time(
+    timestamps: np.ndarray,
+    energy_vals: np.ndarray,
+    output_path: str,
+    title: str = "Energy Over Time (RMS)",
+):
+    """
+    Plot energy values over time.
+    """
+    if len(timestamps) == 0 or len(energy_vals) == 0:
+        return
+
+    length = min(len(timestamps), len(energy_vals))
+    times = np.asarray(timestamps[:length])
+    energy = np.asarray(energy_vals[:length])
+    energy = np.nan_to_num(energy, nan=0.0, posinf=1.0, neginf=0.0)
+
+    plt.figure(figsize=(12, 4))
+    plt.plot(times, energy, color='teal', linewidth=1.0, alpha=0.9)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Energy (Normalized RMS)")
+    plt.title(title)
+    plt.ylim(0, 1)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=120)
     plt.close()
 
 
@@ -533,7 +613,7 @@ def plot_pitch_with_sargam_lines(
             
     plt.xlabel("Time (s)")
     plt.ylabel("MIDI Pitch")
-    plt.title(f"Pitch Contour with Sargam Lines (Tonic: {_tonic_name(tonic)}, Raga: {raga_name})")
+    plt.title(f"Pitch Contour with Sargam Lines (Tonic: {_tonic_name(tonic_val)}, Raga: {raga_name})")
     plt.tight_layout()
     plt.savefig(output_path, dpi=120)
     plt.close()
@@ -549,9 +629,7 @@ def plot_transition_heatmap_v2(
     """
     plt.figure(figsize=(10, 8))
     
-    # Normalize for coloring if raw counts passed? Assume probability matrix passed usually, but check
-    # If integer matrix, maybe normalize for color? Actually commonly passed counts / row_sums probability matrix.
-    # Just display what's passed.
+    # Normalize for coloring when raw counts arrive; otherwise display the supplied probabilities.
     
     plt.imshow(matrix, cmap='YlOrRd', interpolation='nearest')
     plt.colorbar(label='Transition Probability')
@@ -727,6 +805,7 @@ def generate_html_report(
             vocals_id,
             "Vocals Analysis",
             tonic,
+            transcription_json=_serialize_notes(results.notes, tonic) if results.notes else "[]"
         ))
     
     # Accompaniment player section
@@ -847,6 +926,7 @@ def _generate_audio_player_section(
     player_id: str,
     title: str,
     tonic: int,
+    transcription_json: str = "[]",
 ) -> str:
     """Generate audio player with synchronized pitch contour."""
     
@@ -867,6 +947,12 @@ def _generate_audio_player_section(
             </div>
 
             <div id="{player_id}-plot" class="pitch-plot"></div>
+            
+            <!-- Karaoke Overlay -->
+            <div id="{player_id}-karaoke" class="karaoke-container">
+                <!-- Spans will be injected here by JS -->
+            </div>
+
             <div class="time-display">
                 <span id="{player_id}-time">0.00s</span> | 
                 <span id="{player_id}-sargam">--</span>
@@ -875,11 +961,12 @@ def _generate_audio_player_section(
         <script>
             (function() {{
                 var plotData = {pitch_json};
+                var transcriptionData = {transcription_json};
                 var plotDiv = document.getElementById('{player_id}-plot');
                 Plotly.newPlot(plotDiv, plotData.data, plotData.layout);
                 
                 // Setup audio sync
-                setupAudioSync('{player_id}', {tonic});
+                setupAudioSync('{player_id}', {tonic}, transcriptionData);
             }})();
         </script>
     </section>
@@ -930,8 +1017,8 @@ def _generate_ranking_section(candidates: pd.DataFrame) -> str:
     
     # Generate rows for top 40
     rows = []
-    for i, row in candidates.head(40).iterrows():
-        rank = row.get('rank', i+1)
+    for idx, (_, row) in enumerate(candidates.head(40).iterrows(), start=1):
+        rank = int(row["rank"]) if "rank" in row else idx
         hidden_class = ' class="hidden-row"' if rank > 20 else ''
         rows.append(f'''
             <tr{hidden_class}>
@@ -954,7 +1041,7 @@ def _generate_ranking_section(candidates: pd.DataFrame) -> str:
     return f'''
     <section id="raga-ranking">
         <h2>Raga Candidates</h2>
-        <p>Showing top 40 candidates. Scroll horizontally to see all parameters.</p>
+        <p>Showing top 40 candidates.</p>
         <div class="table-scroll-container">
             <table class="data-table ranking-table">
                 <thead>
@@ -1079,7 +1166,6 @@ def _tonic_name(tonic: Optional[int]) -> str:
 
 
 def _get_css_styles() -> str:
-    """Get CSS styles for the report - Dark mode with funky font."""
     return '''
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap');
         
@@ -1209,6 +1295,46 @@ def _get_css_styles() -> str:
         }
         a { color: #58a6ff; }
         a:hover { color: #e94560; }
+
+        /* Karaoke Overlay */
+        .karaoke-container {
+            margin: 10px 0;
+            padding: 15px;
+            background: #0d1117;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: nowrap;
+            text-align: center;
+            border: 1px solid #30363d;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+        }
+        .karaoke-word {
+            display: inline-block;
+            padding: 5px 15px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            color: #8b949e;
+            opacity: 0.4;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .karaoke-word:hover {
+            background: #21262d;
+            opacity: 0.8;
+        }
+        .karaoke-word.active {
+            opacity: 1.0;
+            color: #e94560;
+            transform: scale(1.15);
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
+            background: rgba(233, 69, 96, 0.1);
+        }
     '''
 
 
@@ -1227,13 +1353,14 @@ def _get_audio_sync_js() -> str:
             btn.textContent = showingMore ? 'Show Less (1-20)' : 'Show More (21-40)';
         }
         
-        function setupAudioSync(playerId, tonic) {
+        function setupAudioSync(playerId, tonic, transcriptionData) {
             var audio = document.getElementById(playerId + '-audio');
             var plotDiv = document.getElementById(playerId + '-plot');
             var timeDisplay = document.getElementById(playerId + '-time');
             var sargamDisplay = document.getElementById(playerId + '-sargam');
             var slider = document.getElementById(playerId + '-energy-slider');
             var sliderVal = document.getElementById(playerId + '-energy-val');
+            var karaokeDiv = document.getElementById(playerId + '-karaoke');
             
             if (!audio || !plotDiv) return;
             
@@ -1276,6 +1403,40 @@ def _get_audio_sync_js() -> str:
             var shapes = plotDiv.layout.shapes || [];
             var cursorIdx = shapes.length - 1;
             
+            // Karaoke Setup
+            var karaokeSpans = [];
+            if (karaokeDiv && transcriptionData && transcriptionData.length > 0) {
+                // Clear existing
+                karaokeDiv.innerHTML = '';
+                
+                // Add spacer to start
+                var spacerStart = document.createElement('div');
+                spacerStart.style.minWidth = "50%";
+                karaokeDiv.appendChild(spacerStart);
+
+                transcriptionData.forEach(function(note, idx) {
+                    var span = document.createElement('span');
+                    span.className = 'karaoke-word';
+                    span.textContent = note.sargam;
+                    span.dataset.start = note.start;
+                    span.dataset.end = note.end;
+                    span.dataset.idx = idx;
+                    
+                    // Click to seek
+                    span.onclick = function() {
+                        audio.currentTime = note.start;
+                    };
+                    
+                    karaokeDiv.appendChild(span);
+                    karaokeSpans.push(span);
+                });
+                
+                // Add spacer to end
+                var spacerEnd = document.createElement('div');
+                spacerEnd.style.minWidth = "50%";
+                karaokeDiv.appendChild(spacerEnd);
+            }
+            
             // Audio timeupdate -> cursor position
             audio.addEventListener('timeupdate', function() {
                 var t = audio.currentTime;
@@ -1289,7 +1450,42 @@ def _get_audio_sync_js() -> str:
                 // Update time display
                 timeDisplay.textContent = t.toFixed(2) + 's';
                 
-                // Estimate current MIDI from plot data
+                // Update Karaoke
+                if (karaokeSpans.length > 0) {
+                    var activeSpan = null;
+                    
+                    // Find active note (simple linear search is fine for < 1000 notes usually)
+                    // Start from the last active index to limit redundant scans.
+                    for (var i = 0; i < karaokeSpans.length; i++) {
+                        var span = karaokeSpans[i];
+                        var start = parseFloat(span.dataset.start);
+                        var end = parseFloat(span.dataset.end);
+                        
+                        if (t >= start && t <= end) {
+                            activeSpan = span;
+                            if (!span.classList.contains('active')) {
+                                span.classList.add('active');
+                                // Scroll into view logic
+                                // Center the active element
+                                var containerCenter = karaokeDiv.offsetWidth / 2;
+                                var spanCenter = span.offsetLeft + (span.offsetWidth / 2);
+                                // We are using spacers, so offsetLeft is relative to the container scroll content
+                                // scrollLeft = spanCenter - containerCenter
+                                
+                                karaokeDiv.scrollTo({
+                                    left: spanCenter - containerCenter,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        } else {
+                            if (span.classList.contains('active')) {
+                                span.classList.remove('active');
+                            }
+                        }
+                    }
+                }
+
+                // Estimate current MIDI from plot data (Legacy/Fallback)
                 try {
                     var trace = plotDiv.data[0];
                     if (trace && trace.x && trace.y) {
@@ -1443,17 +1639,27 @@ def plot_pitch_wide_to_base64_with_legend(
     )
     
     # Plot events
-    for event in transcription_events:
+    for i, event in enumerate(transcription_events):
         # Draw horizontal line for the note
-        ax.hlines(
-            y=event.snapped_midi,
-            xmin=event.start,
-            xmax=event.end,
-            colors='orange',
-            linewidth=3,
-            alpha=0.8,
-            label='Transcribed' if event == transcription_events[0] else None 
-        )
+        if i == 0:
+            ax.hlines(
+                y=event.snapped_midi,
+                xmin=event.start,
+                xmax=event.end,
+                colors='orange',
+                linewidth=3,
+                alpha=0.8,
+                label='Transcribed'
+            )
+        else:
+            ax.hlines(
+                y=event.snapped_midi,
+                xmin=event.start,
+                xmax=event.end,
+                colors='orange',
+                linewidth=3,
+                alpha=0.8
+            )
 
     # --- Inflection Points Overlay ---
     # Detect turning points (derivative = 0)
@@ -1468,8 +1674,7 @@ def plot_pitch_wide_to_base64_with_legend(
     if len(inflection_times) > 0 and transcription_events:
         keep_mask = np.ones(len(inflection_times), dtype=bool)
         for event in transcription_events:
-            # Mark points inside this event's duration as False
-            # We use a small buffer or strict inequality? Strict is fine: start <= t <= end
+            # Mark points inside this event's duration as False using strict boundaries.
             overlap = (inflection_times >= event.start) & (inflection_times <= event.end)
             keep_mask[overlap] = False
             
@@ -1770,59 +1975,34 @@ def generate_analysis_report(
         except Exception as e:
             scroll_plot_html = f"<p>Error generating scrollable plot: {e}</p>"
 
-        # 1. Interactive Plotly Player
-        try:
-             plot_json = create_pitch_contour_plotly(
-                results.pitch_data_vocals,
-                tonic=results.detected_tonic or 0,
-                raga_notes=None, # or restrict if we have filtered raga
-                audio_duration=results.pitch_data_vocals.duration if results.pitch_data_vocals else 0
-            )
-             interactive_player_html = f'''
-             <div id="interactive-pitch-plot" style="width:100%; height:450px;"></div>
-             <script>
-                 var plotData = {plot_json};
-                 Plotly.newPlot('interactive-pitch-plot', plotData.data, plotData.layout, {{responsive: true}});
-                 
-                 // Sync with audio
-                 var trackIds = ['{original_id}', '{vocals_id}', '{accomp_id}'];
-                 var plotDiv = document.getElementById('interactive-pitch-plot');
-                 var cursorShapeIndex = {len(json.loads(plot_json)["layout"]["shapes"])-1};
-                 
-                 trackIds.forEach(function(id) {{
-                     var audio = document.getElementById(id);
-                     if(audio && plotDiv) {{
-                         audio.ontimeupdate = function() {{
-                             // Only sync if this audio is actually playing (to avoid conflict if multiple loaded?)
-                             // Actually ontimeupdate only fires when playing/seeking.
-                             if (!audio.paused || audio.seeking) {{
-                                 var time = audio.currentTime;
-                                 Plotly.relayout(plotDiv, {{
-                                     ['shapes[' + cursorShapeIndex + '].x0']: time,
-                                     ['shapes[' + cursorShapeIndex + '].x1']: time
-                                 }});
-                             }}
-                         }};
-                     }}
-                 }});
-                 
-                 // Allow click on plot to seek audio (Graph -> Audio sync)
-                 plotDiv.on('plotly_click', function(data){{
-                     if (data.points && data.points.length > 0) {{
-                         var time = data.points[0].x;
-                         console.log("Plotly click seek to:", time);
-                         trackIds.forEach(function(id) {{
-                             var el = document.getElementById(id);
-                             if(el) el.currentTime = time;
-                         }});
-                     }}
-                 }});
-             </script>
-             '''
-        except Exception as e:
-            interactive_player_html = f"<p>Error generating interactive plot: {e}</p>"
+        interactive_player_html = ""
 
-        # 2. Energy Histogram
+        # 2. Energy Over Time
+        energy_time_html = ""
+        try:
+            energy_time_path = os.path.join(output_dir, "energy_over_time.png")
+            e_vals = results.pitch_data_vocals.energy
+            t_vals = results.pitch_data_vocals.timestamps
+            if len(e_vals) > 0 and len(t_vals) > 0:
+                plot_energy_over_time(
+                    t_vals,
+                    e_vals,
+                    energy_time_path,
+                    title="Vocal Energy Over Time"
+                )
+                e_time_rel = os.path.relpath(energy_time_path, output_dir)
+                energy_time_html = f'''
+                <div class="viz-container" style="margin-top: 20px;">
+                    <h3>Energy Over Time</h3>
+                    <img src="{e_time_rel}" style="width:100%; max-width:1000px;">
+                </div>
+                '''
+            else:
+                energy_time_html = "<p>No energy data available.</p>"
+        except Exception as e:
+            energy_time_html = f"<p>Error generating energy plot: {e}</p>"
+
+        # 3. Energy Histogram
         energy_histogram_html = ""
         try:
             energy_hist_path = os.path.join(output_dir, "energy_histogram.png")
@@ -1849,10 +2029,15 @@ def generate_analysis_report(
              energy_histogram_html = f"<p>Error generating energy plot: {e}</p>"
     else:
         interactive_player_html = ""
+        energy_time_html = ""
         energy_histogram_html = ""
 
     # Transcription html
-    transcription_html = _generate_transcription_section(results.notes, results.phrases, results.detected_tonic)
+    transcription_html = _generate_transcription_section(
+        results.notes,
+        results.phrases,
+        results.detected_tonic or 0
+    )
     
     # Pattern Analysis HTML (Motifs + Aaroh/Avroh)
     pattern_html = ""
@@ -1904,6 +2089,20 @@ def generate_analysis_report(
             </div>
         </section>
         """
+    # GMM Analysis HTML
+    gmm_html = ""
+    if 'gmm_overlay' in results.plot_paths:
+        gmm_rel = os.path.relpath(results.plot_paths['gmm_overlay'], output_dir)
+        gmm_html = f"""
+        <section id="gmm-analysis">
+            <h2>Microtonal Analysis (GMM)</h2>
+            <div class="viz-container">
+                <img src="{gmm_rel}" alt="GMM Analysis" style="width:100%; max-width:800px;">
+                <p style="font-size: 0.9em; color: #8b949e; text-align: center;">Gaussian Mixture Model fit to histogram peaks for microtonal precision.</p>
+            </div>
+        </section>
+        """
+
     # Images HTML
     images_html = ""
     tm_rel = os.path.relpath(stats.transition_matrix_path, output_dir)
@@ -1931,7 +2130,7 @@ def generate_analysis_report(
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Raga Analysis Report: {stats.raga_name}</title>
-        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+        
         <style>
             {_get_css_styles()}
             /* Custom styles for scroll plot */
@@ -1968,14 +2167,15 @@ def generate_analysis_report(
                     </div>
                 </div>
                 
-                <!-- Interactive Plotly Player (with Slider) -->
-                {interactive_player_html}
                 
                 <!-- Scrollable Plot -->
                 <h3>Static Pitch Analysis (High-Res, Synced)</h3>
                 <p style="font-size: 0.9em; color: #8b949e;">Scroll horizontally or play audio to follow the analysis. Color-coded by octave.</p>
                 {scroll_plot_html}
                 
+                <!-- Energy Over Time -->
+                {energy_time_html}
+
                 <!-- Energy Histogram -->
                 {energy_histogram_html}
             </section>
@@ -1985,6 +2185,8 @@ def generate_analysis_report(
             {transcription_html}
 
             {pattern_html}
+
+            {gmm_html}
 
             {images_html}
         </main>
@@ -2000,3 +2202,20 @@ def generate_analysis_report(
         f.write(html_content)
         
     return report_path
+
+
+def _serialize_notes(notes: List['Note'], tonic: int) -> str:
+    """Serialize notes to JSON for JS consumption."""
+    data = []
+    # If tonic is passed, verify it's int
+    if isinstance(tonic, str):
+        # Fallback if somehow string passed
+        tonic = 0 
+
+    for note in notes:
+        data.append({
+            'start': round(note.start, 3),
+            'end': round(note.end, 3),
+            'sargam': note.sargam or "?"  # Ensure sargam is populated
+        })
+    return json.dumps(data)

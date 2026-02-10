@@ -25,6 +25,7 @@ from raga_pipeline.analysis import (
     compute_cent_histograms, 
     detect_peaks, 
     fit_gmm_to_peaks,
+    compute_gmm_bias_cents,
     compute_cent_histograms_from_config,
     detect_peaks_from_config,
 )
@@ -121,8 +122,8 @@ def run_pipeline(
              raise FileNotFoundError(f"Cached melody pitch data not found at {melody_pitch_csv}. Run 'detect' phase first.")
             
         # dummy wrapper for loading parameters
-        fmin = librosa.note_to_hz(config.fmin_note)
-        fmax = librosa.note_to_hz(config.fmax_note)
+        fmin = float(librosa.note_to_hz(config.fmin_note))
+        fmax = float(librosa.note_to_hz(config.fmax_note))
         
         # Load Primary Melody Stem
         pitch_data_stems = extract_pitch(
@@ -200,8 +201,8 @@ def run_pipeline(
         
         # STEP 2: Pitch
         print("\n[STEP 2/7] Extracting pitch...")
-        fmin = librosa.note_to_hz(config.fmin_note)
-        fmax = librosa.note_to_hz(config.fmax_note)
+        fmin = float(librosa.note_to_hz(config.fmin_note))
+        fmax = float(librosa.note_to_hz(config.fmax_note))
         
         # 2a. Composite Pitch (Always computed)
         print("  - Composite (Original Mix)...")
@@ -255,13 +256,33 @@ def run_pipeline(
         if results.pitch_data_accomp is not None:
             results.histogram_accomp = compute_cent_histograms_from_config(results.pitch_data_accomp, config)
         results.peaks_vocals = detect_peaks_from_config(results.histogram_vocals, config)
+
+        bias_cents = None
+        if config.bias_rotation:
+            bias_gmm_results = fit_gmm_to_peaks(
+                results.histogram_vocals,
+                results.peaks_vocals.validated_indices,
+                window_cents=config.gmm_window_cents,
+                n_components=config.gmm_components,
+                tonic=None,
+            )
+            bias_cents = compute_gmm_bias_cents(bias_gmm_results)
+            results.gmm_bias_cents = bias_cents
+            if bias_cents is not None:
+                print(f"[GMM] Bias rotation: {bias_cents:.1f} cents")
         
         print(f"  Detected {len(results.peaks_vocals.validated_indices)} validated peaks")
         print(f"  [DEBUG] Detected pitch classes: {sorted(results.peaks_vocals.pitch_classes)}")
         
         # Plot histograms (vocals/melody)
         hist_path = os.path.join(stem_dir, "histogram_melody.png")
-        plot_histograms(results.histogram_vocals, results.peaks_vocals, hist_path, title="Melody Pitch Distribution")
+        plot_histograms(
+            results.histogram_vocals,
+            results.peaks_vocals,
+            hist_path,
+            title="Melody Pitch Distribution",
+            bias_cents=results.gmm_bias_cents,
+        )
         results.plot_paths["histogram_vocals"] = hist_path
         print(f"  Saved: {hist_path}")
         
@@ -269,7 +290,12 @@ def run_pipeline(
         if results.histogram_accomp is not None:
             hist_accomp_path = os.path.join(stem_dir, "histogram_accompaniment.png")
             peaks_accomp = detect_peaks_from_config(results.histogram_accomp, config)
-            plot_histograms(results.histogram_accomp, peaks_accomp, hist_accomp_path, title="Accompaniment Pitch Distribution")
+            plot_histograms(
+                results.histogram_accomp,
+                peaks_accomp,
+                hist_accomp_path,
+                title="Accompaniment Pitch Distribution",
+            )
             results.plot_paths["histogram_accomp"] = hist_accomp_path
             print(f"  Saved: {hist_accomp_path}")
         
@@ -296,6 +322,7 @@ def run_pipeline(
                 detected_peak_count=len(results.peaks_vocals.validated_indices),
                 instrument_mode=config.source_type,
                 tonic_candidates=tonic_candidates,  # Pass the bias list!
+                bias_cents=results.gmm_bias_cents,
             )
             
             # Save candidates
@@ -454,11 +481,12 @@ def run_pipeline(
         
         # Detailed Pitch Plot with Sargam Lines
         pp_path = os.path.join(config.stem_dir, "pitch_sargam.png")
+        raga_name = results.detected_raga or "Unknown"
         plot_pitch_with_sargam_lines(
             results.pitch_data_vocals.voiced_times,
             results.pitch_data_vocals.midi_vals,
             results.detected_tonic,
-            results.detected_raga,
+            raga_name,
             pp_path
         )
         print(f"  Saved: {pp_path}")
@@ -476,7 +504,7 @@ def run_pipeline(
         stats_obj = AnalysisStats(
             correction_summary=correction_summary,
             pattern_analysis=pattern_results,
-            raga_name=results.detected_raga,
+            raga_name=raga_name,
             tonic=_tonic_name(results.detected_tonic),
             transition_matrix_path=tm_path,
             pitch_plot_path=pp_path
@@ -490,7 +518,7 @@ def run_pipeline(
          results.histogram_vocals = compute_cent_histograms_from_config(results.pitch_data_vocals, config)
          results.peaks_vocals = detect_peaks_from_config(results.histogram_vocals, config)
 
-    if results.peaks_vocals is not None:
+    if results.peaks_vocals is not None and results.histogram_vocals is not None:
         print("\n[STEP 6.5/7] GMM microtonal analysis...")
         results.gmm_results = fit_gmm_to_peaks(
             results.histogram_vocals,
@@ -499,10 +527,19 @@ def run_pipeline(
             n_components=config.gmm_components,
             tonic=results.detected_tonic, # Pass tonic for rotation
         )
+
+        if config.bias_rotation and results.gmm_bias_cents is None:
+            results.gmm_bias_cents = compute_gmm_bias_cents(results.gmm_results)
         
         if results.gmm_results:
             gmm_path = os.path.join(config.stem_dir, "gmm_overlay.png")
-            plot_gmm_overlay(results.histogram_vocals, results.gmm_results, gmm_path)
+            plot_gmm_overlay(
+                results.histogram_vocals,
+                results.gmm_results,
+                gmm_path,
+                tonic=results.detected_tonic,
+                bias_cents=results.gmm_bias_cents,
+            )
             results.plot_paths["gmm_overlay"] = gmm_path
             print(f"  Saved: {gmm_path}")
 

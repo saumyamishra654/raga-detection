@@ -783,7 +783,7 @@ Generates comprehensive HTML report with:
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  audio.separate_stems()                                                  │
-│  ➜ vocals.wav, accompaniment.wav                                         │
+│  ➜ vocals.mp3, accompaniment.mp3                                         │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
                                 ▼
@@ -845,8 +845,8 @@ All outputs are saved to `{output_dir}/{demucs_model}/{filename}/`:
 
 | File | Module | Description |
 |------|--------|-------------|
-| `vocals.wav` | audio | Separated vocal stem |
-| `accompaniment.wav` | audio | Separated accompaniment |
+| `vocals.mp3` | audio | Separated vocal stem |
+| `accompaniment.mp3` | audio | Separated accompaniment |
 | `vocals_pitch_data.csv` | audio | Cached pitch extraction |
 | `accompaniment_pitch_data.csv` | audio | Cached accompaniment pitch |
 | `histogram_vocals.png` | output | Dual-resolution histogram plot |

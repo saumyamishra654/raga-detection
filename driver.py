@@ -47,6 +47,7 @@ from raga_pipeline.sequence import (
     find_common_patterns,
     analyze_raga_patterns,
     merge_consecutive_notes,
+    split_phrases_by_silence,
 )
 from raga_pipeline.output import (
     AnalysisResults,
@@ -133,8 +134,10 @@ def run_pipeline(
             fmin=fmin,
             fmax=fmax,
             confidence_threshold=config.vocal_confidence,
-            force_recompute=False
+            force_recompute=config.force_recompute,
+            energy_metric=config.energy_metric,
         )
+        results.pitch_data_stem = pitch_data_stems
         
         # Load Composite if exists
         if os.path.exists(composite_pitch_csv):
@@ -145,7 +148,8 @@ def run_pipeline(
                 fmin=fmin,
                 fmax=fmax,
                 confidence_threshold=config.vocal_confidence,
-                force_recompute=False
+                force_recompute=config.force_recompute,
+                energy_metric=config.energy_metric,
             )
             
         # Assign primary melody based on config
@@ -165,7 +169,8 @@ def run_pipeline(
                 fmin=fmin,
                 fmax=fmax,
                 confidence_threshold=config.accomp_confidence,
-                force_recompute=False
+                force_recompute=config.force_recompute,
+                energy_metric=config.energy_metric,
             )
         else:
             results.pitch_data_accomp = None
@@ -214,6 +219,7 @@ def run_pipeline(
             fmax=fmax,
             confidence_threshold=config.vocal_confidence, # Use vocal confidence for now
             force_recompute=config.force_recompute,
+            energy_metric=config.energy_metric,
         )
         
         # 2b. Stem Pitch (Vocals/Melody) - Always computed for reference/fallback
@@ -226,7 +232,9 @@ def run_pipeline(
             fmax=fmax,
             confidence_threshold=config.vocal_confidence,
             force_recompute=config.force_recompute,
+            energy_metric=config.energy_metric,
         )
+        results.pitch_data_stem = pitch_data_stems
         
         # 2c. Accompaniment Pitch
         if accompaniment_path is not None:
@@ -239,6 +247,7 @@ def run_pipeline(
                 fmax=fmax,
                 confidence_threshold=config.accomp_confidence,
                 force_recompute=config.force_recompute,
+                energy_metric=config.energy_metric,
             )
         else:
             results.pitch_data_accomp = None
@@ -453,7 +462,27 @@ def run_pipeline(
             max_gap=config.phrase_max_gap,
             min_length=config.phrase_min_length,
         )
-        print(f"  Detected {len(results.phrases)} phrases")
+        print(f"  Detected {len(results.phrases)} phrases (gap-based)")
+
+        # Silence-based phrase splitting (optional, uses vocal RMS energy)
+        silence_thresh = config.silence_threshold
+        if silence_thresh <= 0 and config.energy_threshold > 0:
+            # Default: reuse the transcription energy threshold so the user
+            # gets silence-aware splitting automatically when energy gating is on.
+            silence_thresh = config.energy_threshold
+
+        if silence_thresh > 0 and results.pitch_data_vocals is not None:
+            pre_count = len(results.phrases)
+            results.phrases = split_phrases_by_silence(
+                phrases=results.phrases,
+                energy=results.pitch_data_vocals.energy,
+                timestamps=results.pitch_data_vocals.timestamps,
+                silence_threshold=silence_thresh,
+                silence_min_duration=config.silence_min_duration,
+            )
+            print(f"  Silence split ({silence_thresh:.2f} thresh, "
+                  f"{config.silence_min_duration:.2f}s min): "
+                  f"{pre_count} -> {len(results.phrases)} phrases")
         
         # Phrase clustering
         results.phrase_clusters = cluster_phrases(results.phrases)

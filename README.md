@@ -63,6 +63,7 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 *   `--fmin-note` / `--fmax-note`: Override default pitch extraction range (e.g. `G1` to `C6`).
 *   `--prominence-high` / `--prominence-low`: Fine-tune peak detection sensitivity.
 *   `--bias-rotation`: Rotate histograms by median GMM deviation before scoring/plots.
+*   `--no-rms-overlay`: Disable the RMS/log-amplitude energy overlay on pitch plots in HTML reports.
 
 **Output:**
 *   `detection_report.html`: Summary of detected candidates.
@@ -86,6 +87,12 @@ Performs deep sequence analysis, phrasing, and generating the interactive report
     *   Phrase analysis and common motifs.
     *   Raga correction statistics.
     *   Transition matrices.
+
+**Analyze Options:**
+*   `--energy-metric`: `rms` (peak-normalized) or `log_amp` (dBFS with percentile normalization).
+*   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes.
+*   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence.
+*   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases.
 
 ### Batch Processing
 

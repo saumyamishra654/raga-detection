@@ -371,6 +371,7 @@ def extract_pitch(
     fmax: float,
     confidence_threshold: float = 0.9,
     force_recompute: bool = False,
+    energy_metric: str = "rms",
 ) -> PitchData:
     """
     Extract pitch using SwiftF0 with caching.
@@ -383,6 +384,7 @@ def extract_pitch(
         fmax: Maximum frequency (Hz)
         confidence_threshold: Minimum confidence for valid pitch
         force_recompute: Ignore cached results
+        energy_metric: 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-normalised)
 
     Returns:
         PitchData containing pitch extraction results with energy
@@ -409,27 +411,95 @@ def extract_pitch(
     detector = SwiftF0(fmin=fmin, fmax=fmax, confidence_threshold=confidence_threshold)
     result = detector.detect_from_file(audio_path)
 
-    # Calculate RMS Energy
-    print("[AUDIO] Calculating RMS energy...")
+    # Calculate Energy
     y, sr = librosa.load(audio_path, sr=None)
-    # Align energy frames with pitch frames (hop_length=sr*frame_period)
-    frame_period = getattr(result, "frame_period", 0.01)
-    hop_length = int(sr * frame_period)
-    rms = librosa.feature.rms(y=y, hop_length=hop_length, center=True)[0]
-
-    # Match length with pitch data
-    # (SwiftF0 might have slightly different length due to padding)
     pitch_hz = np.asarray(result.pitch_hz)
     target_len = len(pitch_hz)
+    timestamps = (
+        np.asarray(result.timestamps)
+        if hasattr(result, "timestamps")
+        else np.arange(target_len, dtype=float) * 0.01
+    )
 
-    if len(rms) > target_len:
-        rms = rms[:target_len]
-    elif len(rms) < target_len:
-        rms = np.pad(rms, (0, target_len - len(rms)), mode='edge')
+    # Align RMS hop with the actual SwiftF0 timeline.
+    inferred_frame_period = None
+    if len(timestamps) > 1:
+        dt = np.diff(timestamps.astype(float))
+        dt = dt[np.isfinite(dt) & (dt > 0)]
+        if len(dt) > 0:
+            inferred_frame_period = float(np.median(dt))
 
-    # Normalize energy (0-1)
-    energy_max = rms.max() if rms.max() > 0 else 1.0
-    energy_norm = rms / energy_max
+    raw_frame_period = getattr(result, "frame_period", None)
+    try:
+        raw_frame_period = float(raw_frame_period) if raw_frame_period is not None else None
+    except (TypeError, ValueError):
+        raw_frame_period = None
+
+    if raw_frame_period is not None and np.isfinite(raw_frame_period) and raw_frame_period > 0:
+        frame_period = raw_frame_period
+    elif inferred_frame_period is not None:
+        frame_period = inferred_frame_period
+    else:
+        frame_period = 0.01
+
+    if (
+        inferred_frame_period is not None
+        and abs(frame_period - inferred_frame_period) > 5e-4
+    ):
+        print(
+            f"[AUDIO] frame_period mismatch (result={frame_period:.6f}s, "
+            f"timestamps={inferred_frame_period:.6f}s). Using timestamp-derived value."
+        )
+        frame_period = inferred_frame_period
+
+    hop_length = max(1, int(round(sr * frame_period)))
+
+    if energy_metric == "log_amp":
+        # ----- Log-amplitude (dBFS) with percentile normalisation -----
+        print("[AUDIO] Calculating log-amplitude (dBFS) energy...")
+        # Frame-level RMS as the amplitude proxy, then convert to dB
+        rms = librosa.feature.rms(y=y, hop_length=hop_length, center=False)[0]
+        if len(rms) > target_len:
+            rms = rms[:target_len]
+        elif len(rms) < target_len:
+            rms = np.pad(rms, (0, target_len - len(rms)), mode='constant', constant_values=0.0)
+
+        eps = 1e-10  # avoid log(0)
+        db = 20.0 * np.log10(rms + eps)  # dBFS (full-scale relative to 1.0)
+
+        # Percentile-based normalisation: map [p5, p95] -> [0, 1], clamp
+        p5 = np.percentile(db, 5)
+        p95 = np.percentile(db, 95)
+        if p95 - p5 < 1e-6:  # near-constant energy
+            energy_norm = np.ones_like(db) * 0.5
+        else:
+            energy_norm = (db - p5) / (p95 - p5)
+            energy_norm = np.clip(energy_norm, 0.0, 1.0)
+        print(f"[AUDIO] dBFS range: [{db.min():.1f}, {db.max():.1f}] dB  "
+              f"percentile window: [{p5:.1f}, {p95:.1f}] dB")
+    else:
+        # ----- RMS with peak normalisation (original behaviour) -----
+        print("[AUDIO] Calculating RMS energy...")
+        rms = librosa.feature.rms(y=y, hop_length=hop_length, center=False)[0]
+        if len(rms) > target_len:
+            rms = rms[:target_len]
+        elif len(rms) < target_len:
+            rms = np.pad(rms, (0, target_len - len(rms)), mode='constant', constant_values=0.0)
+
+        # Normalize energy (0-1)
+        energy_max = rms.max() if rms.max() > 0 else 1.0
+        energy_norm = rms / energy_max
+
+    rms_len_after_align = len(rms)
+    ts_len = len(timestamps)
+    ts_start = float(timestamps[0]) if ts_len > 0 else 0.0
+    ts_end = float(timestamps[-1]) if ts_len > 0 else 0.0
+    print(
+        "[AUDIO] Energy alignment: "
+        f"sr={sr}, frame_period={frame_period:.6f}s, hop={hop_length}, "
+        f"target_len={target_len}, rms_len={rms_len_after_align}, ts_len={ts_len}, "
+        f"ts_range=[{ts_start:.3f}, {ts_end:.3f}], metric={energy_metric}, center=False, pad=zero"
+    )
 
     # Append energy as a separate column because SwiftF0 result objects are immutable.
 
@@ -451,7 +521,6 @@ def extract_pitch(
     print(f"[WRITE] Exported CSV with energy: {csv_path}")
 
     # Convert to PitchData
-    timestamps = np.asarray(result.timestamps) if hasattr(result, "timestamps") else np.arange(len(pitch_hz)) * 0.01
     confidence = np.asarray(result.confidence) if hasattr(result, "confidence") else np.ones_like(pitch_hz)
     voicing = np.asarray(result.voicing) if hasattr(result, "voicing") else (pitch_hz > 0)
 
@@ -575,4 +644,5 @@ def extract_pitch_from_config(config: PipelineConfig, stem: str = "vocals") -> P
         fmax=fmax,
         confidence_threshold=confidence,
         force_recompute=config.force_recompute,
+        energy_metric=getattr(config, 'energy_metric', 'rms'),
     )

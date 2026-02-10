@@ -45,6 +45,7 @@ class AnalysisResults:
     
     # Pitch data
     pitch_data_vocals: Optional[PitchData] = None
+    pitch_data_stem: Optional[PitchData] = None
     pitch_data_accomp: Optional[PitchData] = None
     pitch_data_composite: Optional[PitchData] = None # New field for composite/full-mix pitch
     
@@ -348,6 +349,7 @@ def create_pitch_contour_plotly(
     tonic: int,
     raga_notes: Optional[Set[int]] = None,
     audio_duration: float = 0.0,
+    show_rms_overlay: bool = False,
 ) -> str:
     """
     Generate Plotly figure HTML for pitch contour with sargam lines.
@@ -421,7 +423,29 @@ def create_pitch_contour_plotly(
         "customdata": voiced_energy,
         "hovertemplate": "Time: %{x:.2f}s<br>Pitch: %{y:.1f}<br>Energy: %{customdata:.2f}<extra></extra>",
     })
-    
+
+    # RMS energy overlay on a secondary y-axis (scaled into the MIDI range)
+    if show_rms_overlay and len(pitch_data.energy) > 0:
+        all_times = pitch_data.timestamps.tolist()
+        raw_energy = np.nan_to_num(pitch_data.energy, nan=0.0, posinf=1.0, neginf=0.0)
+        # Scale energy [0,1] into the lower portion of the MIDI range so it
+        # doesn't obscure the pitch contour (bottom 30 % of visible range).
+        midi_span = max_midi - min_midi
+        scaled_energy = (raw_energy * 0.30 * midi_span + min_midi).tolist()
+        traces.append({
+            "x": all_times,
+            "y": scaled_energy,
+            "mode": "lines",
+            "line": {"color": "rgba(0, 206, 209, 0.35)", "width": 1},
+            "fill": "tozeroy",
+            "fillcolor": "rgba(0, 206, 209, 0.08)",
+            "name": "RMS Energy",
+            "type": "scattergl",
+            "yaxis": "y",
+            "hovertemplate": "Time: %{x:.2f}s<br>Energy: %{customdata:.3f}<extra></extra>",
+            "customdata": raw_energy.tolist(),
+        })
+
     # Build shapes (sargam lines)
     shapes = []
     annotations = []
@@ -482,7 +506,8 @@ def create_pitch_contour_plotly(
         "margin": {"l": 60, "r": 120, "t": 40, "b": 60},
         "xaxis": {"title": "Time (s)", "range": [0, total_duration]},
         "yaxis": {"title": "Pitch (MIDI)", "range": [min_midi - 2, max_midi + 2]},
-        "showlegend": False,
+        "showlegend": show_rms_overlay,
+        "legend": {"x": 0, "y": 1, "bgcolor": "rgba(13,17,23,0.7)", "font": {"color": "#c9d1d9", "size": 11}},
         "shapes": shapes,
         "annotations": annotations,
     }
@@ -774,10 +799,17 @@ def generate_html_report(
     vocals_id = f"vocals-{uuid.uuid4().hex[:8]}"
     accomp_id = f"accomp-{uuid.uuid4().hex[:8]}"
     
+    analysis_uses_composite = (
+        getattr(results.config, "melody_source", "separated") == "composite"
+        and results.pitch_data_composite is not None
+    )
+    analysis_audio_path = results.config.audio_path if analysis_uses_composite else results.config.vocals_path
+    analysis_track_label = "Composite Analysis" if analysis_uses_composite else "Vocals Analysis"
+
     # Get audio duration
     try:
         import librosa
-        audio_duration = librosa.get_duration(path=results.config.vocals_path)
+        audio_duration = librosa.get_duration(path=analysis_audio_path)
     except Exception:
         audio_duration = 0.0
     
@@ -797,13 +829,14 @@ def generate_html_report(
             tonic,
             raga_notes,
             audio_duration,
+            show_rms_overlay=getattr(results.config, 'show_rms_overlay', True),
         )
         
         sections.append(_generate_audio_player_section(
-            results.config.vocals_path,
+            analysis_audio_path,
             pitch_json,
             vocals_id,
-            "Vocals Analysis",
+            analysis_track_label,
             tonic,
             transcription_json=_serialize_notes(results.notes, tonic) if results.notes else "[]"
         ))
@@ -1102,27 +1135,33 @@ def _generate_audio_players_section(results: AnalysisResults) -> str:
 
 
 def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], tonic: int) -> str:
-    """Generate musical transcription section."""
-    from .sequence import transcribe_notes
-    
-    full_transcription = transcribe_notes(notes, tonic)
-    
-    phrase_html = ""
-    for i, phrase in enumerate(phrases[:10]):
-        sargam = " ".join(OFFSET_TO_SARGAM.get(int(round(n.pitch_midi - tonic)) % 12, '?') for n in phrase.notes)
-        phrase_html += f'<p><strong>Phrase {i+1}</strong> ({phrase.start:.2f}s - {phrase.end:.2f}s): {sargam}</p>'
-    
+    """Generate phrase-by-phrase musical transcription section."""
+    phrase_rows: List[str] = []
+    for i, phrase in enumerate(phrases):
+        labels: List[str] = []
+        for n in phrase.notes:
+            label = (n.sargam or "").strip()
+            if not label:
+                label = OFFSET_TO_SARGAM.get(int(round(n.pitch_midi - tonic)) % 12, "?")
+            labels.append(label)
+        phrase_text = " ".join(labels).strip() if labels else "--"
+        phrase_rows.append(
+            f'''
+            <div style="padding: 10px 12px; border: 1px solid #30363d; border-radius: 8px; background: #0d1117;">
+                <div style="font-size: 12px; color: #8b949e; margin-bottom: 4px;">Phrase {i+1} · {phrase.start:.2f}s to {phrase.end:.2f}s</div>
+                <div style="font-size: 16px; line-height: 1.5; color: #c9d1d9; word-break: break-word;">{phrase_text}</div>
+            </div>
+            '''
+        )
+
+    phrases_html = "".join(phrase_rows) if phrase_rows else "<p>No phrase transcription available.</p>"
     return f'''
     <section id="transcription">
         <h2>Musical Transcription</h2>
         <p><strong>Total Notes:</strong> {len(notes)} | <strong>Phrases:</strong> {len(phrases)}</p>
-        <div class="sargam-notation">
-            <h3>Full Transcription</h3>
-            <pre>{full_transcription}</pre>
-        </div>
-        <div class="phrase-list">
-            <h3>Detected Phrases</h3>
-            {phrase_html}
+        <div class="phrase-list" style="display: grid; gap: 8px;">
+            <h3>Phrase-by-Phrase Transcription</h3>
+            {phrases_html}
         </div>
     </section>
     '''
@@ -1531,7 +1570,11 @@ def plot_pitch_wide_to_base64_with_legend(
     figsize_width: int = 80, 
     figsize_height: int = 7, 
     dpi: int = 100, 
-    join_gap_threshold: float = 1.0
+    join_gap_threshold: float = 1.0,
+    show_rms_overlay: bool = True,
+    overlay_energy: Optional[np.ndarray] = None,
+    overlay_timestamps: Optional[np.ndarray] = None,
+    overlay_label: str = "RMS Energy",
 ) -> Tuple[str, str, int]:
     """
     Generate wide pitch contour and overlay sargam lines, returning base64 images.
@@ -1696,6 +1739,25 @@ def plot_pitch_wide_to_base64_with_legend(
          # Optionally mark points
          ax.scatter(inflection_times, inflection_pitches, c='red', s=10, alpha=0.5, zorder=3)
 
+    # --- RMS Energy Overlay ---
+    # Scaled energy is drawn as a filled area in the bottom 25 % of the plot.
+    e_vals_src = overlay_energy if overlay_energy is not None else pitch_data.energy
+    e_times_src = overlay_timestamps if overlay_timestamps is not None else timestamps
+    if show_rms_overlay and e_vals_src is not None and len(e_vals_src) > 0:
+        e_vals_arr = np.asarray(e_vals_src, dtype=float)
+        e_times_arr = np.asarray(e_times_src, dtype=float)
+        e_len = min(len(e_vals_arr), len(e_times_arr))
+        if e_len > 0:
+            e_vals = np.nan_to_num(e_vals_arr[:e_len], nan=0.0, posinf=1.0, neginf=0.0)
+            e_times = e_times_arr[:e_len]
+            midi_span = (max_m + 1) - (min_m - 1)
+            scaled_e = e_vals * 0.25 * midi_span + (min_m - 1)
+            ax.fill_between(
+                e_times, min_m - 1, scaled_e,
+                color='darkcyan', alpha=0.15, zorder=0, label=overlay_label
+            )
+            ax.plot(e_times, scaled_e, color='darkcyan', linewidth=0.6, alpha=0.4, zorder=0)
+
     ax.set_ylim(min_m - 1, max_m + 1)
     ax.set_xlim(0, max(timestamps[-1], 1.0))
     ax.set_xlabel('Time (s)')
@@ -1766,7 +1828,11 @@ def create_scrollable_pitch_plot_html(
     raga_notes: Optional[Set[int]] = None,
     transcription_smoothing_ms: float = 70.0,
     transcription_min_duration: float = 0.04,
-    transcription_derivative_threshold: float = 2.0
+    transcription_derivative_threshold: float = 2.0,
+    show_rms_overlay: bool = True,
+    overlay_energy: Optional[np.ndarray] = None,
+    overlay_timestamps: Optional[np.ndarray] = None,
+    overlay_label: str = "RMS Energy",
 ) -> str:
     """
     Create HTML component for scrollable pitch plot with audio sync.
@@ -1775,7 +1841,11 @@ def create_scrollable_pitch_plot_html(
         pitch_data, tonic, raga_name, raga_notes, 
         transcription_smoothing_ms=transcription_smoothing_ms,
         transcription_min_duration=transcription_min_duration,
-        transcription_derivative_threshold=transcription_derivative_threshold
+        transcription_derivative_threshold=transcription_derivative_threshold,
+        show_rms_overlay=show_rms_overlay,
+        overlay_energy=overlay_energy,
+        overlay_timestamps=overlay_timestamps,
+        overlay_label=overlay_label,
     )
     
     if not plot_b64:
@@ -1928,6 +1998,203 @@ def save_notes_to_csv(notes: List['Note'], output_path: str):
             })
 
 
+def _generate_karaoke_section(
+    phrases: List['Phrase'],
+    tonic: int,
+    audio_element_ids: List[str],
+) -> str:
+    """
+    Generate a phrase-level karaoke section that scrolls vertically like
+    lyric UIs.
+    """
+    if not phrases:
+        return ""
+
+    uid = f"karaoke_{uuid.uuid4().hex[:6]}"
+
+    # Build phrase data.
+    phrase_data = []
+    for idx, phrase in enumerate(phrases):
+        labels: List[str] = []
+        for n in phrase.notes:
+            label = (n.sargam or "").strip()
+            if not label:
+                label = OFFSET_TO_SARGAM.get(int(round(n.pitch_midi - tonic)) % 12, "?")
+            if label:
+                labels.append(label)
+
+        phrase_text = " ".join(labels).strip()
+        if not phrase_text:
+            continue
+        phrase_data.append({
+            "idx": idx + 1,
+            "start": round(phrase.start, 3),
+            "end": round(phrase.end, 3),
+            "text": phrase_text,
+        })
+
+    if not phrase_data:
+        return ""
+
+    phrases_json = json.dumps(phrase_data)
+
+    return f'''
+    <section id="{uid}-section">
+        <h2>Phrase Karaoke</h2>
+        <p style="font-size: 0.9em; color: #8b949e;">
+            Phrase-level transcription that auto-scrolls with playback.
+            Click any phrase to seek.
+        </p>
+
+        <div id="{uid}-lyrics" style="
+            overflow-y: auto;
+            padding: 14px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 320px;
+            position: relative;
+        ">
+        </div>
+
+        <div style="
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 4px 0;
+            font-size: 11px;
+            color: #484f58;
+        ">
+            <span id="{uid}-time">0.00 s</span>
+            <span id="{uid}-phrase">--</span>
+        </div>
+
+        <script>
+        (function() {{
+            var phrases = {phrases_json};
+            var listEl = document.getElementById("{uid}-lyrics");
+            var timeEl = document.getElementById("{uid}-time");
+            var phraseEl = document.getElementById("{uid}-phrase");
+            var trackIds = {json.dumps(audio_element_ids)};
+            if (!listEl || !phrases.length) return;
+
+            var rows = [];
+            var BASE_STYLE = "width:100%; padding:10px 12px; border-radius:10px; " +
+                "border:1px solid #30363d; background:#161b22; color:#8b949e; " +
+                "opacity:0.45; transform:scale(0.98); transition:all 0.2s ease; " +
+                "cursor:pointer; line-height:1.5;";
+            var ACTIVE_STYLE = "border-color:#e94560; color:#ffffff; opacity:1; " +
+                "transform:scale(1.01); box-shadow:0 0 0 1px rgba(233,69,96,0.25) inset;";
+
+            phrases.forEach(function(p) {{
+                var row = document.createElement("div");
+                row.dataset.start = p.start;
+                row.dataset.end = p.end;
+                row.dataset.idx = p.idx;
+                row.style.cssText = BASE_STYLE;
+
+                var meta = document.createElement("div");
+                meta.style.cssText = "font-size:11px;color:#8b949e;margin-bottom:6px;";
+                meta.textContent = "Phrase " + p.idx + " · " + p.start.toFixed(2) + "s - " + p.end.toFixed(2) + "s";
+
+                var phraseLine = document.createElement("div");
+                phraseLine.style.cssText = "font-size:17px;word-break:break-word;";
+                phraseLine.textContent = p.text;
+
+                row.appendChild(meta);
+                row.appendChild(phraseLine);
+
+                row.addEventListener("click", function() {{
+                    trackIds.forEach(function(id) {{
+                        var el = document.getElementById(id);
+                        if (el) el.currentTime = p.start;
+                    }});
+                }});
+
+                listEl.appendChild(row);
+                rows.push(row);
+            }});
+
+            // Binary search for active phrase at time t
+            function findActive(t) {{
+                var lo = 0, hi = phrases.length - 1;
+                while (lo <= hi) {{
+                    var mid = (lo + hi) >>> 1;
+                    if (t < phrases[mid].start) hi = mid - 1;
+                    else if (t > phrases[mid].end) lo = mid + 1;
+                    else return mid;
+                }}
+                return -1;
+            }}
+
+            function setPhraseInactive(phraseIdx) {{
+                if (phraseIdx < 0 || phraseIdx >= rows.length) return;
+                rows[phraseIdx].style.cssText = BASE_STYLE;
+            }}
+
+            function setPhraseActive(phraseIdx) {{
+                if (phraseIdx < 0 || phraseIdx >= rows.length) return;
+                rows[phraseIdx].style.cssText = BASE_STYLE + ACTIVE_STYLE;
+            }}
+
+            var lastActive = -1;
+
+            function onTimeUpdate() {{
+                // Find which audio is playing
+                var audio = null;
+                for (var i = 0; i < trackIds.length; i++) {{
+                    var el = document.getElementById(trackIds[i]);
+                    if (el && !el.paused) {{ audio = el; break; }}
+                }}
+                if (!audio) return;
+
+                var t = audio.currentTime;
+                if (timeEl) timeEl.textContent = t.toFixed(2) + " s";
+
+                var prevActive = lastActive;
+                var idx = findActive(t);
+
+                // Deactivate old
+                if (idx !== prevActive && prevActive >= 0) {{
+                    setPhraseInactive(prevActive);
+                }}
+                if (idx < 0) {{
+                    if (phraseEl) phraseEl.textContent = "--";
+                    lastActive = -1;
+                    return;
+                }}
+
+                var phraseChanged = idx !== prevActive;
+                if (phraseChanged) {{
+                    setPhraseActive(idx);
+                    if (phraseEl) {{
+                        phraseEl.textContent = "Phrase " + phrases[idx].idx;
+                    }}
+                }}
+
+                // Scroll when phrase changes so active row stays centered.
+                if (phraseChanged || prevActive === -1) {{
+                    var row = rows[idx];
+                    var targetTop = row.offsetTop - (listEl.clientHeight / 2) + (row.offsetHeight / 2);
+                    listEl.scrollTo({{ top: Math.max(0, targetTop), behavior: "smooth" }});
+                }}
+
+                lastActive = idx;
+            }}
+
+            // Bind to all audio timeupdate events
+            trackIds.forEach(function(id) {{
+                var el = document.getElementById(id);
+                if (el) el.addEventListener("timeupdate", onTimeUpdate);
+            }});
+        }})();
+        </script>
+    </section>
+    '''
+
+
 @dataclass
 class AnalysisStats:
     correction_summary: dict
@@ -1958,79 +2225,264 @@ def generate_analysis_report(
     accomp_id = "accomp-player"
     original_id = "original-player"
     
-    # Scrollable Plot HTML
-    scroll_plot_html = ""
-    if results.pitch_data_vocals:
-        # Generate the scrollable plot synced to vocals
-        try:
-            scroll_plot_html = create_scrollable_pitch_plot_html(
-                results.pitch_data_vocals,
-                tonic=results.detected_tonic or 0,
-                raga_name=stats.raga_name,
-                audio_element_ids=[original_id, vocals_id, accomp_id],
-                transcription_smoothing_ms=results.config.transcription_smoothing_ms,
-                transcription_min_duration=results.config.transcription_min_duration,
-                transcription_derivative_threshold=results.config.transcription_derivative_threshold
+    analysis_source_key = "original" if results.config.melody_source == "composite" else "vocals"
+    analysis_source_label = (
+        "Original Mix (Composite Pitch/Energy)"
+        if analysis_source_key == "original"
+        else "Vocals Stem (Separated Melody Pitch/Energy)"
+    )
+
+    vocals_pitch_data = results.pitch_data_stem
+    if vocals_pitch_data is None and results.config.melody_source == "separated":
+        vocals_pitch_data = results.pitch_data_vocals
+
+    original_pitch_data = results.pitch_data_composite
+    if original_pitch_data is None and results.config.melody_source == "composite":
+        original_pitch_data = results.pitch_data_vocals
+
+    track_specs = [
+        {
+            "key": "original",
+            "label": "Original Mix",
+            "audio_id": original_id,
+            "pitch_data": original_pitch_data,
+        },
+        {
+            "key": "vocals",
+            "label": "Vocals Stem",
+            "audio_id": vocals_id,
+            "pitch_data": vocals_pitch_data,
+        },
+        {
+            "key": "accompaniment",
+            "label": "Accompaniment",
+            "audio_id": accomp_id,
+            "pitch_data": results.pitch_data_accomp,
+        },
+    ]
+    available_tracks = [spec for spec in track_specs if spec["pitch_data"] is not None]
+    default_track_key = analysis_source_key if any(
+        spec["key"] == analysis_source_key for spec in available_tracks
+    ) else (available_tracks[0]["key"] if available_tracks else None)
+    default_energy_key = default_track_key
+
+    track_buttons_html = ""
+    energy_buttons_html = ""
+    track_panels_html = ""
+    track_switch_js = ""
+
+    if available_tracks:
+        track_button_parts = []
+        energy_button_parts = []
+        panel_parts = []
+        available_track_keys = [spec["key"] for spec in available_tracks]
+
+        # Always show the 3 energy-source buttons (disable unavailable ones).
+        for spec in track_specs:
+            key = spec["key"]
+            label = spec["label"]
+            is_available = key in available_track_keys
+            disabled_attr = "" if is_available else "disabled"
+            disabled_style = "" if is_available else "opacity:0.45; cursor:not-allowed;"
+            energy_button_parts.append(
+                f'<button type="button" id="energy-btn-{key}" data-energy-key="{key}" {disabled_attr} '
+                f'style="padding:8px 12px; border-radius:6px; border:1px solid #30363d; '
+                f'background:#21262d; color:#c9d1d9; cursor:pointer; {disabled_style}">{label}</button>'
             )
-        except Exception as e:
-            scroll_plot_html = f"<p>Error generating scrollable plot: {e}</p>"
 
-        interactive_player_html = ""
+        # Pre-generate standalone energy histogram per overlay source.
+        energy_visual_html_by_key: Dict[str, str] = {}
+        for e_spec in available_tracks:
+            e_key = e_spec["key"]
+            e_label = e_spec["label"]
+            e_pitch = e_spec["pitch_data"]
 
-        # 2. Energy Over Time
-        energy_time_html = ""
-        try:
-            energy_time_path = os.path.join(output_dir, "energy_over_time.png")
-            e_vals = results.pitch_data_vocals.energy
-            t_vals = results.pitch_data_vocals.timestamps
-            if len(e_vals) > 0 and len(t_vals) > 0:
-                plot_energy_over_time(
-                    t_vals,
-                    e_vals,
-                    energy_time_path,
-                    title="Vocal Energy Over Time"
-                )
-                e_time_rel = os.path.relpath(energy_time_path, output_dir)
-                energy_time_html = f'''
-                <div class="viz-container" style="margin-top: 20px;">
-                    <h3>Energy Over Time</h3>
-                    <img src="{e_time_rel}" style="width:100%; max-width:1000px;">
+            energy_histogram_html = "<p>No energy data available.</p>"
+            try:
+                e_vals = e_pitch.energy
+                if len(e_vals) > 0:
+                    energy_hist_path = os.path.join(output_dir, f"energy_histogram_{e_key}.png")
+                    plot_energy_distribution(
+                        e_vals,
+                        energy_hist_path,
+                        title=f"{e_label} Energy Distribution (Threshold: {results.config.energy_threshold})",
+                        threshold=results.config.energy_threshold
+                    )
+                    e_hist_rel = os.path.relpath(energy_hist_path, output_dir)
+                    energy_histogram_html = f'''
+                    <div class="stat-box" style="text-align: center; background: #0d1117; margin-top: 20px;">
+                        <h3>Energy Analysis ({e_label})</h3>
+                        <img src="{e_hist_rel}" style="max-width: 100%; border-radius: 6px;">
+                    </div>
+                    '''
+            except Exception as e:
+                energy_histogram_html = f"<p>Error generating energy histogram for {e_label}: {e}</p>"
+
+            energy_visual_html_by_key[e_key] = energy_histogram_html
+
+        for spec in available_tracks:
+            key = spec["key"]
+            label = spec["label"]
+            audio_id = spec["audio_id"]
+            pitch_data = spec["pitch_data"]
+            panel_visible = (key == default_track_key)
+
+            track_button_parts.append(
+                f'<button type="button" id="track-btn-{key}" data-track-key="{key}" '
+                f'style="padding:8px 12px; border-radius:6px; border:1px solid #30363d; '
+                f'background:#21262d; color:#c9d1d9; cursor:pointer;">{label}</button>'
+            )
+
+            overlay_parts = []
+            for e_spec in available_tracks:
+                e_key = e_spec["key"]
+                e_label = e_spec["label"]
+                e_pitch = e_spec["pitch_data"]
+                overlay_visible = (key == default_track_key and e_key == default_energy_key)
+
+                try:
+                    scroll_plot_html = create_scrollable_pitch_plot_html(
+                        pitch_data,
+                        tonic=results.detected_tonic or 0,
+                        raga_name=stats.raga_name,
+                        audio_element_ids=[original_id, vocals_id, accomp_id],
+                        transcription_smoothing_ms=results.config.transcription_smoothing_ms,
+                        transcription_min_duration=results.config.transcription_min_duration,
+                        transcription_derivative_threshold=results.config.transcription_derivative_threshold,
+                        show_rms_overlay=getattr(results.config, 'show_rms_overlay', True),
+                        overlay_energy=e_pitch.energy,
+                        overlay_timestamps=e_pitch.timestamps,
+                        overlay_label=f"{e_label} RMS",
+                    )
+                except Exception as e:
+                    scroll_plot_html = (
+                        f"<p>Error generating scrollable plot for pitch={label}, overlay={e_label}: {e}</p>"
+                    )
+
+                overlay_parts.append(f'''
+                <div class="energy-overlay-panel" id="overlay-panel-{key}-{e_key}" data-track-key="{key}" data-energy-key="{e_key}" style="display: {'block' if overlay_visible else 'none'};">
+                    <h3>Pitch: {label} | Amplitude Overlay: {e_label}</h3>
+                    <p style="font-size: 0.9em; color: #8b949e;">Pitch stays on <strong>{label}</strong>. Energy overlay is from <strong>{e_label}</strong>.</p>
+                    {scroll_plot_html}
                 </div>
-                '''
-            else:
-                energy_time_html = "<p>No energy data available.</p>"
-        except Exception as e:
-            energy_time_html = f"<p>Error generating energy plot: {e}</p>"
+                ''')
 
-        # 3. Energy Histogram
-        energy_histogram_html = ""
-        try:
-            energy_hist_path = os.path.join(output_dir, "energy_histogram.png")
-            # Filter valid energy values (remove -1 or 0 placeholders if any, though sanitized are 0-1)
-            e_vals = results.pitch_data_vocals.energy
-            if len(e_vals) > 0:
-                plot_energy_distribution(
-                    e_vals, 
-                    energy_hist_path, 
-                    title=f"Vocal Energy Distribution (Threshold: {results.config.energy_threshold})",
-                    threshold=results.config.energy_threshold
-                )
-                e_hist_rel = os.path.relpath(energy_hist_path, output_dir)
-                energy_histogram_html = f'''
-                <div class="stat-box" style="text-align: center; background: #0d1117; margin-top: 20px;">
-                    <h3>Energy Analysis</h3>
-                    <p style="font-size:0.9em; color:#8b949e">Distribution of RMS energy. Used to filter silence/noise.</p>
-                    <img src="{e_hist_rel}" style="max-width: 100%; border-radius: 6px;">
-                </div>
-                '''
-            else:
-                energy_histogram_html = "<p>No energy data available.</p>"
-        except Exception as e:
-             energy_histogram_html = f"<p>Error generating energy plot: {e}</p>"
+            panel_parts.append(f'''
+            <div class="track-analysis-panel" id="track-panel-{key}" data-track-key="{key}" style="display: {'block' if panel_visible else 'none'};">
+                {"".join(overlay_parts)}
+            </div>
+            ''')
+
+        if len(track_button_parts) > 1:
+            track_buttons_html = f'''
+            <p style="font-size: 0.86em; color: #8b949e; margin: 4px 0 6px 0;">Pitch Track (what contour is shown):</p>
+            <div id="track-analysis-selector" style="display:flex; flex-wrap:wrap; gap:8px; margin: 10px 0 16px 0;">
+                {"".join(track_button_parts)}
+            </div>
+            '''
+        if energy_button_parts:
+            energy_buttons_html = f'''
+            <p style="font-size: 0.86em; color: #8b949e; margin: 0 0 6px 0;">Amplitude Overlay Source (independent):</p>
+            <div id="energy-overlay-selector" style="display:flex; flex-wrap:wrap; gap:8px; margin: 0 0 16px 0;">
+                {"".join(energy_button_parts)}
+            </div>
+            '''
+        track_panels_html = "".join(panel_parts)
+
+        track_to_audio = {spec["key"]: spec["audio_id"] for spec in available_tracks}
+        track_switch_js = f"""
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {{
+            var availableTrackKeys = {json.dumps(available_track_keys)};
+            var availableEnergyKeys = {json.dumps(available_track_keys)};
+            var trackToAudio = {json.dumps(track_to_audio)};
+            var defaultTrack = {json.dumps(default_track_key)};
+            var defaultEnergy = {json.dumps(default_energy_key)};
+            var currentTrack = defaultTrack;
+            var currentEnergy = defaultEnergy;
+
+            function setActiveTrackButton(trackKey) {{
+                availableTrackKeys.forEach(function(key) {{
+                    var btn = document.getElementById("track-btn-" + key);
+                    if (!btn) return;
+                    if (key === trackKey) {{
+                        btn.style.background = "#e94560";
+                        btn.style.color = "#ffffff";
+                        btn.style.borderColor = "#e94560";
+                    }} else {{
+                        btn.style.background = "#21262d";
+                        btn.style.color = "#c9d1d9";
+                        btn.style.borderColor = "#30363d";
+                    }}
+                }});
+            }}
+
+            function setActiveEnergyButton(energyKey) {{
+                availableEnergyKeys.forEach(function(key) {{
+                    var btn = document.getElementById("energy-btn-" + key);
+                    if (!btn || btn.disabled) return;
+                    if (key === energyKey) {{
+                        btn.style.background = "#238636";
+                        btn.style.color = "#ffffff";
+                        btn.style.borderColor = "#238636";
+                    }} else {{
+                        btn.style.background = "#21262d";
+                        btn.style.color = "#c9d1d9";
+                        btn.style.borderColor = "#30363d";
+                    }}
+                }});
+            }}
+
+            function showOverlay(trackKey, energyKey) {{
+                var resolvedEnergy = availableEnergyKeys.indexOf(energyKey) >= 0 ? energyKey : availableEnergyKeys[0];
+                availableEnergyKeys.forEach(function(eKey) {{
+                    var panel = document.getElementById("overlay-panel-" + trackKey + "-" + eKey);
+                    if (panel) {{
+                        panel.style.display = (eKey === resolvedEnergy) ? "block" : "none";
+                    }}
+                }});
+                currentEnergy = resolvedEnergy;
+                setActiveEnergyButton(currentEnergy);
+            }}
+
+            function showTrackPanel(trackKey) {{
+                availableTrackKeys.forEach(function(key) {{
+                    var panel = document.getElementById("track-panel-" + key);
+                    if (panel) {{
+                        panel.style.display = (key === trackKey) ? "block" : "none";
+                    }}
+                }});
+                currentTrack = trackKey;
+                setActiveTrackButton(trackKey);
+                showOverlay(trackKey, currentEnergy);
+            }}
+
+            availableTrackKeys.forEach(function(key) {{
+                var btn = document.getElementById("track-btn-" + key);
+                if (btn) {{
+                    btn.addEventListener("click", function() {{
+                        showTrackPanel(key);
+                    }});
+                }}
+            }});
+
+            availableEnergyKeys.forEach(function(key) {{
+                var btn = document.getElementById("energy-btn-" + key);
+                if (btn && !btn.disabled) {{
+                    btn.addEventListener("click", function() {{
+                        showOverlay(currentTrack, key);
+                    }});
+                }}
+            }});
+
+            if (defaultTrack) {{
+                showTrackPanel(defaultTrack);
+            }}
+        }});
+        </script>
+        """
     else:
-        interactive_player_html = ""
-        energy_time_html = ""
-        energy_histogram_html = ""
+        track_panels_html = "<p>No pitch data available for interactive analysis.</p>"
 
     # Transcription html
     transcription_html = _generate_transcription_section(
@@ -2038,6 +2490,16 @@ def generate_analysis_report(
         results.phrases,
         results.detected_tonic or 0
     )
+
+    # Karaoke scrolling transcription
+    karaoke_html = ""
+    if results.phrases:
+        tonic_for_karaoke = results.detected_tonic or 0
+        karaoke_html = _generate_karaoke_section(
+            results.phrases,
+            tonic_for_karaoke,
+            audio_element_ids=[original_id, vocals_id, accomp_id],
+        )
     
     # Pattern Analysis HTML (Motifs + Aaroh/Avroh)
     pattern_html = ""
@@ -2158,7 +2620,7 @@ def generate_analysis_report(
                         <audio id="{original_id}" controls src="{original_rel}" style="width:100%"></audio>
                     </div>
                     <div>
-                        <p><strong>Vocals (Analysis Source)</strong></p>
+                        <p><strong>Vocals Stem</strong></p>
                         <audio id="{vocals_id}" controls src="{vocals_rel}" style="width:100%"></audio>
                     </div>
                     <div>
@@ -2167,17 +2629,14 @@ def generate_analysis_report(
                     </div>
                 </div>
                 
-                
-                <!-- Scrollable Plot -->
-                <h3>Static Pitch Analysis (High-Res, Synced)</h3>
-                <p style="font-size: 0.9em; color: #8b949e;">Scroll horizontally or play audio to follow the analysis. Color-coded by octave.</p>
-                {scroll_plot_html}
-                
-                <!-- Energy Over Time -->
-                {energy_time_html}
-
-                <!-- Energy Histogram -->
-                {energy_histogram_html}
+                <p style="font-size: 0.9em; color: #8b949e;">
+                    Analysis source for note detection: <strong>{analysis_source_label}</strong>.
+                    Pitch track and amplitude overlay are controlled by the selectors below. Audio playback only moves the playhead/cursor.
+                </p>
+                {track_buttons_html}
+                {energy_buttons_html}
+                {track_panels_html}
+                {karaoke_html}
             </section>
 
             {correction_html}
@@ -2194,6 +2653,7 @@ def generate_analysis_report(
         <footer>
             <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
         </footer>
+        {track_switch_js}
     </body>
     </html>
     """

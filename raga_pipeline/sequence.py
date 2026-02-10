@@ -456,7 +456,7 @@ def detect_stationary_points(
         
         # Calculate mean energy
         region_energy_indices = voiced_indices[start_idx:end_idx]
-        if len(pitch_data.energy) > 0 and len(pitch_data.energy) >= max(region_energy_indices):
+        if len(region_energy_indices) > 0 and len(pitch_data.energy) > int(np.max(region_energy_indices)):
             # Safe access
             try:
                 mean_energy = float(np.mean(pitch_data.energy[region_energy_indices]))
@@ -675,6 +675,107 @@ def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tole
             
     merged.append(current_note)
     return merged
+
+
+def split_phrases_by_silence(
+    phrases: List[Phrase],
+    energy: np.ndarray,
+    timestamps: np.ndarray,
+    silence_threshold: float = 0.05,
+    silence_min_duration: float = 0.25,
+) -> List[Phrase]:
+    """
+    Re-split existing phrases at points where vocal RMS energy drops below a
+    threshold for a sustained period.  This captures breath pauses and rests
+    that gap-based splitting may miss when the pitch tracker keeps voicing
+    active through low-energy regions.
+
+    Args:
+        phrases: Pre-detected phrases (from gap-based detection).
+        energy: Full-length normalised RMS array aligned to *timestamps*.
+        timestamps: Full-length time axis matching *energy*.
+        silence_threshold: Fraction of peak energy below which a frame is
+            considered silent (e.g. 0.05 = 5 %).
+        silence_min_duration: Minimum consecutive seconds of silence required
+            to trigger a phrase break.
+
+    Returns:
+        New list of Phrase objects with additional splits inserted.
+    """
+    if silence_threshold <= 0 or len(energy) == 0 or len(timestamps) == 0:
+        return phrases
+
+    length = min(len(energy), len(timestamps))
+    energy = np.asarray(energy[:length], dtype=float)
+    ts = np.asarray(timestamps[:length], dtype=float)
+
+    # Boolean mask: True where energy is below the threshold
+    is_silent = energy < silence_threshold
+
+    new_phrases: List[Phrase] = []
+
+    for phrase in phrases:
+        if len(phrase.notes) < 2:
+            new_phrases.append(phrase)
+            continue
+
+        # Find silence regions that fall *within* this phrase's time span
+        p_start = phrase.notes[0].start
+        p_end = phrase.notes[-1].end
+
+        # Indices in the global time array that overlap with this phrase
+        mask = (ts >= p_start) & (ts <= p_end) & is_silent
+
+        if not np.any(mask):
+            new_phrases.append(phrase)
+            continue
+
+        # Detect contiguous silent runs that exceed min duration
+        silent_indices = np.where(mask)[0]
+        if len(silent_indices) == 0:
+            new_phrases.append(phrase)
+            continue
+
+        # Group consecutive indices
+        breaks_in_silence = np.where(np.diff(silent_indices) > 1)[0]
+        runs: list = []
+        run_start = 0
+        for b in breaks_in_silence:
+            runs.append((silent_indices[run_start], silent_indices[b]))
+            run_start = b + 1
+        runs.append((silent_indices[run_start], silent_indices[-1]))
+
+        # Keep only runs whose duration >= silence_min_duration
+        split_times: List[float] = []
+        for ri, rf in runs:
+            dur = ts[rf] - ts[ri]
+            if dur >= silence_min_duration:
+                # Use the midpoint of the silence region as the split point
+                split_times.append((ts[ri] + ts[rf]) / 2.0)
+
+        if not split_times:
+            new_phrases.append(phrase)
+            continue
+
+        # Split the phrase's note list at each split_time
+        remaining_notes = list(phrase.notes)
+        for st in sorted(split_times):
+            left: List[Note] = []
+            right: List[Note] = []
+            for n in remaining_notes:
+                mid = (n.start + n.end) / 2.0
+                if mid < st:
+                    left.append(n)
+                else:
+                    right.append(n)
+            if left:
+                new_phrases.append(Phrase(notes=left))
+            remaining_notes = right
+
+        if remaining_notes:
+            new_phrases.append(Phrase(notes=remaining_notes))
+
+    return new_phrases
 
 
 def detect_phrases(

@@ -9,7 +9,10 @@
 - [x] Add optional GMM bias rotation and mass-gated scoring
 - [x] Default batch `--ground-truth` to `<input_dir>_gt.csv` stored alongside the input directory
 - [x] Save separated stems as MP3 (with legacy WAV fallback)
-- [ ] Implement scrollable karaoke-style text transcription overlay
+- [x] Implement scrollable karaoke-style text transcription overlay
+- [x] Add optional RMS overlay on pitch plots in reports
+- [x] Split phrases using silence thresholds from RMS energy
+- [x] Update README CLI flags for energy overlay and silence splitting
 - [ ] Add CLI flags to expose `cluster_notes_into_phrases` parameters (method, threshold, etc.)
 - [ ] Tune energy-based gating for different instrument types (sitar vs vocal)
 - [ ] Refactor and clean up redundancies in `raga_pipeline/sequence.py` (legacy transition matrices, overlapping note detection methods, duplicate sargam logic)

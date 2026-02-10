@@ -72,10 +72,21 @@ class PipelineConfig:
     transcription_min_duration: float = 0.02 # Min duration for stationary notes (20ms)
     transcription_derivative_threshold: float = 4.0 # Stability threshold (semitones/sec)
     energy_threshold: float = 0.0 # Normalized energy threshold (0-1) for filtering
+    energy_metric: str = "rms"  # 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-normalised)
 
     # Phrase detection parameters
     phrase_max_gap: float = 1.0           # Max silence between notes in phrase
     phrase_min_length: int = 13            # Minimum notes per phrase
+
+    # Silence-based phrase splitting (RMS energy)
+    # When > 0, phrases are additionally split at points where vocal RMS
+    # drops below this fraction of the track's peak energy for at least
+    # silence_min_duration seconds.
+    silence_threshold: float = 0.0        # 0 = disabled; 0.05 = 5% of peak energy
+    silence_min_duration: float = 0.25    # Min consecutive low-energy seconds to count as silence
+
+    # RMS overlay on pitch plots
+    show_rms_overlay: bool = True         # Show energy trace on pitch analysis plots
 
     # ml params (currently unused)
     use_ml_model: bool = False  # Disabled per migration plan
@@ -244,6 +255,16 @@ def load_config_from_cli() -> PipelineConfig:
                                 help="Max pitch change (semitones/sec) to be considered stable.")
     analyze_parser.add_argument("--energy-threshold", type=float, default=0.0,
                                 help="Energy threshold (0.0-1.0) for filtering unvoiced segments.")
+    analyze_parser.add_argument("--energy-metric", choices=["rms", "log_amp"],
+                                default="rms",
+                                help="Energy metric: 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-scaled). "
+                                     "log_amp gives better dynamic range for quiet passages.")
+    analyze_parser.add_argument("--silence-threshold", type=float, default=0.0,
+                                help="RMS energy threshold (0.0-1.0) for silence-based phrase splitting. 0 disables.")
+    analyze_parser.add_argument("--silence-min-duration", type=float, default=0.25,
+                                help="Minimum silence duration (seconds) to trigger a phrase break.")
+    analyze_parser.add_argument("--no-rms-overlay", action="store_true",
+                                help="Disable RMS energy overlay on pitch analysis plots.")
     analyze_parser.add_argument("--no-smoothing", action="store_true", help="Disable transcription smoothing")
 
     # --- Root Parser (Legacy support - defaults to detect) ---
@@ -285,6 +306,10 @@ def load_config_from_cli() -> PipelineConfig:
         transcription_min_duration=getattr(args, 'transcription_min_duration', 0.02),
         transcription_derivative_threshold=getattr(args, 'transcription_stability_threshold', 4.0),
         energy_threshold=getattr(args, 'energy_threshold', 0.0),
+        energy_metric=getattr(args, 'energy_metric', 'rms'),
+        silence_threshold=getattr(args, 'silence_threshold', 0.0),
+        silence_min_duration=getattr(args, 'silence_min_duration', 0.25),
+        show_rms_overlay=not getattr(args, 'no_rms_overlay', False),
         melody_source=getattr(args, 'melody_source', "separated"),
         fmin_note=getattr(args, 'fmin_note', "G1"),
         fmax_note=getattr(args, 'fmax_note', "C6"),

@@ -232,7 +232,8 @@ def process_directory(input_dir: str, ground_truth_path: Optional[str] = None, o
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
-                    bufsize=1  # Line buffered
+                    bufsize=1,  # Line buffered
+                    env=os.environ  # Inherit full environment including PATH
                 )
 
                 if process.stdout is None:

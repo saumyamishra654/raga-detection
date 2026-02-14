@@ -51,6 +51,7 @@ results/
 
 # Stem separation output (intermediate files)
 htdemucs/
+spleeter/
 mdx/
 mdx_extra/
 mdx_q/

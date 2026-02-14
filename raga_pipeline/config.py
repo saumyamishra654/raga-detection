@@ -25,6 +25,8 @@ class PipelineConfig:
     yt_url: Optional[str] = None
     audio_dir: Optional[str] = None
     filename_override: Optional[str] = None
+    preprocess_start_time: Optional[str] = None
+    preprocess_end_time: Optional[str] = None
 
     # separator settings
     separator_engine: str = "demucs"  # 'demucs' or 'spleeter'
@@ -305,6 +307,10 @@ def load_config_from_cli() -> PipelineConfig:
                                    help="Directory where downloaded MP3 should be saved")
     preprocess_parser.add_argument("--filename", required=True,
                                    help="Output filename base (without extension); saved as <filename>.mp3")
+    preprocess_parser.add_argument("--start-time",
+                                   help="Optional trim start time (SS, MM:SS, or HH:MM:SS)")
+    preprocess_parser.add_argument("--end-time",
+                                   help="Optional trim end time (SS, MM:SS, or HH:MM:SS)")
     preprocess_parser.add_argument("--output", "-o", default="batch_results",
                                    help="Default detect output directory suggestion for next-step command")
 
@@ -332,6 +338,8 @@ def load_config_from_cli() -> PipelineConfig:
         yt_url=getattr(args, 'yt', None),
         audio_dir=getattr(args, 'audio_dir', None),
         filename_override=getattr(args, 'filename', None),
+        preprocess_start_time=getattr(args, 'start_time', None),
+        preprocess_end_time=getattr(args, 'end_time', None),
         separator_engine=getattr(args, 'separator', 'demucs'),
         demucs_model=getattr(args, 'demucs_model', 'htdemucs'),
         source_type=getattr(args, 'source_type', 'mixed'),

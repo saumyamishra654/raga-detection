@@ -16,7 +16,7 @@ A robust, pipeline-based system for automatic Hindustani raga identification and
     *   **Bidirectional Navigation**: Click-to-seek functionality (Plot -> Audio) and a real-time cursor that follows the audio playback (Audio -> Plot).
     *   **Energy Analysis**: Visual distribution of note energy to help fine-tune transcription accuracy.
     *   **Dynamic Scaling**: Visualizations automatically adapt to the singer's vocal range.
-*   **Technical Primer**: A multi-page [Technical Case Study](primer/index.html) explaining the system's inner workings for developers.
+*   **Docs**: See `raga_pipeline/DOCUMENTATION.md` for the full CLI reference and output layout.
 
 ---
 
@@ -44,6 +44,8 @@ A robust, pipeline-based system for automatic Hindustani raga identification and
 
 The project is designed to be run via the `run_pipeline.sh` script, which handles environment activation and path setup. The pipeline supports three modes: **Preprocess**, **Detect**, and **Analyze**.
 
+Note: `run_pipeline.sh` assumes a Conda environment named `raga` and a Conda install at `/opt/miniconda3`. If that does not match your machine, activate your environment manually and run `python driver.py ...` with the same arguments.
+
 ### Mode 0: Preprocess (`preprocess`)
 
 Downloads audio from YouTube and saves it locally as an MP3 so it can be used by `detect` and `analyze`.
@@ -51,10 +53,22 @@ Downloads audio from YouTube and saves it locally as an MP3 so it can be used by
 ```bash
 ./run_pipeline.sh preprocess \
     --yt "https://www.youtube.com/watch?v=..." \
-    --filename "my_song_name"
+    --filename "my_song_name" \
+    --start-time "0:30" \
+    --end-time "2:00"
 ```
 
 `--audio-dir` defaults to `../audio_test_files` (you can override it when needed).
+
+`--start-time` and `--end-time` are optional. If omitted, preprocess defaults to full track (`0:00` to track end). Time format supports `SS`, `MM:SS`, or `HH:MM:SS`.
+
+Prerequisites:
+- `ffmpeg` and `ffprobe` available in `PATH`
+- Python package `yt-dlp` installed (imported as `yt_dlp`)
+
+Validation rules:
+- `start-time < end-time`
+- both times must be within track duration
 
 This mode saves `../audio_test_files/my_song_name.mp3` by default and prints a copyable `detect` command for the next step.
 
@@ -75,24 +89,32 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 ```
 
 **Common Options:**
-*   `--output`: Defaults to `./results` (optional).
+*   `--output`: Parent output directory. Defaults to `batch_results`.
+    - Outputs are written under `<output>/<demucs-model>/<audio_filename>/...` (or `<output>/spleeter/<audio_filename>/...`).
 *   `--source-type`: `mixed` (default), `vocal`, or `instrumental`.
-*   `--melody-source`: `separated` (default) or `composite`. Use `composite` for instrumental recordings with poor stem separation.
+    - If `--vocalist-gender` is provided, `--source-type` is auto-set to `vocal`.
+*   `--melody-source`: `separated` (default) or `composite`. Use `composite` when the separated melody stem is unreliable.
 *   `--vocalist-gender`: When provided, `--source-type` is auto-set to `vocal`.
+*   `--instrument-type`: Instrument type hint for tonic biasing in instrumental mode (default: `autodetect`).
 *   `--separator`: `demucs` (default) or `spleeter`.
+*   `--demucs-model`: Demucs model name (default: `htdemucs`).
 *   `--fmin-note` / `--fmax-note`: Override default pitch extraction range (e.g. `G1` to `C6`).
-*   `--prominence-high` / `--prominence-low`: Fine-tune peak detection sensitivity.
-*   `--bias-rotation`: Rotate histograms by median GMM deviation before scoring/plots.
-*   `--no-rms-overlay`: Disable the RMS/log-amplitude energy overlay on pitch plots in HTML reports.
+*   `--vocal-confidence` / `--accomp-confidence`: Confidence thresholds (0-1) for pitch extraction.
+*   `--prominence-high` / `--prominence-low`: Fine-tune peak detection sensitivity (factors applied to prominence thresholds).
+*   `--bias-rotation`: Disable histogram bias rotation (bias rotation is enabled by default).
+*   `--force` / `-f`: Force pitch recomputation (stems are reused if present).
+*   `--raga-db`: Override path to the raga database CSV.
 *   `--tonic`: Constrain scoring to one or more tonics (comma-separated, e.g. `C,D#`).
 *   `--raga`: Constrain scoring to a specific raga name.
 
 **Output:**
-*   `detection_report.html`: Summary of detected candidates.
-*   `candidates.csv`: Ranked list of likely ragas.
-*   `stationary_note_histogram_duration_weighted.png`: Same octave-wrapped 12-bin histogram, but each note is weighted by total stationary duration.
-*   `stationary_note_histogram_duration_weighted.csv`: Octave-wrapped 12-column duration totals (seconds) used by the weighted stationary-note histogram.
-*   Pitch data and stems saved in `results/htdemucs/<song_name>/` (stems are saved as MP3).
+*   Written under `<output>/<demucs-model>/<song_name>/` (or `<output>/spleeter/<song_name>/`):
+    *   `detection_report.html`: Summary report for Phase 1.
+    *   `candidates.csv`: Ranked list of likely ragas/tonics.
+    *   `histogram_melody.png`, `histogram_accompaniment.png`: Pitch distribution histograms.
+    *   `stationary_note_histogram_duration_weighted.png` and `stationary_note_histogram_duration_weighted.csv`: Duration-weighted stationary-note distribution (12 fixed pitch classes, octave-wrapped).
+    *   Cached pitch CSVs (e.g. `composite_pitch_data.csv`, `melody_pitch_data.csv` or `vocals_pitch_data.csv`, `accompaniment_pitch_data.csv`).
+    *   Stems (`vocals.mp3`, `accompaniment.mp3`).
 
 ### Phase 2: Analysis (`analyze`)
 
@@ -105,23 +127,56 @@ Performs deep sequence analysis, phrasing, and generating the interactive report
   --raga "Bhairavi"
 ```
 
+Important:
+- The subcommand is spelled `analyze` (not `analyse`).
+- `analyze` expects cached pitch data in the output stem directory. Run `detect` first with the same `--audio`, `--output`, `--separator`, and `--demucs-model`.
+
 **Output:**
-*   `analysis_report.html`: The **Final Report** featuring:
+*   `analysis_report.html`: The Phase 2 report featuring:
     *   Interactive, scrollable pitch plot with audio sync.
     *   Phrase analysis and common motifs.
     *   Raga correction statistics.
     *   Transition matrices.
 
 **Analyze Options:**
+*   `--keep-impure-notes`: Keep notes not in the raga (default behavior is to discard them during correction).
+*   `--transcription-smoothing-ms`: Transcription smoothing sigma (ms). Use `0` to disable.
+*   `--transcription-min-duration`: Minimum duration (s) for a transcribed note (default: `0.02`).
+*   `--transcription-stability-threshold`: Max pitch change (semitones/sec) to be considered stable (default: `4.0`).
 *   `--energy-metric`: `rms` (peak-normalized, default) or `log_amp` (dBFS with percentile normalization).
 *   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes. Default: 0.0.
-*   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10.
+*   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10 (set `0` to disable).
 *   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases. Default: 0.25.
-*   **Snapping behavior**: Notes are snapped to the nearest chromatic target by default. In raga mode, if the nearest chromatic target is outside the raga, the second-closest target is used if it is inside the raga; otherwise the note is skipped.
+*   `--no-rms-overlay`: Disable the energy overlay on pitch plots in the HTML report.
+*   `--no-smoothing`: Force transcription smoothing off (equivalent to `--transcription-smoothing-ms 0`).
+*   Snapping behavior: Transcription uses chromatic snapping internally; raga correction then removes or keeps non-raga notes depending on `--keep-impure-notes`.
 
 ### Batch Processing
 
-Batch mode walks a directory of `.mp3`, `.wav`, `.flac`, or `.m4a` files and runs `run_pipeline.sh` on each one. The script now defaults to storing the ground-truth CSV alongside the input directory using the directory name (for example, `audio_test_files_gt.csv`). Run `python -m raga_pipeline.batch <audio_dir> --init-csv` from the project root to create that file, then rerun without `--init-csv` to process the directory; the batch tool will also read the same directory-level CSV unless you override `--ground-truth`.
+Batch mode walks a directory of `.mp3`, `.wav`, `.flac`, or `.m4a` files and runs `run_pipeline.sh` on each one.
+
+```bash
+# 1) Create a blank ground-truth CSV inside the input directory:
+python -m raga_pipeline.batch /path/to/audio_dir --init-csv
+
+# This creates: /path/to/audio_dir/<audio_dir_name>_gt.csv
+# Fill in at least `raga` and `tonic` for files you want to run in analyze mode.
+
+# 2) Run batch processing (auto mode):
+python -m raga_pipeline.batch /path/to/audio_dir
+
+# Force detect-only (ignores ground truth):
+python -m raga_pipeline.batch /path/to/audio_dir --mode detect
+```
+
+Batch options:
+*   `--ground-truth` / `-g`: Ground truth CSV path (default: auto-detected as described above).
+*   `--output` / `-o`: Output directory (default: `<repo>/batch_results`).
+*   `--silent` / `-s`: Suppress console output; logs are still written.
+
+Outputs:
+*   Per-file logs: `<output>/logs/<filename>.log`
+*   Per-file pipeline outputs: `<output>/<demucs-model>/<song_name>/...`
 
 ---
 
@@ -133,7 +188,7 @@ Batch mode walks a directory of `.mp3`, `.wav`, `.flac`, or `.m4a` files and run
     *   `audio.py`, `raga.py`, `analysis.py`: Core processing modules.
 *   **`driver.py`**: Main entry point script.
 *   **`run_pipeline.sh`**: Helper script to run the driver in the correct environment.
-*   **`results/`**: Directory where all pipeline outputs are stored.
+*   **`batch_results/`**: Default directory where pipeline outputs are stored.
 *   **`main notebooks/`**: (Legacy) Original research notebooks. Use the pipeline for production tasks.
 
 ---

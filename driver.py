@@ -111,6 +111,8 @@ def run_pipeline(
         print(f"YouTube URL: {config.yt_url}")
         print(f"Audio Dir: {config.audio_dir}")
         print(f"Filename: {config.filename_override}.mp3")
+        print(f"Start Time: {config.preprocess_start_time or '0:00'}")
+        print(f"End Time: {config.preprocess_end_time or 'track end'}")
         print()
 
         try:
@@ -118,6 +120,8 @@ def run_pipeline(
                 yt_url=config.yt_url or "",
                 audio_dir=config.audio_dir or "",
                 filename_base=config.filename_override or "",
+                start_time=config.preprocess_start_time,
+                end_time=config.preprocess_end_time,
             )
         except Exception as exc:
             print(f"[PREPROCESS] ERROR: {exc}")

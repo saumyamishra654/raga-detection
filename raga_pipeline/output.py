@@ -919,7 +919,7 @@ def generate_html_report(
         getattr(results.config, "melody_source", "separated") == "composite"
         and results.pitch_data_composite is not None
     )
-    analysis_audio_path = results.config.audio_path if analysis_uses_composite else results.config.vocals_path
+    analysis_audio_path = _require_audio_path(results.config) if analysis_uses_composite else results.config.vocals_path
     analysis_track_label = "Composite Analysis" if analysis_uses_composite else "Vocals Analysis"
 
     # Get audio duration
@@ -1228,8 +1228,9 @@ def _generate_audio_players_section(results: AnalysisResults) -> str:
     # Get relative paths from stem_dir
     vocals_rel = os.path.basename(config.vocals_path)
     accomp_rel = os.path.basename(config.accompaniment_path)
-    original_rel = os.path.relpath(config.audio_path, config.stem_dir)
-    original_local = os.path.basename(config.audio_path)
+    original_audio_path = _require_audio_path(config)
+    original_rel = os.path.relpath(original_audio_path, config.stem_dir)
+    original_local = os.path.basename(original_audio_path)
     original_sources = _build_audio_source_tags(original_local, original_rel)
     vocals_sources = _build_audio_source_tags(vocals_rel, vocals_rel)
     accomp_sources = _build_audio_source_tags(accomp_rel, accomp_rel)
@@ -1275,6 +1276,13 @@ def _build_audio_source_tags(primary_path: str, secondary_path: Optional[str] = 
         source_tags.append(f'<source src="{path}" type="{mime_type}">')
 
     return "".join(source_tags)
+
+
+def _require_audio_path(config: PipelineConfig) -> str:
+    """Return a concrete audio path for report-generation paths that require local audio."""
+    if not config.audio_path:
+        raise ValueError("Audio path is required for report generation but is missing.")
+    return config.audio_path
 
 
 def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], tonic: int) -> str:
@@ -2422,12 +2430,13 @@ def generate_analysis_report(
     report_path = os.path.join(output_dir, "analysis_report.html")
     
     # Relative paths for audio assets
+    original_audio_path = _require_audio_path(results.config)
     vocals_rel = os.path.relpath(results.config.vocals_path, output_dir)
     accomp_rel = os.path.relpath(results.config.accompaniment_path, output_dir)
-    original_rel = os.path.relpath(results.config.audio_path, output_dir)
+    original_rel = os.path.relpath(original_audio_path, output_dir)
     vocals_local = os.path.basename(results.config.vocals_path)
     accomp_local = os.path.basename(results.config.accompaniment_path)
-    original_local = os.path.basename(results.config.audio_path)
+    original_local = os.path.basename(original_audio_path)
 
     original_sources = _build_audio_source_tags(original_local, original_rel)
     vocals_sources = _build_audio_source_tags(vocals_local, vocals_rel)

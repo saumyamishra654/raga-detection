@@ -98,10 +98,108 @@ def _sanitize_filename_base(filename_base: str) -> str:
     return sanitized
 
 
+def _parse_time_to_seconds(value: str) -> float:
+    """Parse time text into seconds. Supports SS, MM:SS, HH:MM:SS."""
+    raw = value.strip()
+    if not raw:
+        raise ValueError("Time value cannot be empty.")
+
+    parts = raw.split(":")
+    if len(parts) == 1:
+        try:
+            seconds = float(parts[0])
+        except ValueError as exc:
+            raise ValueError(f"Invalid time value: {value}") from exc
+        if seconds < 0:
+            raise ValueError(f"Time must be non-negative: {value}")
+        return seconds
+
+    if len(parts) > 3:
+        raise ValueError(f"Invalid time format: {value}")
+
+    try:
+        nums = [float(p) for p in parts]
+    except ValueError as exc:
+        raise ValueError(f"Invalid time format: {value}") from exc
+
+    if any(p < 0 for p in nums):
+        raise ValueError(f"Time must be non-negative: {value}")
+
+    if len(nums) == 2:
+        minutes, seconds = nums
+        return minutes * 60 + seconds
+
+    hours, minutes, seconds = nums
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def _get_audio_duration_seconds(audio_path: str) -> float:
+    """Get audio duration in seconds using ffprobe."""
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        raise RuntimeError("ffprobe is required for duration checks but was not found in PATH.")
+
+    proc = subprocess.run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            audio_path,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    duration_txt = proc.stdout.strip()
+    if not duration_txt:
+        raise RuntimeError(f"Failed to read audio duration: {audio_path}")
+    return float(duration_txt)
+
+
+def _trim_audio_segment(audio_path: str, start_s: float, end_s: float) -> None:
+    """Trim an audio file in-place to [start_s, end_s]."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError("ffmpeg is required for trimming but was not found in PATH.")
+
+    temp_path = f"{audio_path}.trim.tmp.mp3"
+    try:
+        subprocess.run(
+            [
+                ffmpeg,
+                "-y",
+                "-loglevel",
+                "error",
+                "-ss",
+                f"{start_s:.3f}",
+                "-to",
+                f"{end_s:.3f}",
+                "-i",
+                audio_path,
+                "-codec:a",
+                "libmp3lame",
+                "-q:a",
+                "2",
+                temp_path,
+            ],
+            check=True,
+        )
+        os.replace(temp_path, audio_path)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
 def download_youtube_audio(
     yt_url: str,
     audio_dir: str,
     filename_base: str,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
 ) -> str:
     """
     Download audio from YouTube and save as MP3.
@@ -110,6 +208,8 @@ def download_youtube_audio(
         yt_url: YouTube URL
         audio_dir: Target directory where MP3 should be saved
         filename_base: Output filename base (without extension)
+        start_time: Optional trim start time (SS, MM:SS, or HH:MM:SS)
+        end_time: Optional trim end time (SS, MM:SS, or HH:MM:SS)
 
     Returns:
         Absolute path to saved MP3 file
@@ -189,6 +289,7 @@ def download_youtube_audio(
     ]
 
     errors: list[str] = []
+    download_succeeded = False
     for attempt in attempts:
         for temp_file in glob.glob(os.path.join(target_dir, f"{safe_base}.*")):
             if temp_file != target_mp3_path and os.path.exists(temp_file):
@@ -202,11 +303,12 @@ def download_youtube_audio(
             with yt_dlp.YoutubeDL(cast(Any, merged_opts)) as ydl:
                 ydl.download([yt_url])
             if os.path.isfile(target_mp3_path):
-                return target_mp3_path
+                download_succeeded = True
+                break
         except Exception as exc:
             errors.append(f"{attempt['name']}: {exc}")
 
-    if not os.path.isfile(target_mp3_path):
+    if not download_succeeded or not os.path.isfile(target_mp3_path):
         detail = errors[-1] if errors else "unknown download failure"
         raise RuntimeError(
             "Failed to download YouTube audio after multiple fallback attempts. "
@@ -214,6 +316,31 @@ def download_youtube_audio(
             "Try updating yt-dlp (`pip install -U yt-dlp`) and retry. "
             "If the video is restricted, try another URL."
         )
+
+    track_duration = _get_audio_duration_seconds(target_mp3_path)
+    trim_start = _parse_time_to_seconds(start_time) if start_time else 0.0
+    trim_end = _parse_time_to_seconds(end_time) if end_time else track_duration
+
+    duration_epsilon = 1e-3
+    if trim_start >= trim_end:
+        raise ValueError(
+            f"Invalid trim range: start time ({trim_start:.3f}s) must be less than "
+            f"end time ({trim_end:.3f}s)."
+        )
+    if trim_start > track_duration + duration_epsilon:
+        raise ValueError(
+            f"Start time ({trim_start:.3f}s) exceeds track duration ({track_duration:.3f}s)."
+        )
+    if trim_end > track_duration + duration_epsilon:
+        raise ValueError(
+            f"End time ({trim_end:.3f}s) exceeds track duration ({track_duration:.3f}s)."
+        )
+
+    trim_start = max(0.0, min(trim_start, track_duration))
+    trim_end = max(0.0, min(trim_end, track_duration))
+
+    if trim_start > 0.0 or trim_end < (track_duration - duration_epsilon):
+        _trim_audio_segment(target_mp3_path, trim_start, trim_end)
 
     return target_mp3_path
 

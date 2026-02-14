@@ -85,19 +85,19 @@ def tonic_to_midi_class(tonic: Union[int, float, str]) -> int:
             return int(round(tonic)) % 12
         else:
             # Treat as Hz
-            midi = librosa.hz_to_midi(float(tonic))
-            return int(round(midi)) % 12
+            midi_from_hz = float(librosa.hz_to_midi(float(tonic)))
+            return int(round(midi_from_hz)) % 12
     
     # String: note name
     if isinstance(tonic, str):
         try:
-            midi = librosa.note_to_midi(tonic)
-            return int(midi) % 12
+            midi_from_note = float(librosa.note_to_midi(tonic))
+            return int(midi_from_note) % 12
         except Exception:
             try:
                 # Try appending octave 4
-                midi = librosa.note_to_midi(tonic + "4")
-                return int(midi) % 12
+                midi_from_note = float(librosa.note_to_midi(tonic + "4"))
+                return int(midi_from_note) % 12
             except Exception:
                 pass
     
@@ -437,7 +437,7 @@ def detect_stationary_points(
     stationary_mask = derivative < derivative_threshold
     regions = _find_continuous_regions(stationary_mask)
     
-    notes = []
+    notes: List[Note] = []
     
     for start_idx, end_idx in regions:
         if end_idx <= start_idx:
@@ -930,8 +930,8 @@ def build_transition_matrix_corrected(
     n_notes = len(sorted_sargams)
     matrix = np.zeros((n_notes, n_notes), dtype=int)
     
-    aaroh_patterns = defaultdict(int)
-    avroh_patterns = defaultdict(int)
+    aaroh_patterns: Dict[str, int] = defaultdict(int)
+    avroh_patterns: Dict[str, int] = defaultdict(int)
     
     for phrase in phrases:
         notes = phrase.notes
@@ -1005,11 +1005,11 @@ def extract_melodic_sequences(phrases: List[Phrase], tonic: Union[int, str], max
     return sequences
 
 
-def find_common_patterns(sequences: List[dict], min_length: int = 3, min_frequency: int = 2) -> List[Tuple[Tuple[str], int]]:
+def find_common_patterns(sequences: List[dict], min_length: int = 3, min_frequency: int = 2) -> List[Tuple[Tuple[str, ...], int]]:
     """Find commonly occurring melodic patterns."""
     from collections import defaultdict
     
-    counts = defaultdict(int)
+    counts: Dict[Tuple[str, ...], int] = defaultdict(int)
     
     for item in sequences:
         seq = item['sequence']
@@ -1167,9 +1167,131 @@ def extract_aaroh_avroh_runs(
     }
 
 
+def check_aaroh_avroh_conformance(
+    phrases: List[Phrase],
+    tonic: Union[int, str],
+    expected_aaroh: Sequence[float],
+    expected_avroh: Sequence[float],
+    min_edges_per_note: int = 3,
+) -> Dict[str, Any]:
+    """
+    Compare observed directional note usage against expected aaroh/avroh patterns.
+
+    Direction evidence is computed from incoming transitions:
+    - ascending edge for note X: previous note is lower and transitions into X
+    - descending edge for note X: previous note is higher and transitions into X
+    """
+    if len(expected_aaroh) != 12 or len(expected_avroh) != 12:
+        raise ValueError("expected_aaroh and expected_avroh must each have 12 entries")
+
+    # Per pitch-class incoming edge counts: [ascending_edges, descending_edges]
+    edge_counts: Dict[int, List[int]] = {pc: [0, 0] for pc in range(12)}
+
+    for phrase in phrases:
+        notes = phrase.notes
+        if len(notes) < 2:
+            continue
+
+        for i in range(1, len(notes)):
+            previous = notes[i - 1]
+            current = notes[i]
+
+            _, prev_midi, _ = extract_corrected_sargam_info(previous, tonic)
+            curr_pc, curr_midi, _ = extract_corrected_sargam_info(current, tonic)
+
+            if curr_midi == prev_midi:
+                continue
+
+            if curr_midi > prev_midi:
+                edge_counts[curr_pc][0] += 1
+            else:
+                edge_counts[curr_pc][1] += 1
+
+    note_evidence = []
+    missing_aaroh = []
+    missing_avroh = []
+    unexpected_aaroh = []
+    unexpected_avroh = []
+
+    matched_checks = 0
+    total_checks = 0
+    notes_with_evidence = 0
+
+    for pc in range(12):
+        sargam = OFFSET_TO_SARGAM[pc]
+        asc_count, desc_count = edge_counts[pc]
+        total = asc_count + desc_count
+        expected_asc = float(expected_aaroh[pc])
+        expected_desc = float(expected_avroh[pc])
+
+        observed_asc = asc_count > 0
+        observed_desc = desc_count > 0
+
+        if total >= min_edges_per_note:
+            notes_with_evidence += 1
+            total_checks += 2
+            if observed_asc == (expected_asc > 0):
+                matched_checks += 1
+            if observed_desc == (expected_desc > 0):
+                matched_checks += 1
+
+            if expected_asc > 0 and not observed_asc:
+                missing_aaroh.append(sargam)
+            if expected_desc > 0 and not observed_desc:
+                missing_avroh.append(sargam)
+            if expected_asc <= 0 and observed_asc:
+                unexpected_aaroh.append(sargam)
+            if expected_desc <= 0 and observed_desc:
+                unexpected_avroh.append(sargam)
+
+        asc_ratio = (asc_count / total) if total > 0 else 0.0
+        desc_ratio = (desc_count / total) if total > 0 else 0.0
+
+        note_evidence.append({
+            "note": sargam,
+            "asc_edges": asc_count,
+            "desc_edges": desc_count,
+            "asc_ratio": round(asc_ratio, 3),
+            "desc_ratio": round(desc_ratio, 3),
+            "expected_asc": expected_asc,
+            "expected_desc": expected_desc,
+            "sufficient_evidence": total >= min_edges_per_note,
+        })
+
+    score = float(matched_checks / total_checks) if total_checks > 0 else 0.0
+
+    expected_aaroh_notes = [
+        OFFSET_TO_SARGAM[pc]
+        for pc, value in enumerate(expected_aaroh)
+        if float(value) > 0
+    ]
+    expected_avroh_notes = [
+        OFFSET_TO_SARGAM[pc]
+        for pc, value in enumerate(expected_avroh)
+        if float(value) > 0
+    ]
+
+    return {
+        "score": round(score, 3),
+        "matched_checks": matched_checks,
+        "total_checks": total_checks,
+        "notes_with_evidence": notes_with_evidence,
+        "min_edges_per_note": min_edges_per_note,
+        "expected_aaroh_notes": expected_aaroh_notes,
+        "expected_avroh_notes": expected_avroh_notes,
+        "missing_aaroh": missing_aaroh,
+        "missing_avroh": missing_avroh,
+        "unexpected_aaroh": unexpected_aaroh,
+        "unexpected_avroh": unexpected_avroh,
+        "note_evidence": note_evidence,
+    }
+
+
 def analyze_raga_patterns(
     phrases: List[Phrase],
     tonic: Union[int, str],
+    expected_aaroh: Optional[Sequence[float]] = None,
+    expected_avroh: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """
     Comprehensive raga pattern analysis.
@@ -1201,7 +1323,7 @@ def analyze_raga_patterns(
             "count": count
         })
         
-    return {
+    result = {
         "aaroh_stats": runs["stats"]["aaroh_top"],
         "avroh_stats": runs["stats"]["avroh_top"],
         "common_motifs": formatted_motifs,
@@ -1209,6 +1331,16 @@ def analyze_raga_patterns(
         "total_aaroh_runs": len(runs["aaroh_runs"]),
         "total_avroh_runs": len(runs["avroh_runs"])
     }
+
+    if expected_aaroh is not None and expected_avroh is not None:
+        result["aaroh_avroh_checker"] = check_aaroh_avroh_conformance(
+            phrases=phrases,
+            tonic=tonic,
+            expected_aaroh=expected_aaroh,
+            expected_avroh=expected_avroh,
+        )
+
+    return result
 
 
 # =============================================================================
@@ -1279,12 +1411,29 @@ def cluster_notes_into_phrases(
     """
     import matplotlib.pyplot as plt
     
-    # defensive copy & sort by start time
-    # Check type to sort correctly
-    if notes and isinstance(notes[0], dict):
-        notes_sorted = sorted(cast(Sequence[Dict[str, Any]], notes), key=lambda n: float(n['start']))
+    # Defensive copy and stable type narrowing before sort.
+    notes_list: List[Union[Dict[str, Any], Note]] = list(notes)
+    if not notes_list:
+        return [], [], 0.0
+
+    if isinstance(notes_list[0], dict):
+        notes_sorted_dict = sorted(
+            cast(List[Dict[str, Any]], notes_list),
+            key=lambda n: float(n['start'])
+        )
+        notes_sorted: List[Union[Dict[str, Any], Note]] = cast(
+            List[Union[Dict[str, Any], Note]],
+            notes_sorted_dict,
+        )
     else:
-        notes_sorted = sorted(cast(Sequence[Note], notes), key=lambda n: n.start)
+        notes_sorted_note = sorted(
+            cast(List[Note], notes_list),
+            key=lambda n: n.start
+        )
+        notes_sorted = cast(
+            List[Union[Dict[str, Any], Note]],
+            notes_sorted_note,
+        )
         
     starts, ends, mids, labels, idxs = _extract_times_and_labels(notes_sorted, label_key=label_key)
     n = len(starts)
@@ -1374,7 +1523,7 @@ def cluster_notes_into_phrases(
         break_positions = np.where(gaps > threshold_used)[0]  # indices in gaps; break between note i and i+1 for each index found
 
     # form phrases (list of note lists)
-    raw_phrases = []
+    raw_phrases: List[List[Union[Dict[str, Any], Note]]] = []
     start_idx = 0
     for b in break_positions:
         end_idx = b + 1  # inclusive index for phrase slice
@@ -1400,7 +1549,7 @@ def cluster_notes_into_phrases(
 
     # 1) merge phrases separated by very small gaps (< merge_gap_threshold)
     if len(raw_phrases) > 1:
-        merged = []
+        merged: List[List[Union[Dict[str, Any], Note]]] = []
         i = 0
         while i < len(raw_phrases):
             cur = raw_phrases[i]
@@ -1418,7 +1567,7 @@ def cluster_notes_into_phrases(
         raw_phrases = merged
 
     # 2) merge or drop too-short / too-few-note phrases
-    final_raw_phrases = []
+    final_raw_phrases: List[List[Union[Dict[str, Any], Note]]] = []
     i = 0
     while i < len(raw_phrases):
         ph = raw_phrases[i]
@@ -1451,12 +1600,30 @@ def cluster_notes_into_phrases(
     breaks_indices = [int(x) for x in cum_lens[:-1]]  # indices in sorted notes where phrases break
     
     # Convert to Phrase objects if not already
-    phrases = []
+    phrases: List[Phrase] = []
     for ph_notes in final_raw_phrases:
-        if ph_notes and isinstance(ph_notes[0], dict):
-            # If input was dicts, we probably can't create Notes easily without pitch_hz/confidence
-            # But the user asked to augment the pipeline. The pipeline uses Notes.
-            pass
-        phrases.append(Phrase(notes=ph_notes))
+        note_objs: List[Note] = []
+        for item in ph_notes:
+            if isinstance(item, dict):
+                start = float(item.get("start", 0.0))
+                end = float(item.get("end", start))
+                midi_val = item.get("midi")
+                if midi_val is None:
+                    midi_val = item.get("midi_note")
+                pitch_midi = float(midi_val) if midi_val is not None else 0.0
+                note_objs.append(
+                    Note(
+                        start=start,
+                        end=end,
+                        pitch_midi=pitch_midi,
+                        pitch_hz=float(librosa.midi_to_hz(pitch_midi)),
+                        confidence=float(item.get("confidence", 1.0)),
+                        energy=float(item.get("energy", 0.0)),
+                        sargam=str(item.get("sargam", "")),
+                    )
+                )
+            else:
+                note_objs.append(item)
+        phrases.append(Phrase(notes=note_objs))
 
     return phrases, breaks_indices, threshold_used

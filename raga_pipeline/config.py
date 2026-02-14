@@ -18,8 +18,13 @@ class PipelineConfig:
     """config for raga detection pipeline"""
 
     # mandatory paths
-    audio_path: str
+    audio_path: Optional[str]
     output_dir: str
+
+    # Optional preprocess inputs (YouTube ingest)
+    yt_url: Optional[str] = None
+    audio_dir: Optional[str] = None
+    filename_override: Optional[str] = None
 
     # separator settings
     separator_engine: str = "demucs"  # 'demucs' or 'spleeter'
@@ -102,24 +107,37 @@ class PipelineConfig:
     # GMM parameters
     gmm_window_cents: float = 150.0
     gmm_components: int = 1
-    bias_rotation: bool = False
+    bias_rotation: bool = True
 
-    # execution Mode (only detect and analyze supported)
-    mode: str = "detect"  # "detect" or "analyze" only
+    # execution mode
+    mode: str = "detect"  # "preprocess", "detect", or "analyze"
     tonic_override: Optional[str] = None
     raga_override: Optional[str] = None
     keep_impure_notes: bool = False
 
     def __post_init__(self):
         """Validate and normalize paths."""
-        self.audio_path = os.path.abspath(self.audio_path)
         self.output_dir = os.path.abspath(self.output_dir)
-
-        if not os.path.isfile(self.audio_path):
-            raise FileNotFoundError(f"Audio file not found: {self.audio_path}")
-
-        # create output directory if needed
         os.makedirs(self.output_dir, exist_ok=True)
+
+        if self.mode == "preprocess":
+            if not self.yt_url:
+                raise ValueError("Preprocess mode requires --yt")
+            if not self.audio_dir:
+                raise ValueError("Preprocess mode requires --audio-dir")
+            if not self.filename_override:
+                raise ValueError("Preprocess mode requires --filename")
+
+            self.audio_dir = os.path.abspath(self.audio_dir)
+            os.makedirs(self.audio_dir, exist_ok=True)
+            self.audio_path = os.path.join(self.audio_dir, f"{self.filename_override}.mp3")
+        else:
+            if not self.audio_path:
+                raise ValueError(f"{self.mode.capitalize()} mode requires --audio/-a")
+            self.audio_path = os.path.abspath(self.audio_path)
+
+            if not os.path.isfile(self.audio_path):
+                raise FileNotFoundError(f"Audio file not found: {self.audio_path}")
 
         # auto-locate model and database if not specified
         if self.model_path is None:
@@ -156,7 +174,11 @@ class PipelineConfig:
     @property
     def filename(self) -> str:
         """Extract filename without extension from audio path."""
-        return os.path.splitext(os.path.basename(self.audio_path))[0]
+        if self.audio_path:
+            return os.path.splitext(os.path.basename(self.audio_path))[0]
+        if self.filename_override:
+            return self.filename_override
+        return "unknown_audio"
 
     @property
     def stem_dir(self) -> str:
@@ -196,13 +218,13 @@ def load_config_from_cli() -> PipelineConfig:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    # create subparsers for modes: detect, analyze, full (default)
+    # create subparsers for modes: preprocess, detect, analyze
     subparsers = parser.add_subparsers(dest="command", help="Pipeline mode")
 
     # --- Common arguments function ---
     def add_common_args(p, required=True):
         p.add_argument("--audio", "-a", required=required, help="Input audio file (relative or absolute path)")
-        p.add_argument("--output", "-o", default="results", help="Parent directory for output results")
+        p.add_argument("--output", "-o", default="batch_results", help="Parent directory for output results")
         p.add_argument("--separator", choices=["demucs", "spleeter"], default="demucs", help="Stem separation engine to use")
         p.add_argument("--demucs-model", default="htdemucs", help="Specific Demucs model (e.g., htdemucs, mdx_extra)")
 
@@ -227,8 +249,12 @@ def load_config_from_cli() -> PipelineConfig:
         # Peak Detection settings
         p.add_argument("--prominence-high", type=float, default=0.01, help="Prominence threshold factor for high-res peak detection")
         p.add_argument("--prominence-low", type=float, default=0.03, help="Prominence threshold factor for low-res peak detection")
-        p.add_argument("--bias-rotation", action="store_true",
-                   help="Rotate histograms by median GMM deviation before scoring and plots")
+        p.add_argument(
+            "--bias-rotation",
+            action="store_false",
+            dest="bias_rotation",
+            help="Disable histogram bias rotation (enabled by default)",
+        )
 
         # Miscellaneous
         p.add_argument("--force", "-f", action="store_true", help="Force recompute pitch extraction (reuses existing stems if found)")
@@ -239,6 +265,8 @@ def load_config_from_cli() -> PipelineConfig:
     # --- Detect Mode ---
     detect_parser = subparsers.add_parser("detect", help="Phase 1: Detection only")
     add_common_args(detect_parser, required=True)
+    detect_parser.add_argument("--tonic", help="Force tonic (comma-separated allowed, e.g. C,D#)")
+    detect_parser.add_argument("--raga", help="Force raga name")
 
     # --- Analyze Mode ---
     analyze_parser = subparsers.add_parser("analyze", help="Phase 2: Analysis only")
@@ -267,9 +295,22 @@ def load_config_from_cli() -> PipelineConfig:
                                 help="Disable RMS energy overlay on pitch analysis plots.")
     analyze_parser.add_argument("--no-smoothing", action="store_true", help="Disable transcription smoothing")
 
+    # --- Preprocess Mode ---
+    preprocess_parser = subparsers.add_parser(
+        "preprocess",
+        help="Download YouTube audio to a local MP3 and exit"
+    )
+    preprocess_parser.add_argument("--yt", required=True, help="YouTube URL to download")
+    preprocess_parser.add_argument("--audio-dir", default="../audio_test_files",
+                                   help="Directory where downloaded MP3 should be saved")
+    preprocess_parser.add_argument("--filename", required=True,
+                                   help="Output filename base (without extension); saved as <filename>.mp3")
+    preprocess_parser.add_argument("--output", "-o", default="batch_results",
+                                   help="Default detect output directory suggestion for next-step command")
+
     # --- Root Parser (Legacy support - defaults to detect) ---
     add_common_args(parser, required=False)
-    parser.add_argument("--tonic", help="Force tonic")
+    parser.add_argument("--tonic", help="Force tonic (comma-separated allowed, e.g. C,D#)")
     parser.add_argument("--raga", help="Force raga")
 
     args = parser.parse_args()
@@ -282,22 +323,25 @@ def load_config_from_cli() -> PipelineConfig:
     if args.vocalist_gender and args.source_type != "vocal":
         args.source_type = "vocal"
 
-    # Determine effective mode (default to detect, no full mode)
-    mode = args.command if args.command in ["detect", "analyze"] else "detect"
+    # Determine effective mode (default to detect)
+    mode = args.command if args.command in ["preprocess", "detect", "analyze"] else "detect"
 
     return PipelineConfig(
-        audio_path=args.audio,
-        output_dir=args.output,
-        separator_engine=args.separator,
-        demucs_model=args.demucs_model,
-        source_type=args.source_type,
-        vocalist_gender=args.vocalist_gender,
-        instrument_type=args.instrument_type,
-        skip_separation=args.skip_separation,
-        vocal_confidence=args.vocal_confidence,
-        accomp_confidence=args.accomp_confidence,
-        force_recompute=args.force,
-        raga_db_path=args.raga_db,
+        audio_path=getattr(args, 'audio', None),
+        output_dir=getattr(args, 'output', 'batch_results'),
+        yt_url=getattr(args, 'yt', None),
+        audio_dir=getattr(args, 'audio_dir', None),
+        filename_override=getattr(args, 'filename', None),
+        separator_engine=getattr(args, 'separator', 'demucs'),
+        demucs_model=getattr(args, 'demucs_model', 'htdemucs'),
+        source_type=getattr(args, 'source_type', 'mixed'),
+        vocalist_gender=getattr(args, 'vocalist_gender', None),
+        instrument_type=getattr(args, 'instrument_type', 'autodetect'),
+        skip_separation=getattr(args, 'skip_separation', False),
+        vocal_confidence=getattr(args, 'vocal_confidence', 0.98),
+        accomp_confidence=getattr(args, 'accomp_confidence', 0.80),
+        force_recompute=getattr(args, 'force', False),
+        raga_db_path=getattr(args, 'raga_db', None),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),

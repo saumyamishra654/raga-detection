@@ -162,6 +162,8 @@ def detect_stationary_events(
         )
         if not keep_note:
             continue
+        if snapped_pitch is None:
+            continue
         
         event = TranscriptionEvent(
             start=timestamps[start_idx],

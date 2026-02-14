@@ -29,3 +29,6 @@ plotly>=5.0.0
 # Optional: Spleeter (alternative to Demucs)
 # Note: Spleeter has limited Python version support (<=3.10)
 # pip install spleeter
+
+# YouTube audio ingest (preprocess mode)
+yt-dlp>=2024.0.0

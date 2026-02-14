@@ -3,6 +3,7 @@
 driver file for raga detection pipeline - do not run directly, run using run_pipeline.sh
 
 modes:
+    preprocess - download YouTube audio to local MP3 and exit
     detect  - run phase 1 of analysis (histogram-based raga filtering/ranking)
     analyze - run phase 2 of analysis (note sequence analysis given tonic/raga)
 """
@@ -20,7 +21,13 @@ if __name__ == "__main__":
 import librosa
 
 from raga_pipeline.config import PipelineConfig, load_config_from_cli, create_config
-from raga_pipeline.audio import separate_stems, extract_pitch, extract_pitch_from_config, load_audio_direct
+from raga_pipeline.audio import (
+    separate_stems,
+    extract_pitch,
+    extract_pitch_from_config,
+    load_audio_direct,
+    download_youtube_audio,
+)
 from raga_pipeline.analysis import (
     compute_cent_histograms, 
     detect_peaks, 
@@ -33,8 +40,13 @@ from raga_pipeline.raga import (
     RagaDatabase, 
     generate_candidates, 
     RagaScorer,
+    _parse_tonic,
+    _parse_tonic_list,
     apply_raga_correction_to_notes,
     get_tonic_candidates,
+    build_aaroh_avroh_subset,
+    load_aaroh_avroh_patterns,
+    get_aaroh_avroh_pattern_for_raga,
 )
 from raga_pipeline.sequence import (
     detect_notes, 
@@ -53,6 +65,7 @@ from raga_pipeline.output import (
     AnalysisResults,
     AnalysisStats,
     plot_histograms,
+    plot_absolute_note_histogram,
     plot_gmm_overlay,
     plot_note_segments,
     generate_html_report,
@@ -72,7 +85,8 @@ def run_pipeline(
 ) -> AnalysisResults:
     """
     run the raga detection pipeline in the configured mode
- 
+
+    - preprocess: Download YouTube audio to local MP3 and exit.
     - detect: Run up to raga candidate scoring, generate summary report.
     - analyze: Load cached pitch, run sequence/phrase analysis using provided tonic/raga.
     
@@ -88,6 +102,42 @@ def run_pipeline(
         AnalysisResults with computed data
     """
     results = AnalysisResults(config=config)
+
+    if config.mode == "preprocess":
+        print("=" * 60)
+        print("RAGA DETECTION PIPELINE")
+        print("MODE: PREPROCESS")
+        print("=" * 60)
+        print(f"YouTube URL: {config.yt_url}")
+        print(f"Audio Dir: {config.audio_dir}")
+        print(f"Filename: {config.filename_override}.mp3")
+        print()
+
+        try:
+            downloaded_audio_path = download_youtube_audio(
+                yt_url=config.yt_url or "",
+                audio_dir=config.audio_dir or "",
+                filename_base=config.filename_override or "",
+            )
+        except Exception as exc:
+            print(f"[PREPROCESS] ERROR: {exc}")
+            print("[PREPROCESS] Tip: try updating yt-dlp and retrying with a different/public video URL.")
+            raise SystemExit(1)
+
+        config.audio_path = downloaded_audio_path
+
+        print("[PREPROCESS] Download complete")
+        print(f"  Saved: {downloaded_audio_path}")
+
+        print("\n" + "=" * 60)
+        print("Next: Run detect mode with downloaded audio:")
+        print("=" * 60)
+        print(f"./run_pipeline.sh detect \\")
+        print(f'  --audio "{downloaded_audio_path}" \\')
+        print(f'  --output "{config.output_dir}"')
+        print("=" * 60)
+
+        return results
     
     print("=" * 60)
     print("RAGA DETECTION PIPELINE")
@@ -99,8 +149,39 @@ def run_pipeline(
     
     # check ragaDB path early
     raga_db = None
+    aaroh_avroh_lookup = {}
+    aaroh_avroh_subset_path = os.path.join(
+        Path(__file__).parent,
+        "raga_pipeline",
+        "data",
+        "aarohavroha_subset.csv",
+    )
+
     if config.raga_db_path and os.path.isfile(config.raga_db_path):
         raga_db = RagaDatabase(config.raga_db_path)
+        aaroh_avroh_source_path = os.path.join(Path(__file__).parent, "aarohavroha.csv")
+        if os.path.isfile(aaroh_avroh_subset_path):
+            try:
+                aaroh_avroh_lookup = load_aaroh_avroh_patterns(aaroh_avroh_subset_path)
+                print(f"[AAROH/AVROH] Loaded {len(aaroh_avroh_lookup)} patterns from subset DB")
+            except Exception as e:
+                print(f"[AAROH/AVROH] Failed to load subset DB: {e}")
+        elif os.path.isfile(aaroh_avroh_source_path):
+            try:
+                subset_df = build_aaroh_avroh_subset(
+                    aaroh_avroh_csv_path=aaroh_avroh_source_path,
+                    raga_db_csv_path=config.raga_db_path,
+                    output_csv_path=aaroh_avroh_subset_path,
+                )
+                aaroh_avroh_lookup = load_aaroh_avroh_patterns(aaroh_avroh_subset_path)
+                print(
+                    f"[AAROH/AVROH] Loaded {len(aaroh_avroh_lookup)} aligned patterns "
+                    f"(subset rows: {len(subset_df)})"
+                )
+            except Exception as e:
+                print(f"[AAROH/AVROH] Failed to build/load subset DB: {e}")
+        else:
+            print(f"[AAROH/AVROH] Source CSV not found: {aaroh_avroh_source_path}")
     
     # =========================================================================
     # PHASE 1: DETECTION (or load cache)
@@ -132,6 +213,7 @@ def run_pipeline(
             melody_pitch_csv = os.path.join(config.stem_dir, f"{melody_prefix}_pitch_data.csv")
         accomp_pitch_csv = os.path.join(config.stem_dir, "accompaniment_pitch_data.csv")
         composite_pitch_csv = os.path.join(config.stem_dir, "composite_pitch_data.csv")
+        assert melody_pitch_csv is not None
         
         if not os.path.exists(melody_pitch_csv):
             raise FileNotFoundError(
@@ -195,8 +277,6 @@ def run_pipeline(
         if not config.tonic_override or not config.raga_override:
             raise ValueError("Analyze mode requires --tonic and --raga arguments")
             
-        # parse tonic
-        from raga_pipeline.raga import _parse_tonic
         results.detected_tonic = _parse_tonic(config.tonic_override)
         results.detected_raga = config.raga_override
         
@@ -323,6 +403,44 @@ def run_pipeline(
             )
             results.plot_paths["histogram_accomp"] = hist_accomp_path
             print(f"  Saved: {hist_accomp_path}")
+
+        print("\n[STEP 3.5/7] Building duration-weighted octave-wrapped stationary-note histogram from vocal SwiftF0...")
+        stationary_frame_period = 0.01
+        if len(results.pitch_data_stem.timestamps) > 1:
+            stationary_frame_period = float(
+                results.pitch_data_stem.timestamps[1] - results.pitch_data_stem.timestamps[0]
+            )
+
+        stationary_events = transcription.detect_stationary_events(
+            pitch_hz=results.pitch_data_stem.pitch_hz,
+            timestamps=results.pitch_data_stem.timestamps,
+            voicing_mask=results.pitch_data_stem.voiced_mask,
+            tonic=60.0,
+            energy=results.pitch_data_stem.energy,
+            energy_threshold=config.energy_threshold,
+            smoothing_sigma_ms=config.transcription_smoothing_ms,
+            frame_period_s=max(stationary_frame_period, 1e-3),
+            derivative_threshold=config.transcription_derivative_threshold,
+            min_event_duration=config.transcription_min_duration,
+            snap_mode='chromatic',
+        )
+        stationary_midis = [evt.snapped_midi for evt in stationary_events]
+        stationary_durations = [max(0.0, evt.duration) for evt in stationary_events]
+        stationary_weighted_hist_path = os.path.join(stem_dir, "stationary_note_histogram_duration_weighted.png")
+        stationary_weighted_counts = plot_absolute_note_histogram(
+            stationary_midis,
+            stationary_weighted_hist_path,
+            title="Stationary Notes (Duration-Weighted, Octave-Wrapped)",
+            weights=stationary_durations,
+            ylabel="Total stationary duration (s)",
+        )
+        stationary_weighted_csv_path = os.path.join(stem_dir, "stationary_note_histogram_duration_weighted.csv")
+        stationary_weighted_counts.to_csv(stationary_weighted_csv_path, index=False)
+
+        results.plot_paths["stationary_note_histogram"] = stationary_weighted_hist_path
+        print(f"  Stationary events: {len(stationary_events)}")
+        print(f"  Saved: {stationary_weighted_hist_path}")
+        print(f"  Saved: {stationary_weighted_csv_path}")
         
         # STEP 4 & 5: Raga Matching
         print("\n[STEP 4/7] Loading raga database...")
@@ -338,7 +456,16 @@ def run_pipeline(
                 vocalist_gender=config.vocalist_gender,
                 instrument_type=config.instrument_type,
             )
-            print(f"  Tonic candidates: {tonic_candidates}")
+            tonic_constraints = _parse_tonic_list(config.tonic_override)
+            if tonic_constraints:
+                tonic_candidates = tonic_constraints
+                tonic_names = ", ".join(_tonic_name(t) for t in tonic_candidates)
+                print(f"  Tonic constraint: {tonic_names}")
+            else:
+                print(f"  Tonic candidates: {tonic_candidates}")
+
+            if config.raga_override:
+                print(f"  Raga constraint: {config.raga_override}")
             
             scorer = RagaScorer(raga_db=raga_db, model_path=config.model_path, use_ml=config.use_ml_model)
             results.candidates = scorer.score(
@@ -348,6 +475,7 @@ def run_pipeline(
                 instrument_mode=config.source_type,
                 tonic_candidates=tonic_candidates,  # Pass the bias list!
                 bias_cents=results.gmm_bias_cents,
+                raga_filter=config.raga_override,
             )
             
             # Save candidates
@@ -355,13 +483,10 @@ def run_pipeline(
             results.candidates.to_csv(candidates_path, index=False)
             print(f"  Saved: {candidates_path}")
             
-            # Helper to parse tonic
-            from raga_pipeline.raga import _parse_tonic
-            
             # Determine Top Candidate / Override
-            if config.tonic_override:
-                results.detected_tonic = _parse_tonic(config.tonic_override)
-                print(f"  Force Tonic: {config.tonic_override}")
+            if tonic_constraints and len(tonic_constraints) == 1:
+                results.detected_tonic = tonic_constraints[0]
+                print(f"  Force Tonic: {_tonic_name(tonic_constraints[0])}")
             elif len(results.candidates) > 0:
                 top = results.candidates.iloc[0]
                 results.detected_tonic = int(top["tonic"])
@@ -514,11 +639,49 @@ def run_pipeline(
         
         # Advanced Pattern Analysis
         # Includes sequences, motifs, and Aaroh/Avroh runs
-        pattern_results = analyze_raga_patterns(results.phrases, results.detected_tonic)
+        expected_pattern = None
+        if aaroh_avroh_lookup and results.detected_raga:
+            expected_pattern = get_aaroh_avroh_pattern_for_raga(
+                results.detected_raga,
+                aaroh_avroh_lookup,
+            )
+
+        if expected_pattern:
+            pattern_results = analyze_raga_patterns(
+                results.phrases,
+                results.detected_tonic,
+                expected_aaroh=expected_pattern.aaroh_pattern,
+                expected_avroh=expected_pattern.avroh_pattern,
+            )
+            pattern_results["aaroh_avroh_reference"] = {
+                "matched_name": expected_pattern.raga_name,
+                "source_name": expected_pattern.source_raga_name,
+                "aaroh_raw": expected_pattern.aaroh_raw,
+                "avroh_raw": expected_pattern.avroh_raw,
+                "subset_csv": aaroh_avroh_subset_path,
+            }
+        else:
+            pattern_results = analyze_raga_patterns(results.phrases, results.detected_tonic)
+
         print(f"  Pattern Analysis:")
         print(f"    - Common Motifs: {len(pattern_results['common_motifs'])}")
         print(f"    - Aaroh Runs: {pattern_results['total_aaroh_runs']}")
         print(f"    - Avroh Runs: {pattern_results['total_avroh_runs']}")
+        checker = pattern_results.get("aaroh_avroh_checker")
+        if checker:
+            print(
+                f"    - Aaroh/Avroh Check: score={checker['score']:.3f} "
+                f"({checker['matched_checks']}/{checker['total_checks']})"
+            )
+            mismatches = (
+                len(checker["missing_aaroh"]) +
+                len(checker["missing_avroh"]) +
+                len(checker["unexpected_aaroh"]) +
+                len(checker["unexpected_avroh"])
+            )
+            print(f"    - Directional Mismatches: {mismatches}")
+        elif results.detected_raga:
+            print(f"    - Aaroh/Avroh Check: No pattern entry found for '{results.detected_raga}'")
         
         # Display top motifs
         if pattern_results['common_motifs']:
@@ -532,7 +695,8 @@ def run_pipeline(
             results.pitch_data_vocals.midi_vals,
             results.detected_tonic,
             raga_name,
-            pp_path
+            pp_path,
+            phrase_ranges=[(phrase.start, phrase.end) for phrase in results.phrases if phrase.end > phrase.start],
         )
         print(f"  Saved: {pp_path}")
 

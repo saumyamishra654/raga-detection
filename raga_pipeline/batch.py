@@ -5,6 +5,13 @@ import argparse
 import sys
 from typing import Dict, Optional, Tuple
 
+
+def _is_valid_audio_file(filename: str, valid_exts: set) -> bool:
+    """Filter out hidden/AppleDouble files and non-audio extensions."""
+    if not filename or filename.startswith("."):
+        return False
+    return os.path.splitext(filename)[1].lower() in valid_exts
+
 def load_ground_truth(csv_path: str) -> Dict[str, dict]:
     """
     load ground truth data from annotated song db
@@ -12,7 +19,7 @@ def load_ground_truth(csv_path: str) -> Dict[str, dict]:
     optional columns: instrument_type, vocalist_gender, source_type, melody_source
     returns dict: {filename: {data}}
     """
-    ground_truth = {}
+    ground_truth: Dict[str, Dict[str, str]] = {}
     if not os.path.exists(csv_path):
         print(f"Warning: Ground truth file not found at {csv_path}")
         return ground_truth
@@ -72,7 +79,7 @@ def init_ground_truth_csv(input_dir: str, output_csv: str):
     
     for root, dirs, files in os.walk(input_dir):
         for file in files:
-            if os.path.splitext(file)[1].lower() in valid_exts:
+            if _is_valid_audio_file(file, valid_exts):
                 files_to_process.append(file)
                 
     files_to_process.sort()
@@ -123,7 +130,7 @@ def process_directory(input_dir: str, ground_truth_path: Optional[str] = None, o
     tasks = []
     for root, dirs, files in os.walk(input_dir):
         for file in files:
-            if os.path.splitext(file)[1].lower() in valid_exts:
+            if _is_valid_audio_file(file, valid_exts):
                 full_path = os.path.join(root, file)
                 tasks.append(full_path)
 

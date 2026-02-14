@@ -42,7 +42,21 @@ A robust, pipeline-based system for automatic Hindustani raga identification and
 
 ## Usage
 
-The project is designed to be run via the `run_pipeline.sh` script, which handles environment activation and path setup. The pipeline operates in two phases: **Detect** and **Analyze**.
+The project is designed to be run via the `run_pipeline.sh` script, which handles environment activation and path setup. The pipeline supports three modes: **Preprocess**, **Detect**, and **Analyze**.
+
+### Mode 0: Preprocess (`preprocess`)
+
+Downloads audio from YouTube and saves it locally as an MP3 so it can be used by `detect` and `analyze`.
+
+```bash
+./run_pipeline.sh preprocess \
+    --yt "https://www.youtube.com/watch?v=..." \
+    --filename "my_song_name"
+```
+
+`--audio-dir` defaults to `../audio_test_files` (you can override it when needed).
+
+This mode saves `../audio_test_files/my_song_name.mp3` by default and prints a copyable `detect` command for the next step.
 
 ### Phase 1: Detection (`detect`)
 
@@ -52,6 +66,12 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 ./run_pipeline.sh detect \
   --audio "path/to/song.mp3" \
   --source-type instrumental
+
+# Constrained detection (limit scoring to specific tonics or ragas)
+./run_pipeline.sh detect \
+    --audio "path/to/song.mp3" \
+    --tonic "C,D#" \
+    --raga "Bhairavi"
 ```
 
 **Common Options:**
@@ -64,10 +84,14 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 *   `--prominence-high` / `--prominence-low`: Fine-tune peak detection sensitivity.
 *   `--bias-rotation`: Rotate histograms by median GMM deviation before scoring/plots.
 *   `--no-rms-overlay`: Disable the RMS/log-amplitude energy overlay on pitch plots in HTML reports.
+*   `--tonic`: Constrain scoring to one or more tonics (comma-separated, e.g. `C,D#`).
+*   `--raga`: Constrain scoring to a specific raga name.
 
 **Output:**
 *   `detection_report.html`: Summary of detected candidates.
 *   `candidates.csv`: Ranked list of likely ragas.
+*   `stationary_note_histogram_duration_weighted.png`: Same octave-wrapped 12-bin histogram, but each note is weighted by total stationary duration.
+*   `stationary_note_histogram_duration_weighted.csv`: Octave-wrapped 12-column duration totals (seconds) used by the weighted stationary-note histogram.
 *   Pitch data and stems saved in `results/htdemucs/<song_name>/` (stems are saved as MP3).
 
 ### Phase 2: Analysis (`analyze`)

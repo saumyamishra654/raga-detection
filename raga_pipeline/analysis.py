@@ -8,7 +8,7 @@ Provides:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Set, Tuple, Optional
+from typing import List, Set, Tuple, Optional, Dict, Any
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.ndimage import gaussian_filter1d
@@ -21,6 +21,17 @@ from .audio import PitchData
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
+
+def _empty_ndarray() -> np.ndarray:
+    return np.array([])
+
+
+def _empty_int_set() -> Set[int]:
+    return set()
+
+
+def _empty_peak_details() -> List[dict]:
+    return []
 
 @dataclass
 class HistogramData:
@@ -39,8 +50,8 @@ class HistogramData:
     bin_centers_low: np.ndarray
     
     # Normalized versions (for plotting)
-    high_res_norm: np.ndarray = field(default_factory=lambda: np.array([]))
-    smoothed_high_norm: np.ndarray = field(default_factory=lambda: np.array([]))
+    high_res_norm: np.ndarray = field(default_factory=_empty_ndarray)
+    smoothed_high_norm: np.ndarray = field(default_factory=_empty_ndarray)
     
     def __post_init__(self):
         """Compute normalized versions if not provided."""
@@ -69,10 +80,10 @@ class PeakData:
     validated_cents: np.ndarray
     
     # Pitch classes (0-11)
-    pitch_classes: Set[int] = field(default_factory=set)
+    pitch_classes: Set[int] = field(default_factory=_empty_int_set)
     
     # Peak details for summary
-    peak_details: List[dict] = field(default_factory=list)
+    peak_details: List[dict] = field(default_factory=_empty_peak_details)
 
 
 @dataclass
@@ -237,8 +248,8 @@ def detect_peaks(
         print(f"Low-res peak positions (cents): {low_cents}")
     
     # Cross-validate: high-res peaks must align with low-res within tolerance
-    validated_indices = []
-    validated_cents_list = []
+    validated_indices_list: List[int] = []
+    validated_cents_list: List[float] = []
     filtered_peaks = []  # Track filtered peaks for debug
     
     # Notebook logic:
@@ -248,7 +259,7 @@ def detect_peaks(
     for idx, cent in zip(high_peaks, high_cents):
         if len(low_cents) == 0:
             # With no low-res peaks available, accept every high-res peak as a fallback.
-            validated_indices.append(idx)
+            validated_indices_list.append(int(idx))
             validated_cents_list.append(cent)
         else:
             # Circular distance to nearest low-res peak
@@ -258,7 +269,7 @@ def detect_peaks(
             # We use circular distance so boundary cases (e.g., 10¢ vs 1190¢) wrap correctly.
             
             if min_dist <= peak_tolerance_cents:
-                validated_indices.append(idx)
+                validated_indices_list.append(int(idx))
                 validated_cents_list.append(cent)
             else:
                 filtered_peaks.append((cent, min_dist))
@@ -269,14 +280,14 @@ def detect_peaks(
             pc = int(round(cent / 100)) % 12
             print(f"  - {cent:.1f}¢ (PC={pc}) → nearest low-res peak: {dist:.1f}¢ away (max allowed: {peak_tolerance_cents}¢)")
     
-    validated_indices = np.array(validated_indices, dtype=int)
+    validated_indices = np.array(validated_indices_list, dtype=int)
     validated_cents = np.array(validated_cents_list)
     
     # Map to pitch classes and remove duplicates (keep best match per note)
     note_centers = np.arange(0, 1200, 100)  # 0, 100, 200, ..., 1100
     
     # Temporary storage for grouping by pitch class
-    peaks_by_note = {} # note_idx -> list of (distance, detail_dict, original_idx, cent)
+    peaks_by_note: Dict[int, List[Dict[str, Any]]] = {}
     
     for idx, cent in zip(validated_indices, validated_cents):
         # Circular distance to nearest semitone center
@@ -299,10 +310,10 @@ def detect_peaks(
         peaks_by_note[nearest_note].append(detail)
 
     # Filter duplicates
-    final_validated_indices = []
-    final_validated_cents = []
-    pitch_classes = set()
-    peak_details = []
+    final_validated_indices: List[int] = []
+    final_validated_cents: List[float] = []
+    pitch_classes: Set[int] = set()
+    peak_details: List[dict] = []
     
     for note_idx in sorted(peaks_by_note.keys()):
         candidates = peaks_by_note[note_idx]
@@ -453,15 +464,15 @@ def fit_gmm_to_peaks(
             continue
             
         # Create weighted samples for GMM
-        samples = []
+        sample_values: List[float] = []
         for val, count in zip(unwrapped_bins, window_counts):
             if count > 0:
-                samples.extend([val] * int(count))
+                sample_values.extend([float(val)] * int(count))
         
-        if len(samples) < n_components * 2:
+        if len(sample_values) < n_components * 2:
             continue
         
-        samples = np.array(samples).reshape(-1, 1)
+        samples_arr = np.array(sample_values).reshape(-1, 1)
         
         # Fit GMM
         try:
@@ -470,7 +481,7 @@ def fit_gmm_to_peaks(
                 random_state=42,
                 covariance_type="full",
             )
-            gmm.fit(samples)
+            gmm.fit(samples_arr)
         except Exception as e:
             print(f"GMM detection failed for peak {peak_idx}: {e}")
             continue

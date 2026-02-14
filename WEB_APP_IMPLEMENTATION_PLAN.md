@@ -14,7 +14,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     CLIENT LAYER                             │
+│                     CLIENT LAYER                            │
 ├──────────────────────┬──────────────────────────────────────┤
 │  Web Frontend        │  Mobile App                          │
 │  (React + TypeScript)│  (React Native / Flutter)            │
@@ -24,8 +24,8 @@
 └──────────────────────┴──────────────────────────────────────┘
                             ↓ ↑ (REST/GraphQL + WebSocket)
 ┌─────────────────────────────────────────────────────────────┐
-│                     API GATEWAY                              │
-│  (Node.js/Bun + Hono OR FastAPI)                           │
+│                     API GATEWAY                             │
+│  (Node.js/Bun + Hono OR FastAPI)                            │
 │  - Authentication (Firebase Auth / Supabase Auth)           │
 │  - Rate limiting (Redis)                                    │
 │  - Job submission & status polling                          │
@@ -33,30 +33,30 @@
 └─────────────────────────────────────────────────────────────┘
                             ↓ ↑
 ┌─────────────────────────────────────────────────────────────┐
-│                   MESSAGE QUEUE                              │
-│  (BullMQ + Redis OR Cloud Tasks)                           │
+│                   MESSAGE QUEUE                             │
+│  (BullMQ + Redis OR Cloud Tasks)                            │
 │  - Job prioritization (stem sep → pitch → analysis)         │
 │  - Progress tracking                                        │
 │  - Retry/failure handling                                   │
 └─────────────────────────────────────────────────────────────┘
                             ↓ ↑
-┌─────────────────────────────────────────────────────────────┐
-│                  WORKER POOL                                 │
-│  (Python + Celery OR Temporal)                             │
+┌───────────────────────────────────────────────────────────┐
+│                  WORKER POOL                              │
+│  (Python + Celery OR Temporal)                            │
 │  ┌──────────────────┐  ┌──────────────────┐               │
 │  │ Stem Separation  │  │ Pitch Extraction │               │
 │  │ (GPU-accelerated)│  │ (SwiftF0 + CPU)  │               │
 │  │ - Demucs         │  │                  │               │
 │  │ - Spleeter       │  └──────────────────┘               │
-│  └──────────────────┘                                       │
+│  └──────────────────┘                                     │
 │  ┌──────────────────┐  ┌──────────────────┐               │
 │  │ Raga Detection   │  │ Report Generator │               │
 │  │ (CPU)            │  │ (CPU)            │               │
 │  └──────────────────┘  └──────────────────┘               │
-└─────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────┘
                             ↓ ↑
-┌─────────────────────────────────────────────────────────────┐
-│                    STORAGE LAYER                             │
+┌───────────────────────────────────────────────────────────┐
+│                    STORAGE LAYER                          │
 │  ┌──────────────────┐  ┌──────────────────┐               │
 │  │ Database         │  │ Object Storage   │               │
 │  │ (Firebase/       │  │ (S3/GCS/R2)      │               │
@@ -65,7 +65,7 @@
 │  │ - Job metadata   │  │ - HTML reports   │               │
 │  │ - Analysis cache │  │ - Pitch CSVs     │               │
 │  └──────────────────┘  └──────────────────┘               │
-└─────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -78,6 +78,7 @@
 **Why:** Mature ecosystem, excellent TypeScript support, large talent pool
 
 **Key Libraries:**
+
 - **UI Framework:** shadcn/ui (accessible, customizable components)
 - **Styling:** Tailwind CSS (rapid development, consistent design)
 - **State Management:** Zustand or Jotai (lighter than Redux, sufficient for this scale)
@@ -115,6 +116,7 @@ web-app/
 **Alternative:** Flutter (if team has Dart expertise)
 
 **Why React Native with Expo:**
+
 - Share ~70% code with web (business logic, API calls, state management)
 - Expo provides managed workflow (easier deployment, OTA updates)
 - Better TypeScript integration than Flutter
@@ -122,6 +124,7 @@ web-app/
 - Faster iteration for MVP
 
 **Key Libraries:**
+
 - **Navigation:** React Navigation 6
 - **UI:** React Native Paper or Tamagui (cross-platform primitives)
 - **Audio:** expo-av or react-native-track-player
@@ -156,6 +159,7 @@ packages/
 
 **Structure:**
 ```python
+
 backend/
 ├── app/
 │   ├── main.py                # FastAPI app entry
@@ -179,6 +183,7 @@ backend/
 
 **Option B: Node.js (Bun + Hono)**  
 **Why:** If you want unified TypeScript across frontend/backend
+
 - Bun is extremely fast (Python-level speed for I/O)
 - Hono is minimal, performant, similar to FastAPI
 - Call Python pipeline via subprocesses or gRPC
@@ -194,29 +199,35 @@ backend/
 
 **Option A: Celery + Redis (Python-native)**  
 **Pros:**
+
 - Mature, battle-tested
 - Works seamlessly with existing Python code
 - Rich monitoring (Flower dashboard)
 
 **Cons:**
+
 - Heavier footprint
 - Requires separate Redis instance
 
 **Option B: BullMQ (Node.js) + Redis**  
 **Pros:**
+
 - Excellent TypeScript support
 - Modern API, better observability
 - Lighter than Celery
 
 **Cons:**
+
 - Python workers need to communicate via HTTP/gRPC
 
 **Option C: Cloud-Native (AWS SQS + Lambda / GCP Tasks + Cloud Run)**  
 **Pros:**
+
 - Fully managed, scales to zero
 - No Redis instance to maintain
 
 **Cons:**
+
 - Vendor lock-in
 - Cold starts (mitigated with reserved concurrency)
 
@@ -230,6 +241,7 @@ backend/
 **RECOMMENDED for MVP**
 
 **Why:**
+
 - All-in-one: Database, Auth, Storage, Realtime subscriptions
 - Generous free tier (500MB storage, 2GB bandwidth, 50K monthly active users)
 - PostgreSQL under the hood (can self-host later)
@@ -237,6 +249,7 @@ backend/
 - Built-in Row Level Security (RLS)
 
 **Schema:**
+
 ```sql
 -- Users (managed by Supabase Auth)
 -- No need to create users table, use auth.users
@@ -290,11 +303,13 @@ CREATE INDEX idx_results_user_id ON results(user_id);
 
 **Option B: Firebase (Firestore + Auth + Storage)**  
 **Pros:**
+
 - Excellent mobile SDK integration
 - Realtime listeners out of the box
 - Offline support
 
 **Cons:**
+
 - NoSQL (less powerful queries)
 - More expensive at scale
 - Vendor lock-in
@@ -309,12 +324,14 @@ CREATE INDEX idx_results_user_id ON results(user_id);
 **RECOMMENDED**
 
 **Why:**
+
 - S3-compatible API (easy migration)
 - **Zero egress fees** (huge cost savings for serving audio/reports)
 - 10GB free storage
 - Fast global CDN
 
 **Structure:**
+
 ```
 raga-detection-bucket/
 ├── audio/
@@ -339,10 +356,12 @@ raga-detection-bucket/
 
 **Option B: Supabase Storage**  
 **Pros:**
+
 - Integrated with Supabase auth (RLS policies built-in)
 - Simpler setup
 
 **Cons:**
+
 - More expensive egress
 - Smaller free tier (1GB)
 
@@ -357,15 +376,18 @@ raga-detection-bucket/
 **For 100-500 users with stem separation workload:**
 
 #### API Server (Stateless)
+
 - **Platform:** Render, Railway, or Fly.io (for MVP)
 - **Specs:** 2 CPU, 4GB RAM (sufficient for API + queue management)
 - **Cost:** ~$20-40/month
 - **Scaling:** Horizontal (add instances as needed)
 
 #### Worker Instances (Python + GPU for Demucs)
+
 **Challenge:** Stem separation is GPU-intensive. Options:
 
 **Option A: Dedicated GPU VPS (RECOMMENDED for MVP)**
+
 - **Provider:** RunPod, Vast.ai, or Lambda Labs
 - **Specs:** 1x NVIDIA T4 or RTX 3060 (10GB+ VRAM), 4 CPU cores, 16GB RAM
 - **Cost:** ~$0.30-0.50/hour = ~$220-360/month (if running 24/7)
@@ -375,6 +397,7 @@ raga-detection-bucket/
 - **Queue:** Pull jobs from Redis/SQS when instance is running
 
 **Setup:**
+
 ```bash
 # Worker instance startup script
 docker run \
@@ -388,11 +411,13 @@ docker run \
 ```
 
 **Option B: Serverless GPU (Modal, Banana.dev, Replicate)**
+
 - **Pros:** Pay per execution, scales to zero
 - **Cons:** Cold starts (10-30s), more expensive per job (~$0.50-1.00 per analysis)
 - **When to use:** If usage is very sporadic (<10 jobs/day)
 
 **Option C: Cloud GPU Instances (AWS EC2 P3, GCP A2)**
+
 - **Pros:** Fully managed, auto-scaling
 - **Cons:** Expensive (~$3-5/hour for P3 instances)
 - **When to use:** If you have consistent high volume (50+ jobs/day)
@@ -400,17 +425,20 @@ docker run \
 **Recommendation for MVP:** Start with **RunPod GPU instance (on-demand)** + auto-shutdown script. Monitor usage and migrate to serverless or cloud GPUs if pattern changes.
 
 #### CPU Workers (Pitch Extraction, Analysis)
+
 - **Platform:** Same as API (Render/Railway)
 - **Specs:** 2 CPU, 2GB RAM per worker
 - **Scaling:** 2-3 workers initially
 - **Cost:** ~$15-25/month per worker
 
 #### Redis (Queue + Cache)
+
 - **Option A:** Upstash Redis (serverless, generous free tier)
 - **Option B:** Railway Redis (managed, $5/month)
 - **Recommendation:** Upstash for MVP
 
 **Total MVP Infrastructure Cost Estimate:**
+
 - API Server: $30/month
 - GPU Worker: $250/month (on-demand with auto-shutdown)
 - CPU Workers (2x): $40/month
@@ -451,6 +479,7 @@ resource "runpod_pod" "gpu_worker" {
 ```
 
 **CI/CD:**
+
 - **GitHub Actions** for automated testing + deployment
 - **Docker** for consistent environments
 - **Sentry** for error tracking
@@ -950,6 +979,7 @@ NetInfo.addEventListener(state => {
 ### Authentication
 
 **Firebase Auth / Supabase Auth:**
+
 ```typescript
 // Web: Sign in with Google
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
@@ -965,6 +995,7 @@ async function signInWithGoogle() {
 ```
 
 **Backend token verification:**
+
 ```python
 from firebase_admin import auth as firebase_auth
 
@@ -1034,6 +1065,7 @@ CREATE POLICY "Users can only insert their own jobs"
 ## MVP Feature Checklist
 
 ### Phase 1: Core Backend (Weeks 1-4)
+
 - [ ] FastAPI setup with auth (Firebase/Supabase)
 - [ ] Job queue (Celery + Redis)
 - [ ] Worker integration (existing pipeline as Celery tasks)
@@ -1045,6 +1077,7 @@ CREATE POLICY "Users can only insert their own jobs"
 - [ ] GPU worker deployment (RunPod)
 
 ### Phase 2: Web Frontend (Weeks 3-6)
+\
 - [ ] React + TypeScript + Vite setup
 - [ ] Auth UI (sign in with Google/Apple)
 - [ ] File upload with progress (Uppy)
@@ -1056,6 +1089,7 @@ CREATE POLICY "Users can only insert their own jobs"
 - [ ] Dark mode
 
 ### Phase 3: Mobile App (Weeks 5-8)
+
 - [ ] Expo app setup
 - [ ] Shared API client package
 - [ ] Auth screens (Google/Apple sign-in)
@@ -1068,6 +1102,7 @@ CREATE POLICY "Users can only insert their own jobs"
 - [ ] Android internal testing build
 
 ### Phase 4: Polish & Launch (Weeks 9-12)
+
 - [ ] Performance optimization (lazy loading, code splitting)
 - [ ] Error boundaries + fallbacks
 - [ ] User onboarding flow
@@ -1084,11 +1119,13 @@ CREATE POLICY "Users can only insert their own jobs"
 ## Post-MVP Roadmap
 
 ### Performance Optimizations
+
 - **Caching:** Cache frequently analyzed ragas/tonics
 - **Batch processing:** Process multiple files from same album together
 - **Model optimization:** Quantize Demucs model (INT8) for faster inference
 
 ### Advanced Features
+
 - **Collaborative analysis:** Share reports with collaborators
 - **Comparison mode:** Compare 2+ recordings side-by-side
 - **Playlist analysis:** Analyze entire concerts/albums
@@ -1097,6 +1134,7 @@ CREATE POLICY "Users can only insert their own jobs"
 - **Social features:** Community raga database contributions
 
 ### Scaling Considerations
+
 - **CDN for static assets** (Cloudflare Pages)
 - **Database read replicas** (Supabase supports this)
 - **Horizontal worker scaling** (Kubernetes for workers)
@@ -1121,6 +1159,7 @@ CREATE POLICY "Users can only insert their own jobs"
 | **Total** | | | **~$330/month** |
 
 **At scale (500 users, 1000 jobs/month):**
+
 - GPU worker: $500-700 (full-time)
 - Storage: $10-20 (200GB)
 - Database: $25 (Pro plan for better performance)
@@ -1132,25 +1171,29 @@ CREATE POLICY "Users can only insert their own jobs"
 ## Development Timeline (3-4 Months)
 
 ### Month 1: Backend Foundation
+
 - Week 1: FastAPI setup, Supabase schema, R2 integration
 - Week 2: Celery workers, pipeline integration
 - Week 3: WebSocket, real-time updates
 - Week 4: Deploy to Render + RunPod, end-to-end testing
 
 ### Month 2: Web Frontend
+
 - Week 5: React setup, auth, routing
 - Week 6: Upload flow, job submission
 - Week 7: Results viewer, library
 - Week 8: Polish, responsive design
 
 ### Month 3: Mobile App
+
 - Week 9: Expo setup, shared packages
 - Week 10: Auth, upload, job submission
 - Week 11: Results viewer, offline support
 - Week 12: Push notifications, TestFlight build
 
 ### Month 4: Testing & Launch
-- Week 13: Beta testing, bug fixes
+
+- Week 13: Beta testing, bug fixe
 - Week 14: Performance optimization
 - Week 15: Documentation, onboarding
 - Week 16: Production launch, monitoring

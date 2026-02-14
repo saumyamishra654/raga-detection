@@ -12,7 +12,9 @@ Note: torch and demucs are imported lazily to avoid import errors if not install
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Tuple, Optional, Any, cast
+import glob
 import os
+import re
 import shutil
 import subprocess
 import numpy as np
@@ -81,6 +83,139 @@ class PitchData:
             frame_period=self.frame_period,
             audio_path=self.audio_path,
         )
+
+
+# =============================================================================
+# EXTERNAL AUDIO INGEST
+# =============================================================================
+
+def _sanitize_filename_base(filename_base: str) -> str:
+    """Sanitize filename base for cross-platform safe MP3 output."""
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", filename_base.strip())
+    sanitized = sanitized.strip("._-")
+    if not sanitized:
+        raise ValueError("Filename cannot be empty after sanitization.")
+    return sanitized
+
+
+def download_youtube_audio(
+    yt_url: str,
+    audio_dir: str,
+    filename_base: str,
+) -> str:
+    """
+    Download audio from YouTube and save as MP3.
+
+    Args:
+        yt_url: YouTube URL
+        audio_dir: Target directory where MP3 should be saved
+        filename_base: Output filename base (without extension)
+
+    Returns:
+        Absolute path to saved MP3 file
+
+    Raises:
+        ValueError: If required inputs are missing
+        FileExistsError: If target output already exists
+        RuntimeError: If yt-dlp or ffmpeg is unavailable or download fails
+    """
+    if not yt_url:
+        raise ValueError("YouTube URL is required.")
+    if not audio_dir:
+        raise ValueError("Audio directory is required.")
+    if not filename_base:
+        raise ValueError("Filename is required.")
+
+    target_dir = os.path.abspath(audio_dir)
+    os.makedirs(target_dir, exist_ok=True)
+
+    safe_base = _sanitize_filename_base(filename_base)
+    target_mp3_path = os.path.join(target_dir, f"{safe_base}.mp3")
+
+    if os.path.exists(target_mp3_path):
+        raise FileExistsError(
+            f"Target audio already exists: {target_mp3_path}. "
+            "Choose a different --filename or remove the existing file."
+        )
+
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("ffmpeg is required for YouTube audio extraction but was not found in PATH.")
+
+    try:
+        import yt_dlp
+    except ImportError as exc:
+        raise RuntimeError(
+            "yt-dlp is required for --yt download support. Install it with: pip install yt-dlp"
+        ) from exc
+
+    output_template = os.path.join(target_dir, f"{safe_base}.%(ext)s")
+    base_opts = {
+        "noplaylist": True,
+        "outtmpl": output_template,
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ],
+        "quiet": True,
+        "no_warnings": True,
+    }
+
+    attempts = [
+        {
+            "name": "android/tv audio priority",
+            "opts": {
+                "format": "140/251/bestaudio[acodec!=none]/bestaudio/best",
+                "extractor_args": {"youtube": {"player_client": ["android", "tv"]}},
+            },
+        },
+        {
+            "name": "android + ipv4 fallback",
+            "opts": {
+                "format": "140/251/bestaudio[acodec!=none]/bestaudio/best",
+                "extractor_args": {"youtube": {"player_client": ["android"]}},
+                "force_ipv4": True,
+            },
+        },
+        {
+            "name": "hls audio fallback",
+            "opts": {
+                "format": "bestaudio[protocol*=m3u8]/bestaudio/best",
+                "extractor_args": {"youtube": {"player_client": ["tv"]}},
+            },
+        },
+    ]
+
+    errors: list[str] = []
+    for attempt in attempts:
+        for temp_file in glob.glob(os.path.join(target_dir, f"{safe_base}.*")):
+            if temp_file != target_mp3_path and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except OSError:
+                    pass
+
+        merged_opts = {**base_opts, **attempt["opts"]}
+        try:
+            with yt_dlp.YoutubeDL(cast(Any, merged_opts)) as ydl:
+                ydl.download([yt_url])
+            if os.path.isfile(target_mp3_path):
+                return target_mp3_path
+        except Exception as exc:
+            errors.append(f"{attempt['name']}: {exc}")
+
+    if not os.path.isfile(target_mp3_path):
+        detail = errors[-1] if errors else "unknown download failure"
+        raise RuntimeError(
+            "Failed to download YouTube audio after multiple fallback attempts. "
+            f"Last error: {detail}. "
+            "Try updating yt-dlp (`pip install -U yt-dlp`) and retry. "
+            "If the video is restricted, try another URL."
+        )
+
+    return target_mp3_path
 
 
 # =============================================================================

@@ -70,7 +70,7 @@ spleeter_output/
 # Generated plots
 *.png
 !README*.png  # Keep README images if any
-
+aaroh-avroh-reconstrictions.md
 # Generated reports
 **/report.html
 **/*_report.html
@@ -84,6 +84,12 @@ raga_pipeline/CHANGELOG.md
 raga_pipeline/NOTEBOOK_VS_PIPELINE_COMPARISON.md
 raga_pipeline/DOCUMENTATION.md
 primer/
+
+# Implementation Plans (Working Documents)
+WEB_APP_IMPLEMENTATION_PLAN.md
+THESIS_DEMO_PLAN.md
+raga_pipeline/DOCUMENTATION.md
+WEB_APP_IMPLEMENTATION_PLAN.md
 # Trained models
 *.pkl
 *_model.pkl

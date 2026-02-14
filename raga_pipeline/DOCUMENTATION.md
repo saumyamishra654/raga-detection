@@ -94,6 +94,9 @@ python -c "from raga_pipeline import PipelineConfig; print('OK')"
 # Run detection phase
 ./run_pipeline.sh detect --audio /path/to/song.mp3 --output /path/to/results
 
+# Run detection with tonic/raga constraints
+./run_pipeline.sh detect --audio /path/to/song.mp3 --tonic "C,D#" --raga "Bhairavi"
+
 # Run analysis phase (after detection)
 ./run_pipeline.sh analyze --audio /path/to/song.mp3 --output /path/to/results --tonic "C#" --raga "Bhairavi"
 ```

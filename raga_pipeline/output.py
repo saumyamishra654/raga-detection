@@ -12,7 +12,7 @@ The HTML report includes JavaScript that synchronizes:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Set, Optional, Any, Union, Tuple
+from typing import List, Dict, Set, Optional, Any, Union, Tuple, TypedDict
 import os
 import json
 import uuid
@@ -37,6 +37,25 @@ from .sequence import Note, Phrase, OFFSET_TO_SARGAM
 # RESULTS CONTAINER
 # =============================================================================
 
+def _new_gmm_results() -> List[GMMResult]:
+    return []
+
+
+def _new_notes() -> List[Note]:
+    return []
+
+
+def _new_phrases() -> List[Phrase]:
+    return []
+
+
+def _new_phrase_clusters() -> Dict[int, List[Phrase]]:
+    return {}
+
+
+def _new_plot_paths() -> Dict[str, str]:
+    return {}
+
 @dataclass
 class AnalysisResults:
     """Container for all analysis results."""
@@ -60,17 +79,24 @@ class AnalysisResults:
     detected_raga: Optional[str] = None
     
     # GMM analysis
-    gmm_results: List[GMMResult] = field(default_factory=list)
+    gmm_results: List[GMMResult] = field(default_factory=_new_gmm_results)
     gmm_bias_cents: Optional[float] = None
     
     # Sequence analysis
-    notes: List[Note] = field(default_factory=list)
-    phrases: List[Phrase] = field(default_factory=list)
-    phrase_clusters: Dict[int, List[Phrase]] = field(default_factory=dict)
+    notes: List[Note] = field(default_factory=_new_notes)
+    phrases: List[Phrase] = field(default_factory=_new_phrases)
+    phrase_clusters: Dict[int, List[Phrase]] = field(default_factory=_new_phrase_clusters)
     transition_matrix: Optional[np.ndarray] = None
     
     # Plot paths
-    plot_paths: Dict[str, str] = field(default_factory=dict)
+    plot_paths: Dict[str, str] = field(default_factory=_new_plot_paths)
+
+
+class TrackSpec(TypedDict):
+    key: str
+    label: str
+    audio_id: str
+    pitch_data: Optional[PitchData]
 
 
 # =============================================================================
@@ -187,6 +213,58 @@ def plot_histograms(
     plt.close(fig)
     
     return output_path
+
+
+def plot_absolute_note_histogram(
+    note_midi_values: List[float],
+    output_path: str,
+    title: str = "Stationary Note Histogram (Octave-Wrapped Western Notes)",
+    weights: Optional[List[float]] = None,
+    ylabel: str = "Stationary event count",
+) -> pd.DataFrame:
+    """Plot octave-wrapped (12-bin) western-note histogram and return 12-column values."""
+    note_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    midi_rounded = np.asarray(np.round(note_midi_values), dtype=int)
+    weight_values = None if weights is None else np.asarray(weights, dtype=float)
+
+    if midi_rounded.size == 0 or (weight_values is not None and weight_values.size == 0):
+        counts = np.zeros(12, dtype=float)
+        fig, ax = plt.subplots(figsize=(10, 5))
+        x = np.arange(12)
+        ax.bar(x, counts, color='teal', alpha=0.85)
+        ax.set_xticks(x)
+        ax.set_xticklabels(note_names)
+        ax.set_xlabel('Pitch Class (Octave-wrapped)')
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.grid(axis='y', linestyle='--', alpha=0.4)
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        return pd.DataFrame([dict(zip(note_names, counts.tolist()))])
+
+    pitch_classes = np.mod(midi_rounded, 12)
+    if weight_values is not None and weight_values.shape[0] == pitch_classes.shape[0]:
+        counts = np.bincount(pitch_classes, weights=weight_values, minlength=12).astype(float)
+    else:
+        counts = np.bincount(pitch_classes, minlength=12).astype(float)
+
+    counts_df = pd.DataFrame([dict(zip(note_names, counts.tolist()))])
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(12)
+    ax.bar(x, counts, color='teal', alpha=0.85)
+    ax.set_xticks(x)
+    ax.set_xticklabels(note_names)
+    ax.set_xlabel('Pitch Class (Octave-wrapped)')
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.grid(axis='y', linestyle='--', alpha=0.4)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+    return counts_df
 
 
 def plot_gmm_overlay(
@@ -588,23 +666,51 @@ def plot_pitch_with_sargam_lines(
     tonic: Union[int, str],
     raga_name: str,
     output_path: str,
-    figsize: Tuple[int, int] = (15, 6)
+    figsize: Tuple[int, int] = (15, 6),
+    phrase_ranges: Optional[List[Tuple[float, float]]] = None,
 ):
     """
     Plot pitch contour with sargam lines.
     Slightly adapted from user snippet to save to file.
     """
     plt.figure(figsize=figsize)
-    
+
+    # Phrase regions: translucent yellow blocks with clear boundaries/labels.
+    if phrase_ranges:
+        y_top_for_labels = float(np.nanmax(pitch_values)) + 0.4
+        for idx, (start_t, end_t) in enumerate(phrase_ranges):
+            if not np.isfinite(start_t) or not np.isfinite(end_t) or end_t <= start_t:
+                continue
+            plt.axvspan(
+                float(start_t),
+                float(end_t),
+                facecolor="#ffeb3b",
+                edgecolor="none",
+                linewidth=0.0,
+                alpha=0.28,
+                zorder=0,
+            )
+            plt.axvline(float(start_t), color="#000000", linestyle="-", linewidth=1.0, alpha=0.8, zorder=1)
+            plt.axvline(float(end_t), color="#000000", linestyle="-", linewidth=1.0, alpha=0.8, zorder=1)
+            plt.text(
+                (float(start_t) + float(end_t)) / 2.0,
+                y_top_for_labels,
+                f"P{idx + 1}",
+                ha="center",
+                va="bottom",
+                fontsize=7,
+                color="#8a6d00",
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="#fff3a3", edgecolor="#eab308", alpha=0.9),
+                zorder=3,
+            )
+
     # Plot pitch
-    plt.plot(time_axis, pitch_values, label='Pitch', color='blue', alpha=0.6, linewidth=1)
+    plt.plot(time_axis, pitch_values, label='Pitch', color='blue', alpha=0.6, linewidth=1, zorder=2)
     
     # Clean tonic
     tonic_val = _parse_tonic(tonic) if isinstance(tonic, str) else int(tonic)
     
     # Sargam lines
-    patches_list = []
-    
     start_midi = int(np.nanmin(pitch_values)) - 1
     end_midi = int(np.nanmax(pitch_values)) + 1
     
@@ -717,6 +823,16 @@ def generate_detection_report(
             <h2>Vocal Pitch Distribution</h2>
             <img src="{os.path.basename(results.plot_paths['histogram_vocals'])}" 
                  alt="Vocal pitch histogram" style="max-width: 100%;">
+        </section>
+        ''')
+
+        # Stationary-note histogram section (duration-weighted octave-wrapped western notes)
+    if 'stationary_note_histogram' in results.plot_paths:
+        sections.append(f'''
+        <section id="stationary-note-histogram">
+                            <h2>Stationary Note Distribution (Duration-Weighted, Octave-Wrapped)</h2>
+            <img src="{os.path.basename(results.plot_paths['stationary_note_histogram'])}"
+                                 alt="Duration-weighted stationary octave-wrapped note histogram" style="max-width: 100%;">
         </section>
         ''')
     
@@ -964,13 +1080,14 @@ def _generate_audio_player_section(
     """Generate audio player with synchronized pitch contour."""
     
     audio_filename = os.path.basename(audio_path)
+    source_tags = _build_audio_source_tags(audio_filename)
     
     return f'''
     <section id="{player_id}-section" class="audio-player-section">
         <h2>{title}</h2>
         <div class="audio-player-container">
             <audio id="{player_id}-audio" controls>
-                <source src="{audio_filename}" type="audio/wav">
+                {source_tags}
             </audio>
             
             <div class="controls-container" style="margin-bottom: 10px; padding: 10px; background: #161b22; border-radius: 4px; display: flex; gap: 10px; align-items: center;">
@@ -1112,6 +1229,10 @@ def _generate_audio_players_section(results: AnalysisResults) -> str:
     vocals_rel = os.path.basename(config.vocals_path)
     accomp_rel = os.path.basename(config.accompaniment_path)
     original_rel = os.path.relpath(config.audio_path, config.stem_dir)
+    original_local = os.path.basename(config.audio_path)
+    original_sources = _build_audio_source_tags(original_local, original_rel)
+    vocals_sources = _build_audio_source_tags(vocals_rel, vocals_rel)
+    accomp_sources = _build_audio_source_tags(accomp_rel, accomp_rel)
     
     return f'''
     <section id="audio-tracks">
@@ -1119,23 +1240,47 @@ def _generate_audio_players_section(results: AnalysisResults) -> str:
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
             <div>
                 <p><strong>Original</strong></p>
-                <audio controls src="{original_rel}" style="width:100%"></audio>
+                <audio controls style="width:100%">{original_sources}</audio>
             </div>
             <div>
                 <p><strong>Vocals</strong></p>
-                <audio controls src="{vocals_rel}" style="width:100%"></audio>
+                <audio controls style="width:100%">{vocals_sources}</audio>
             </div>
             <div>
                 <p><strong>Accompaniment</strong></p>
-                <audio controls src="{accomp_rel}" style="width:100%"></audio>
+                <audio controls style="width:100%">{accomp_sources}</audio>
             </div>
         </div>
     </section>
     '''
 
 
+def _build_audio_source_tags(primary_path: str, secondary_path: Optional[str] = None) -> str:
+    """Build one or two <source> tags so browsers can fall back across locations."""
+    paths: List[str] = [primary_path]
+    if secondary_path and secondary_path != primary_path:
+        paths.append(secondary_path)
+
+    source_tags: List[str] = []
+    for path in paths:
+        ext = os.path.splitext(path)[1].lower()
+        if ext == ".wav":
+            mime_type = "audio/wav"
+        elif ext == ".mp3":
+            mime_type = "audio/mpeg"
+        elif ext == ".flac":
+            mime_type = "audio/flac"
+        else:
+            mime_type = "audio/*"
+        source_tags.append(f'<source src="{path}" type="{mime_type}">')
+
+    return "".join(source_tags)
+
+
 def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], tonic: int) -> str:
     """Generate phrase-by-phrase musical transcription section."""
+    section_id = f"transcription-{uuid.uuid4().hex[:8]}"
+    visible_limit = 10
     phrase_rows: List[str] = []
     for i, phrase in enumerate(phrases):
         labels: List[str] = []
@@ -1145,9 +1290,10 @@ def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], to
                 label = OFFSET_TO_SARGAM.get(int(round(n.pitch_midi - tonic)) % 12, "?")
             labels.append(label)
         phrase_text = " ".join(labels).strip() if labels else "--"
+        row_style = "display: none;" if i >= visible_limit else ""
         phrase_rows.append(
             f'''
-            <div style="padding: 10px 12px; border: 1px solid #30363d; border-radius: 8px; background: #0d1117;">
+            <div class="transcription-phrase-row {'transcription-phrase-hidden' if i >= visible_limit else ''}" style="padding: 10px 12px; border: 1px solid #30363d; border-radius: 8px; background: #0d1117; {row_style}">
                 <div style="font-size: 12px; color: #8b949e; margin-bottom: 4px;">Phrase {i+1} · {phrase.start:.2f}s to {phrase.end:.2f}s</div>
                 <div style="font-size: 16px; line-height: 1.5; color: #c9d1d9; word-break: break-word;">{phrase_text}</div>
             </div>
@@ -1155,14 +1301,42 @@ def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], to
         )
 
     phrases_html = "".join(phrase_rows) if phrase_rows else "<p>No phrase transcription available.</p>"
+    hidden_count = max(0, len(phrases) - visible_limit)
+    show_more_html = ""
+    if hidden_count > 0:
+        show_more_html = f'''
+        <button type="button" id="{section_id}-toggle" style="margin-top: 10px; padding: 8px 14px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer;">
+            Show more ({hidden_count} more phrases)
+        </button>
+        <script>
+        (function() {{
+            var root = document.getElementById("{section_id}");
+            if (!root) return;
+            var btn = document.getElementById("{section_id}-toggle");
+            if (!btn) return;
+            var hiddenRows = root.querySelectorAll(".transcription-phrase-hidden");
+            var expanded = false;
+
+            btn.addEventListener("click", function() {{
+                expanded = !expanded;
+                hiddenRows.forEach(function(row) {{
+                    row.style.display = expanded ? "block" : "none";
+                }});
+                btn.textContent = expanded ? "Show less" : "Show more ({hidden_count} more phrases)";
+            }});
+        }})();
+        </script>
+        '''
+
     return f'''
-    <section id="transcription">
+    <section id="{section_id}">
         <h2>Musical Transcription</h2>
         <p><strong>Total Notes:</strong> {len(notes)} | <strong>Phrases:</strong> {len(phrases)}</p>
         <div class="phrase-list" style="display: grid; gap: 8px;">
             <h3>Phrase-by-Phrase Transcription</h3>
             {phrases_html}
         </div>
+        {show_more_html}
     </section>
     '''
 
@@ -1575,6 +1749,7 @@ def plot_pitch_wide_to_base64_with_legend(
     overlay_energy: Optional[np.ndarray] = None,
     overlay_timestamps: Optional[np.ndarray] = None,
     overlay_label: str = "RMS Energy",
+    phrase_ranges: Optional[List[Tuple[float, float]]] = None,
 ) -> Tuple[str, str, int]:
     """
     Generate wide pitch contour and overlay sargam lines, returning base64 images.
@@ -1586,17 +1761,20 @@ def plot_pitch_wide_to_base64_with_legend(
     from matplotlib.ticker import MultipleLocator
     
     # Resolve tonic
+    tonic_midi_base: float
+    tonic_midi: int
+    tonic_label: str
     if isinstance(tonic_ref, (int, np.integer)):
-        tonic_midi = tonic_ref % 12
-        tonic_midi_base = tonic_midi + 60 # Default to middle C octave if int
+        tonic_midi = int(tonic_ref) % 12
+        tonic_midi_base = float(tonic_midi + 60) # Default to middle C octave if int
         tonic_label = _tonic_name(tonic_ref)
     else:
         try:
-            tonic_midi_base = librosa.note_to_midi(str(tonic_ref) + '4')
+            tonic_midi_base = float(librosa.note_to_midi(str(tonic_ref) + '4'))
             tonic_midi = int(tonic_midi_base) % 12
             tonic_label = str(tonic_ref)
         except Exception:
-            tonic_midi_base = 60
+            tonic_midi_base = 60.0
             tonic_midi = 0
             tonic_label = "C"
 
@@ -1633,6 +1811,35 @@ def plot_pitch_wide_to_base64_with_legend(
     # --- Main Plot ---
     fig, ax = plt.subplots(figsize=(figsize_width, figsize_height), dpi=dpi)
     fig.subplots_adjust(left=0.005, right=0.995, top=0.95, bottom=0.1) # Min margins
+
+    # Phrase regions in yellow so phrase boundaries are visible on the scroll plot.
+    if phrase_ranges:
+        label_y = float(max_m) - 0.35
+        for idx, (start_t, end_t) in enumerate(phrase_ranges):
+            if not np.isfinite(start_t) or not np.isfinite(end_t) or end_t <= start_t:
+                continue
+            ax.axvspan(
+                float(start_t),
+                float(end_t),
+                facecolor="#ffeb3b",
+                edgecolor="none",
+                linewidth=0.0,
+                alpha=0.16,
+                zorder=0,
+            )
+            ax.axvline(float(start_t), color="#000000", linestyle="-", linewidth=0.7, alpha=0.65, zorder=1)
+            ax.axvline(float(end_t), color="#000000", linestyle="-", linewidth=0.7, alpha=0.65, zorder=1)
+            ax.text(
+                (float(start_t) + float(end_t)) / 2.0,
+                label_y,
+                f"P{idx + 1}",
+                ha="center",
+                va="top",
+                fontsize=7,
+                color="#000000",
+                bbox=dict(boxstyle="round,pad=0.12", facecolor="#fff3a3", edgecolor="#000000", alpha=0.9),
+                zorder=2,
+            )
     
     voiced_times = timestamps[voiced_mask]
     
@@ -1817,9 +2024,6 @@ def plot_pitch_wide_to_base64_with_legend(
 
     return legend_b64, plot_b64, pixel_width
 
-
-    return html
-
 def create_scrollable_pitch_plot_html(
     pitch_data: PitchData,
     tonic: int,
@@ -1833,6 +2037,7 @@ def create_scrollable_pitch_plot_html(
     overlay_energy: Optional[np.ndarray] = None,
     overlay_timestamps: Optional[np.ndarray] = None,
     overlay_label: str = "RMS Energy",
+    phrase_ranges: Optional[List[Tuple[float, float]]] = None,
 ) -> str:
     """
     Create HTML component for scrollable pitch plot with audio sync.
@@ -1846,6 +2051,7 @@ def create_scrollable_pitch_plot_html(
         overlay_energy=overlay_energy,
         overlay_timestamps=overlay_timestamps,
         overlay_label=overlay_label,
+        phrase_ranges=phrase_ranges,
     )
     
     if not plot_b64:
@@ -2219,6 +2425,13 @@ def generate_analysis_report(
     vocals_rel = os.path.relpath(results.config.vocals_path, output_dir)
     accomp_rel = os.path.relpath(results.config.accompaniment_path, output_dir)
     original_rel = os.path.relpath(results.config.audio_path, output_dir)
+    vocals_local = os.path.basename(results.config.vocals_path)
+    accomp_local = os.path.basename(results.config.accompaniment_path)
+    original_local = os.path.basename(results.config.audio_path)
+
+    original_sources = _build_audio_source_tags(original_local, original_rel)
+    vocals_sources = _build_audio_source_tags(vocals_local, vocals_rel)
+    accomp_sources = _build_audio_source_tags(accomp_local, accomp_rel)
     
     # Audio IDs for sync
     vocals_id = "vocals-player"
@@ -2240,7 +2453,7 @@ def generate_analysis_report(
     if original_pitch_data is None and results.config.melody_source == "composite":
         original_pitch_data = results.pitch_data_vocals
 
-    track_specs = [
+    track_specs: List[TrackSpec] = [
         {
             "key": "original",
             "label": "Original Mix",
@@ -2270,6 +2483,11 @@ def generate_analysis_report(
     energy_buttons_html = ""
     track_panels_html = ""
     track_switch_js = ""
+    phrase_ranges = [
+        (float(phrase.start), float(phrase.end))
+        for phrase in results.phrases
+        if phrase.end > phrase.start
+    ]
 
     if available_tracks:
         track_button_parts = []
@@ -2296,6 +2514,8 @@ def generate_analysis_report(
             e_key = e_spec["key"]
             e_label = e_spec["label"]
             e_pitch = e_spec["pitch_data"]
+            if e_pitch is None:
+                continue
 
             energy_histogram_html = "<p>No energy data available.</p>"
             try:
@@ -2325,6 +2545,8 @@ def generate_analysis_report(
             label = spec["label"]
             audio_id = spec["audio_id"]
             pitch_data = spec["pitch_data"]
+            if pitch_data is None:
+                continue
             panel_visible = (key == default_track_key)
 
             track_button_parts.append(
@@ -2338,6 +2560,8 @@ def generate_analysis_report(
                 e_key = e_spec["key"]
                 e_label = e_spec["label"]
                 e_pitch = e_spec["pitch_data"]
+                if e_pitch is None:
+                    continue
                 overlay_visible = (key == default_track_key and e_key == default_energy_key)
 
                 try:
@@ -2353,6 +2577,7 @@ def generate_analysis_report(
                         overlay_energy=e_pitch.energy,
                         overlay_timestamps=e_pitch.timestamps,
                         overlay_label=f"{e_label} RMS",
+                        phrase_ranges=phrase_ranges,
                     )
                 except Exception as e:
                     scroll_plot_html = (
@@ -2362,7 +2587,7 @@ def generate_analysis_report(
                 overlay_parts.append(f'''
                 <div class="energy-overlay-panel" id="overlay-panel-{key}-{e_key}" data-track-key="{key}" data-energy-key="{e_key}" style="display: {'block' if overlay_visible else 'none'};">
                     <h3>Pitch: {label} | Amplitude Overlay: {e_label}</h3>
-                    <p style="font-size: 0.9em; color: #8b949e;">Pitch stays on <strong>{label}</strong>. Energy overlay is from <strong>{e_label}</strong>.</p>
+                    <p style="font-size: 0.9em; color: #8b949e;">Pitch stays on <strong>{label}</strong>. Energy overlay is from <strong>{e_label}</strong>. Phrase spans are highlighted in yellow.</p>
                     {scroll_plot_html}
                 </div>
                 ''')
@@ -2523,6 +2748,64 @@ def generate_analysis_report(
         if 'avroh_stats' in p:
             for run, count in p['avroh_stats'].items():
                 avroh_items.append(f"<li><strong>{run}</strong>: {count}</li>")
+
+        # Aaroh/Avroh checker
+        checker_html = ""
+        checker = p.get("aaroh_avroh_checker")
+        reference = p.get("aaroh_avroh_reference", {})
+        if checker:
+            note_rows = []
+            for row in checker.get("note_evidence", []):
+                if not row.get("sufficient_evidence"):
+                    continue
+                note_rows.append(
+                    "<tr>"
+                    f"<td>{row.get('note', '')}</td>"
+                    f"<td>{row.get('asc_edges', 0)}</td>"
+                    f"<td>{row.get('desc_edges', 0)}</td>"
+                    f"<td>{row.get('asc_ratio', 0.0):.2f}</td>"
+                    f"<td>{row.get('desc_ratio', 0.0):.2f}</td>"
+                    f"<td>{row.get('expected_asc', 0.0):.1f}</td>"
+                    f"<td>{row.get('expected_desc', 0.0):.1f}</td>"
+                    "</tr>"
+                )
+
+            ref_name = reference.get("matched_name", stats.raga_name)
+            ref_aaroh = reference.get("aaroh_raw", "N/A")
+            ref_avroh = reference.get("avroh_raw", "N/A")
+
+            checker_html = f"""
+            <div class="stat-box">
+                <strong>Aaroh/Avroh Checker</strong>
+                <p><strong>Reference:</strong> {ref_name}</p>
+                <p><strong>Aaroh:</strong> {ref_aaroh}</p>
+                <p><strong>Avroh:</strong> {ref_avroh}</p>
+                <p><strong>Score:</strong> {checker.get('score', 0.0):.3f}
+                   ({checker.get('matched_checks', 0)}/{checker.get('total_checks', 0)} checks)</p>
+                <p><strong>Missing Aaroh:</strong> {", ".join(checker.get('missing_aaroh', [])) or "None"}</p>
+                <p><strong>Missing Avroh:</strong> {", ".join(checker.get('missing_avroh', [])) or "None"}</p>
+                <p><strong>Unexpected Aaroh:</strong> {", ".join(checker.get('unexpected_aaroh', [])) or "None"}</p>
+                <p><strong>Unexpected Avroh:</strong> {", ".join(checker.get('unexpected_avroh', [])) or "None"}</p>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse: collapse; margin-top: 8px;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Note</th>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Asc Edges</th>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Desc Edges</th>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Asc Ratio</th>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Desc Ratio</th>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Exp Asc</th>
+                                <th style="text-align:left; border-bottom:1px solid #30363d;">Exp Desc</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {"".join(note_rows) or "<tr><td colspan='7'>No notes with sufficient directional evidence.</td></tr>"}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            """
                 
         pattern_html = f"""
         <section id="patterns">
@@ -2531,6 +2814,7 @@ def generate_analysis_report(
                  <div class="stat-box"><strong>Common Motifs</strong><ul>{"".join(motif_items) or "<li>None</li>"}</ul></div>
                  <div class="stat-box"><strong>Aaroh (Ascending) Runs</strong><ul>{"".join(aaroh_items) or "<li>None</li>"}</ul></div>
                  <div class="stat-box"><strong>Avroh (Descending) Runs</strong><ul>{"".join(avroh_items) or "<li>None</li>"}</ul></div>
+                 {checker_html}
             </div>
         </section>
         """
@@ -2617,15 +2901,15 @@ def generate_analysis_report(
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
                     <div>
                         <p><strong>Original</strong></p>
-                        <audio id="{original_id}" controls src="{original_rel}" style="width:100%"></audio>
+                        <audio id="{original_id}" controls style="width:100%">{original_sources}</audio>
                     </div>
                     <div>
                         <p><strong>Vocals Stem</strong></p>
-                        <audio id="{vocals_id}" controls src="{vocals_rel}" style="width:100%"></audio>
+                        <audio id="{vocals_id}" controls style="width:100%">{vocals_sources}</audio>
                     </div>
                     <div>
                         <p><strong>Accompaniment</strong></p>
-                        <audio id="{accomp_id}" controls src="{accomp_rel}" style="width:100%"></audio>
+                        <audio id="{accomp_id}" controls style="width:100%">{accomp_sources}</audio>
                     </div>
                 </div>
                 

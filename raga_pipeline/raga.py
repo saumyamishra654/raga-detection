@@ -12,8 +12,9 @@ Provides:
 
 from dataclasses import dataclass, field
 from collections import defaultdict
-from typing import List, Set, Dict, Tuple, Optional, Union
+from typing import List, Set, Dict, Tuple, Optional, Union, Any
 import os
+import re
 import numpy as np
 import pandas as pd
 import librosa
@@ -131,6 +132,195 @@ class ScoredCandidate:
     raga_size: int
     match_diff: int               # |raga_size - detected_peaks|
     complexity_pen: float
+
+
+# =============================================================================
+# AAROH/AVROH DIRECTIONAL PATTERNS
+# =============================================================================
+
+_AAROH_AVROH_CHAR_TO_PC = {
+    "S": 0, "s": 0,
+    "r": 1,
+    "R": 2,
+    "g": 3,
+    "G": 4,
+    "m": 5,
+    "M": 6,
+    "P": 7, "p": 7,
+    "d": 8,
+    "D": 9,
+    "n": 10,
+    "N": 11,
+}
+
+
+@dataclass
+class AarohAvrohPattern:
+    """Directional note presence for one raga."""
+    raga_name: str
+    source_raga_name: str
+    aaroh_raw: str
+    avroh_raw: str
+    aaroh_pattern: Tuple[float, ...]
+    avroh_pattern: Tuple[float, ...]
+
+
+def _normalize_raga_name(name: str) -> str:
+    """Normalize raga names across CSV variants for matching."""
+    if not name:
+        return ""
+    normalized = str(name).strip().lower()
+    normalized = re.sub(r"\(.*?\)", "", normalized)
+    normalized = re.sub(r"[^a-z0-9 ]+", " ", normalized)
+    return " ".join(normalized.split())
+
+
+def _parse_directional_sequence_to_pattern(sequence: str) -> Tuple[float, ...]:
+    """
+    Parse Aaroh/Avroh text (e.g. S-R-G-m-P-d-n-S) into a 12-note presence vector.
+
+    Handles packed symbols like Gg, Rr, Nn by scanning character-wise.
+    """
+    presence = [0.0] * 12
+    if sequence is None:
+        return tuple(presence)
+
+    text = str(sequence)
+    for char in text:
+        pitch_class = _AAROH_AVROH_CHAR_TO_PC.get(char)
+        if pitch_class is not None:
+            presence[pitch_class] = 1.0
+
+    return tuple(presence)
+
+
+def build_aaroh_avroh_subset(
+    aaroh_avroh_csv_path: str,
+    raga_db_csv_path: str,
+    output_csv_path: str,
+) -> pd.DataFrame:
+    """
+    Build a subset of aaroh/avroh rows aligned to names from raga_list_final.csv.
+
+    The output keeps the canonical raga-list name in `raga_name` and preserves the
+    matched source row name in `RAGATABLE`.
+    """
+    source_df = pd.read_csv(aaroh_avroh_csv_path)
+    raga_df = pd.read_csv(raga_db_csv_path)
+
+    if "RAGATABLE" not in source_df.columns or "Aroha" not in source_df.columns or "Avroh" not in source_df.columns:
+        raise ValueError(
+            "aaroh/avroh CSV must contain columns: RAGATABLE, Aroha, Avroh"
+        )
+    if "names" not in raga_df.columns:
+        raise ValueError("raga DB CSV must contain a 'names' column")
+
+    source_lookup: Dict[str, dict] = {}
+    for _, row in source_df.iterrows():
+        source_name = str(row["RAGATABLE"]).strip()
+        key = _normalize_raga_name(source_name)
+        if key and key not in source_lookup:
+            source_lookup[key] = {
+                "RAGATABLE": source_name,
+                "Aroha": str(row["Aroha"]).strip() if pd.notna(row["Aroha"]) else "",
+                "Avroh": str(row["Avroh"]).strip() if pd.notna(row["Avroh"]) else "",
+            }
+
+    canonical_names: List[str] = []
+    seen_names: Set[str] = set()
+    for _, row in raga_df.iterrows():
+        names_raw = str(row["names"]).strip() if pd.notna(row["names"]) else ""
+        names = [part.strip() for part in names_raw.split(",") if part.strip()]
+        for name in names:
+            key = _normalize_raga_name(name)
+            if key and key not in seen_names:
+                seen_names.add(key)
+                canonical_names.append(name)
+
+    subset_rows: List[dict] = []
+    for canonical_name in canonical_names:
+        key = _normalize_raga_name(canonical_name)
+        matched = source_lookup.get(key)
+        if not matched:
+            continue
+        subset_rows.append({
+            "raga_name": canonical_name,
+            "RAGATABLE": matched["RAGATABLE"],
+            "Aroha": matched["Aroha"],
+            "Avroh": matched["Avroh"],
+        })
+
+    subset_df = pd.DataFrame(
+        subset_rows,
+        columns=["raga_name", "RAGATABLE", "Aroha", "Avroh"],
+    )
+
+    output_dir = os.path.dirname(output_csv_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    subset_df.to_csv(output_csv_path, index=False)
+
+    return subset_df
+
+
+def load_aaroh_avroh_patterns(csv_path: str) -> Dict[str, AarohAvrohPattern]:
+    """Load aaroh/avroh patterns keyed by normalized raga name."""
+    df = pd.read_csv(csv_path)
+
+    name_col = "raga_name" if "raga_name" in df.columns else "RAGATABLE"
+    source_col = "RAGATABLE" if "RAGATABLE" in df.columns else name_col
+    if "Aroha" not in df.columns or "Avroh" not in df.columns:
+        raise ValueError("Pattern CSV must contain Aroha and Avroh columns")
+
+    patterns: Dict[str, AarohAvrohPattern] = {}
+    for _, row in df.iterrows():
+        raga_name = str(row[name_col]).strip()
+        if not raga_name:
+            continue
+        normalized = _normalize_raga_name(raga_name)
+        if not normalized or normalized in patterns:
+            continue
+
+        aaroh_raw = str(row["Aroha"]).strip() if pd.notna(row["Aroha"]) else ""
+        avroh_raw = str(row["Avroh"]).strip() if pd.notna(row["Avroh"]) else ""
+        source_name = str(row[source_col]).strip() if pd.notna(row[source_col]) else raga_name
+
+        patterns[normalized] = AarohAvrohPattern(
+            raga_name=raga_name,
+            source_raga_name=source_name,
+            aaroh_raw=aaroh_raw,
+            avroh_raw=avroh_raw,
+            aaroh_pattern=_parse_directional_sequence_to_pattern(aaroh_raw),
+            avroh_pattern=_parse_directional_sequence_to_pattern(avroh_raw),
+        )
+
+    return patterns
+
+
+def get_aaroh_avroh_pattern_for_raga(
+    raga_name: str,
+    pattern_lookup: Dict[str, AarohAvrohPattern],
+) -> Optional[AarohAvrohPattern]:
+    """Resolve aaroh/avroh pattern using exact then fuzzy name matching."""
+    if not raga_name or not pattern_lookup:
+        return None
+
+    candidates = [part.strip() for part in str(raga_name).split(",") if part.strip()]
+    if not candidates:
+        return None
+
+    for candidate in candidates:
+        key = _normalize_raga_name(candidate)
+        if key in pattern_lookup:
+            return pattern_lookup[key]
+
+    for candidate in candidates:
+        key = _normalize_raga_name(candidate)
+        for pattern_key, pattern in pattern_lookup.items():
+            if key and (key in pattern_key or pattern_key in key):
+                return pattern
+
+    return None
 
 
 # =============================================================================
@@ -299,6 +489,7 @@ def score_candidates_full(
     params: ScoringParams = DEFAULT_SCORING_PARAMS,
     tonic_candidates: Optional[List[int]] = None,
     bias_cents: Optional[float] = None,
+    raga_filter: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Full scoring pipeline matching the notebook exactly.
@@ -314,6 +505,7 @@ def score_candidates_full(
         instrument_mode: Source type for fallback tonic selection
         params: Scoring parameters
         tonic_candidates: Optional list of allowed tonics (from get_tonic_candidates)
+        raga_filter: Optional raga name constraint (comma-separated allowed)
     """
     EPS = params.EPS
     
@@ -369,7 +561,7 @@ def score_candidates_full(
     # Priority: explicit tonic_candidates > tonic bias > accompaniment filtering > all
     if tonic_candidates is not None and len(tonic_candidates) > 0:
         allowed_tonics = tonic_candidates.copy()
-        print(f"[SCORING] Using tonic candidates from bias: {allowed_tonics}")
+        print(f"[SCORING] Using tonic candidates: {allowed_tonics}")
     elif has_accompaniment and len(surviving_tonics) > 0:
         allowed_tonics = surviving_tonics.copy()
     else:
@@ -377,10 +569,27 @@ def score_candidates_full(
     
     print(f"[SCORING] Using tonics: {allowed_tonics}")
     
+    raga_filter_keys: List[str] = []
+    if raga_filter:
+        raga_filter_keys = [
+            _normalize_raga_name(part)
+            for part in str(raga_filter).split(",")
+            if part.strip()
+        ]
+
     # === Score all ragas ===
     final_results = []
     
     for raga_entry in raga_db.all_ragas:
+        if raga_filter_keys:
+            names = raga_entry.get("names", [])
+            matched = False
+            for name in names:
+                if _normalize_raga_name(name) in raga_filter_keys:
+                    matched = True
+                    break
+            if not matched:
+                continue
         mask_abs = np.array(raga_entry["mask"], dtype=int)
         names = raga_entry["names"]
         
@@ -642,11 +851,11 @@ def apply_raga_correction_to_notes(
     """
     valid_pcs = get_raga_notes(raga_db, raga_name, tonic)
     
-    corrected_sequence = []
-    all_corrections = []
+    corrected_sequence: List[Note] = []
+    all_corrections: List[dict] = []
     
     # Stats
-    stats = {
+    stats: Dict[str, Any] = {
         'total': len(note_sequence),
         'unchanged': 0,
         'corrected': 0,
@@ -683,13 +892,13 @@ def apply_raga_correction_to_notes(
              corrected_sequence.append(note)
              
         elif action == 'corrected':
-            new_pitch = info['corrected_midi']
+            new_pitch = float(info['corrected_midi'])
             stats['corrected'] += 1
             new_note = Note(
                 start=note.start,
                 end=note.end,
                 pitch_midi=new_pitch,
-                pitch_hz=librosa.midi_to_hz(new_pitch),
+                pitch_hz=float(librosa.midi_to_hz(new_pitch)),
                 confidence=note.confidence
             )
             corrected_sequence.append(new_note)
@@ -703,14 +912,14 @@ def _tonic_to_name(tonic: int) -> str:
     return names[tonic % 12]
 
 
-def _parse_tonic(tonic_str: str) -> int:
+def _parse_tonic(tonic_str: Union[str, int]) -> int:
     """Parse tonic string (e.g. 'C#', 'Db', '1') to integer 0-11."""
-    if not tonic_str:
-        raise ValueError("Empty tonic string")
-        
     # Handle integer input
     if isinstance(tonic_str, int):
         return int(tonic_str) % 12
+    
+    if not tonic_str:
+        raise ValueError("Empty tonic string")
         
     s = str(tonic_str).strip().upper()
     
@@ -739,6 +948,26 @@ def _parse_tonic(tonic_str: str) -> int:
         return note_map[s]
         
     raise ValueError(f"Invalid tonic: {tonic_str}")
+
+
+def _parse_tonic_list(tonic_input: Optional[Union[str, List[Union[str, int]], Tuple[Union[str, int], ...]]]) -> List[int]:
+    """Parse a comma-separated tonic list into unique pitch classes."""
+    if tonic_input is None:
+        return []
+
+    if isinstance(tonic_input, (list, tuple, set)):
+        parts = list(tonic_input)
+    else:
+        parts = [part.strip() for part in str(tonic_input).split(",") if part.strip()]
+
+    tonics: List[int] = []
+    seen: Set[int] = set()
+    for part in parts:
+        tonic = _parse_tonic(part)
+        if tonic not in seen:
+            tonics.append(tonic)
+            seen.add(tonic)
+    return tonics
 
 
 class RagaScorer:
@@ -785,6 +1014,7 @@ class RagaScorer:
         instrument_mode: str = "autodetect",
         tonic_candidates: Optional[List[int]] = None,
         bias_cents: Optional[float] = None,
+        raga_filter: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Score all raga candidates.
@@ -800,4 +1030,5 @@ class RagaScorer:
             self.params,
             tonic_candidates,
             bias_cents,
+            raga_filter,
         )

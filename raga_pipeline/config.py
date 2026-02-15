@@ -8,7 +8,7 @@ Provides:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 import argparse
 import os
 
@@ -221,118 +221,140 @@ class PipelineConfig:
         return mp3_path
 
 
-def load_config_from_cli() -> PipelineConfig:
-    """Parse command-line arguments and return configuration."""
+def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> None:
+    parser.add_argument("--audio", "-a", required=required, help="Input audio file (relative or absolute path)")
+    parser.add_argument("--output", "-o", default="batch_results", help="Parent directory for output results")
+    parser.add_argument("--separator", choices=["demucs", "spleeter"], default="demucs", help="Stem separation engine to use")
+    parser.add_argument("--demucs-model", default="htdemucs", help="Specific Demucs model (e.g., htdemucs, mdx_extra)")
+
+    # Source and Melody settings
+    parser.add_argument(
+        "--source-type",
+        choices=["mixed", "instrumental", "vocal"],
+        default="mixed",
+        help="Audio source type: 'vocal' enables gender tonic bias, 'instrumental' enables instrument tonic bias",
+    )
+    parser.add_argument(
+        "--melody-source",
+        choices=["separated", "composite"],
+        default="separated",
+        help="Use 'separated' (stem) or 'composite' (full mix) for melody pitch extraction",
+    )
+    parser.add_argument("--vocalist-gender", choices=["male", "female"], help="Vocalist gender for tonic biasing (only used for source-type=vocal)")
+    parser.add_argument(
+        "--instrument-type",
+        choices=["autodetect", "sitar", "sarod", "bansuri", "slide_guitar"],
+        default="autodetect",
+        help="Instrument type for tonic biasing (only used for source-type=instrumental)",
+    )
+
+    # Pitch Extraction settings
+    parser.add_argument("--fmin-note", default="G1", help="Minimum note for pitch extraction (e.g., G1)")
+    parser.add_argument("--fmax-note", default="C6", help="Maximum note for pitch extraction (e.g., C6)")
+    parser.add_argument("--vocal-confidence", type=float, default=0.98, help="Confidence threshold (0-1) for melody pitch data")
+    parser.add_argument("--accomp-confidence", type=float, default=0.80, help="Confidence threshold (0-1) for accompaniment pitch data")
+
+    # Peak Detection settings
+    parser.add_argument("--prominence-high", type=float, default=0.01, help="Prominence threshold factor for high-res peak detection")
+    parser.add_argument("--prominence-low", type=float, default=0.03, help="Prominence threshold factor for low-res peak detection")
+    parser.add_argument(
+        "--bias-rotation",
+        action="store_false",
+        dest="bias_rotation",
+        help="Disable histogram bias rotation (enabled by default)",
+    )
+
+    # Miscellaneous
+    parser.add_argument("--force", "-f", action="store_true", help="Force recompute pitch extraction (reuses existing stems if found)")
+    parser.add_argument("--skip-separation", action="store_true", help="Skip stem separation entirely (only valid for instrument-mode)")
+    parser.add_argument("--raga-db", help="Override path to raga database CSV")
+
+
+def build_cli_parser() -> argparse.ArgumentParser:
+    """Create and return the canonical CLI parser for the pipeline."""
     parser = argparse.ArgumentParser(
         description="Raga Detection Pipeline",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     # create subparsers for modes: preprocess, detect, analyze
     subparsers = parser.add_subparsers(dest="command", help="Pipeline mode")
 
-    # --- Common arguments function ---
-    def add_common_args(p, required=True):
-        p.add_argument("--audio", "-a", required=required, help="Input audio file (relative or absolute path)")
-        p.add_argument("--output", "-o", default="batch_results", help="Parent directory for output results")
-        p.add_argument("--separator", choices=["demucs", "spleeter"], default="demucs", help="Stem separation engine to use")
-        p.add_argument("--demucs-model", default="htdemucs", help="Specific Demucs model (e.g., htdemucs, mdx_extra)")
-
-        # Source and Melody settings
-        p.add_argument("--source-type", choices=["mixed", "instrumental", "vocal"],
-                       default="mixed", help="Audio source type: 'vocal' enables gender tonic bias, 'instrumental' enables instrument tonic bias")
-        p.add_argument("--melody-source", choices=["separated", "composite"],
-                       default="separated", help="Use 'separated' (stem) or 'composite' (full mix) for melody pitch extraction")
-        p.add_argument("--vocalist-gender", choices=["male", "female"],
-                       help="Vocalist gender for tonic biasing (only used for source-type=vocal)")
-        p.add_argument("--instrument-type",
-                       choices=["autodetect", "sitar", "sarod", "bansuri", "slide_guitar"],
-                       default="autodetect",
-                       help="Instrument type for tonic biasing (only used for source-type=instrumental)")
-
-        # Pitch Extraction settings
-        p.add_argument("--fmin-note", default="G1", help="Minimum note for pitch extraction (e.g., G1)")
-        p.add_argument("--fmax-note", default="C6", help="Maximum note for pitch extraction (e.g., C6)")
-        p.add_argument("--vocal-confidence", type=float, default=0.98, help="Confidence threshold (0-1) for melody pitch data")
-        p.add_argument("--accomp-confidence", type=float, default=0.80, help="Confidence threshold (0-1) for accompaniment pitch data")
-
-        # Peak Detection settings
-        p.add_argument("--prominence-high", type=float, default=0.01, help="Prominence threshold factor for high-res peak detection")
-        p.add_argument("--prominence-low", type=float, default=0.03, help="Prominence threshold factor for low-res peak detection")
-        p.add_argument(
-            "--bias-rotation",
-            action="store_false",
-            dest="bias_rotation",
-            help="Disable histogram bias rotation (enabled by default)",
-        )
-
-        # Miscellaneous
-        p.add_argument("--force", "-f", action="store_true", help="Force recompute pitch extraction (reuses existing stems if found)")
-        p.add_argument("--skip-separation", action="store_true",
-                       help="Skip stem separation entirely (only valid for instrument-mode)")
-        p.add_argument("--raga-db", help="Override path to raga database CSV")
-
     # --- Detect Mode ---
     detect_parser = subparsers.add_parser("detect", help="Phase 1: Detection only")
-    add_common_args(detect_parser, required=True)
+    _add_common_args(detect_parser, required=True)
     detect_parser.add_argument("--tonic", help="Force tonic (comma-separated allowed, e.g. C,D#)")
     detect_parser.add_argument("--raga", help="Force raga name")
 
     # --- Analyze Mode ---
     analyze_parser = subparsers.add_parser("analyze", help="Phase 2: Analysis only")
-    add_common_args(analyze_parser, required=True)
+    _add_common_args(analyze_parser, required=True)
     analyze_parser.add_argument("--tonic", required=True, help="Tonic (e.g. C, D#)")
     analyze_parser.add_argument("--raga", required=True, help="Raga name")
-    analyze_parser.add_argument("--keep-impure-notes", action="store_true",
-                                help="Keep notes not in raga (default: remove)")
-    analyze_parser.add_argument("--transcription-smoothing-ms", type=float, default=0.0,
-                                help="Smoothing sigma (ms) for transcription. Set to 0 to disable.")
-    analyze_parser.add_argument("--transcription-min-duration", type=float, default=0.02,
-                                help="Minimum duration (s) for a transcribed note.")
-    analyze_parser.add_argument("--transcription-stability-threshold", type=float, default=4.0,
-                                help="Max pitch change (semitones/sec) to be considered stable.")
-    analyze_parser.add_argument("--energy-threshold", type=float, default=0.0,
-                                help="Energy threshold (0.0-1.0) for filtering unvoiced segments.")
-    analyze_parser.add_argument("--energy-metric", choices=["rms", "log_amp"],
-                                default="rms",
-                                help="Energy metric: 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-scaled). "
-                                     "log_amp gives better dynamic range for quiet passages.")
-    analyze_parser.add_argument("--silence-threshold", type=float, default=0.10,
-                                help="RMS energy threshold (0.0-1.0) for silence-based phrase splitting. 0 disables.")
-    analyze_parser.add_argument("--silence-min-duration", type=float, default=0.25,
-                                help="Minimum silence duration (seconds) to trigger a phrase break.")
-    analyze_parser.add_argument("--phrase-min-duration", type=float, default=1.0,
-                                help="Exclude phrases shorter than this duration (seconds).")
-    analyze_parser.add_argument("--phrase-min-notes", type=int, default=0,
-                                help="Exclude phrases with fewer notes than this count. 0 disables.")
-    analyze_parser.add_argument("--no-rms-overlay", action="store_true",
-                                help="Disable RMS energy overlay on pitch analysis plots.")
+    analyze_parser.add_argument("--keep-impure-notes", action="store_true", help="Keep notes not in raga (default: remove)")
+    analyze_parser.add_argument(
+        "--transcription-smoothing-ms",
+        type=float,
+        default=0.0,
+        help="Smoothing sigma (ms) for transcription. Set to 0 to disable.",
+    )
+    analyze_parser.add_argument("--transcription-min-duration", type=float, default=0.02, help="Minimum duration (s) for a transcribed note.")
+    analyze_parser.add_argument(
+        "--transcription-stability-threshold",
+        type=float,
+        default=4.0,
+        help="Max pitch change (semitones/sec) to be considered stable.",
+    )
+    analyze_parser.add_argument("--energy-threshold", type=float, default=0.0, help="Energy threshold (0.0-1.0) for filtering unvoiced segments.")
+    analyze_parser.add_argument(
+        "--energy-metric",
+        choices=["rms", "log_amp"],
+        default="rms",
+        help="Energy metric: 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-scaled). "
+        "log_amp gives better dynamic range for quiet passages.",
+    )
+    analyze_parser.add_argument(
+        "--silence-threshold",
+        type=float,
+        default=0.10,
+        help="RMS energy threshold (0.0-1.0) for silence-based phrase splitting. 0 disables.",
+    )
+    analyze_parser.add_argument("--silence-min-duration", type=float, default=0.25, help="Minimum silence duration (seconds) to trigger a phrase break.")
+    analyze_parser.add_argument("--phrase-min-duration", type=float, default=1.0, help="Exclude phrases shorter than this duration (seconds).")
+    analyze_parser.add_argument("--phrase-min-notes", type=int, default=0, help="Exclude phrases with fewer notes than this count. 0 disables.")
+    analyze_parser.add_argument("--no-rms-overlay", action="store_true", help="Disable RMS energy overlay on pitch analysis plots.")
     analyze_parser.add_argument("--no-smoothing", action="store_true", help="Disable transcription smoothing")
 
     # --- Preprocess Mode ---
     preprocess_parser = subparsers.add_parser(
         "preprocess",
-        help="Download YouTube audio to a local MP3 and exit"
+        help="Download YouTube audio to a local MP3 and exit",
     )
     preprocess_parser.add_argument("--yt", required=True, help="YouTube URL to download")
-    preprocess_parser.add_argument("--audio-dir", default="../audio_test_files",
-                                   help="Directory where downloaded MP3 should be saved")
-    preprocess_parser.add_argument("--filename", required=True,
-                                   help="Output filename base (without extension); saved as <filename>.mp3")
-    preprocess_parser.add_argument("--start-time",
-                                   help="Optional trim start time (SS, MM:SS, or HH:MM:SS)")
-    preprocess_parser.add_argument("--end-time",
-                                   help="Optional trim end time (SS, MM:SS, or HH:MM:SS)")
-    preprocess_parser.add_argument("--output", "-o", default="batch_results",
-                                   help="Default detect output directory suggestion for next-step command")
+    preprocess_parser.add_argument("--audio-dir", default="../audio_test_files", help="Directory where downloaded MP3 should be saved")
+    preprocess_parser.add_argument(
+        "--filename",
+        required=True,
+        help="Output filename base (without extension); saved as <filename>.mp3",
+    )
+    preprocess_parser.add_argument("--start-time", help="Optional trim start time (SS, MM:SS, or HH:MM:SS)")
+    preprocess_parser.add_argument("--end-time", help="Optional trim end time (SS, MM:SS, or HH:MM:SS)")
+    preprocess_parser.add_argument(
+        "--output",
+        "-o",
+        default="batch_results",
+        help="Default detect output directory suggestion for next-step command",
+    )
 
     # --- Root Parser (Legacy support - defaults to detect) ---
-    add_common_args(parser, required=False)
+    _add_common_args(parser, required=False)
     parser.add_argument("--tonic", help="Force tonic (comma-separated allowed, e.g. C,D#)")
     parser.add_argument("--raga", help="Force raga")
 
-    args = parser.parse_args()
+    return parser
 
+
+def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> PipelineConfig:
     # Validation logic
     if args.command is None:
         if not args.audio:
@@ -383,6 +405,25 @@ def load_config_from_cli() -> PipelineConfig:
         prominence_low_factor=getattr(args, 'prominence_low', 0.03),
         bias_rotation=getattr(args, 'bias_rotation', False),
     )
+
+
+def parse_config_from_argv(argv: Sequence[str]) -> PipelineConfig:
+    """
+    Parse PipelineConfig from an explicit argv list.
+
+    Args:
+        argv: Command-line style arguments, excluding executable name.
+    """
+    parser = build_cli_parser()
+    args = parser.parse_args(list(argv))
+    return _config_from_parsed_args(args, parser)
+
+
+def load_config_from_cli() -> PipelineConfig:
+    """Parse command-line arguments from sys.argv and return configuration."""
+    parser = build_cli_parser()
+    args = parser.parse_args()
+    return _config_from_parsed_args(args, parser)
 
 
 def create_config(audio_path: str, output_dir: str, **kwargs) -> PipelineConfig:

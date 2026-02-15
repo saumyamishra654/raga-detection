@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 import shutil
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,6 +19,7 @@ from raga_pipeline.cli_schema import get_mode_schema, list_modes
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg"}
 
 
 def _health_checks() -> List[str]:
@@ -106,6 +108,38 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             return get_mode_schema(mode)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/upload-audio")
+    async def api_upload_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]:
+        filename = Path(audio_file.filename or "").name
+        if not filename:
+            raise HTTPException(status_code=400, detail="Missing upload filename.")
+
+        suffix = Path(filename).suffix.lower()
+        if suffix and suffix not in ALLOWED_AUDIO_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported audio extension '{suffix}'.",
+            )
+
+        uploads_dir = app.state.job_manager.data_dir / "uploads"
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = uploads_dir / f"{uuid.uuid4().hex}_{filename}"
+
+        try:
+            with dest_path.open("wb") as f:
+                while True:
+                    chunk = await audio_file.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+        finally:
+            await audio_file.close()
+
+        return {
+            "filename": filename,
+            "path": str(dest_path.resolve()),
+        }
 
     @app.post("/api/jobs", response_model=JobStatusResponse)
     def api_create_job(payload: JobCreateRequest) -> JobStatusResponse:

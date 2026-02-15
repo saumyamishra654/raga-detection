@@ -114,6 +114,18 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(logs_response.status_code, 200)
         self.assertTrue(logs_response.json()["logs"])
 
+    def test_audio_upload_endpoint(self) -> None:
+        response = self.client.post(
+            "/api/upload-audio",
+            files={"audio_file": ("demo.mp3", b"abc123", "audio/mpeg")},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("path", payload)
+        uploaded = Path(payload["path"])
+        self.assertTrue(uploaded.exists())
+        self.assertEqual(uploaded.read_bytes(), b"abc123")
+
 
 if __name__ == "__main__":
     unittest.main()

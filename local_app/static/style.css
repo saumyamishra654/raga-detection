@@ -60,6 +60,30 @@ main {
     color: #94a3b8;
 }
 
+.audio-upload-wrap {
+    margin-top: 2px;
+}
+
+.audio-dropzone {
+    border: 1px dashed #64748b;
+    border-radius: 8px;
+    padding: 10px;
+    background: #0b1220;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.audio-dropzone.dragover {
+    border-color: #22d3ee;
+    background: #0f2233;
+}
+
+.audio-dropzone.uploading {
+    border-style: solid;
+    border-color: #38bdf8;
+}
+
 input,
 select,
 textarea,
@@ -138,4 +162,3 @@ progress {
         grid-column: 1;
     }
 }
-

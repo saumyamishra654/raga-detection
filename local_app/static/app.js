@@ -40,6 +40,83 @@
         return "field-" + fieldName.replace(/_/g, "-");
     }
 
+    async function uploadAudioFile(file, targetInput, dropzone) {
+        if (!file) return;
+        const originalLabel = dropzone.textContent;
+        dropzone.textContent = "Uploading " + file.name + "...";
+        dropzone.classList.add("uploading");
+
+        try {
+            const formData = new FormData();
+            formData.append("audio_file", file, file.name);
+            const res = await fetch("/api/upload-audio", {
+                method: "POST",
+                body: formData
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(function () { return {}; });
+                throw new Error(body.detail || "Upload failed");
+            }
+
+            const payload = await res.json();
+            targetInput.value = payload.path;
+            dropzone.textContent = "Uploaded: " + payload.filename;
+            setStatus("Audio uploaded and autofilled: " + payload.filename);
+        } catch (err) {
+            dropzone.textContent = originalLabel;
+            setStatus("Audio upload error: " + err.message);
+        } finally {
+            dropzone.classList.remove("uploading");
+        }
+    }
+
+    function attachAudioDropzone(row, audioInput) {
+        const helperWrap = document.createElement("div");
+        helperWrap.className = "hint audio-upload-wrap";
+
+        const dropzone = document.createElement("div");
+        dropzone.className = "audio-dropzone";
+        dropzone.textContent = "Drag & drop audio file here, or click to browse";
+
+        const picker = document.createElement("input");
+        picker.type = "file";
+        picker.accept = ".mp3,.wav,.flac,.m4a,.mp4,.aac,.ogg,audio/*";
+        picker.style.display = "none";
+
+        dropzone.addEventListener("click", function () {
+            picker.click();
+        });
+
+        picker.addEventListener("change", function () {
+            if (!picker.files || picker.files.length === 0) return;
+            uploadAudioFile(picker.files[0], audioInput, dropzone);
+        });
+
+        ["dragenter", "dragover"].forEach(function (eventName) {
+            dropzone.addEventListener(eventName, function (event) {
+                event.preventDefault();
+                dropzone.classList.add("dragover");
+            });
+        });
+
+        ["dragleave", "drop"].forEach(function (eventName) {
+            dropzone.addEventListener(eventName, function (event) {
+                event.preventDefault();
+                dropzone.classList.remove("dragover");
+            });
+        });
+
+        dropzone.addEventListener("drop", function (event) {
+            const files = event.dataTransfer ? event.dataTransfer.files : null;
+            if (!files || files.length === 0) return;
+            uploadAudioFile(files[0], audioInput, dropzone);
+        });
+
+        helperWrap.appendChild(dropzone);
+        helperWrap.appendChild(picker);
+        row.appendChild(helperWrap);
+    }
+
     function createInput(field) {
         const id = fieldInputId(field.name);
         let input;
@@ -130,6 +207,10 @@
                 hint.className = "hint";
                 hint.textContent = field.help || "";
                 row.appendChild(hint);
+
+                if (field.name === "audio") {
+                    attachAudioDropzone(row, input);
+                }
 
                 section.appendChild(row);
             });

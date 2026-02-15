@@ -65,6 +65,7 @@ Design notes:
 - Serves generated artifacts directly and embeds report HTML in-app.
 - Parses printed "next step" commands from logs and auto-loads suggested params into the next mode form (`preprocess -> detect`, `detect -> analyze`).
 - Optional fields can be left blank to fall back to parser defaults; dependent fields are conditionally shown based on related selections.
+- Detect/analyze `--audio` input supports drag-and-drop uploads; uploaded files are saved in local app storage and the resulting absolute path is used by pipeline runs.
 
 ---
 

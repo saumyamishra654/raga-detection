@@ -129,14 +129,25 @@ class ApiTests(unittest.TestCase):
     def test_raga_list_endpoint_reads_names_column(self) -> None:
         csv_path = Path(self.tmp.name) / "ragas.csv"
         csv_path.write_text(
-            "0,1,names\n1,0,Bhairavi\n0,1,Yaman\n1,1,bhairavi\n",
+            "0,1,names\n1,0,\"Bhairavi, Sindhu Bhairavi\"\n0,1,Yaman\n1,1,bhairavi\n",
             encoding="utf-8",
         )
         response = self.client.get("/api/ragas", params={"raga_db": str(csv_path)})
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["source"], str(csv_path.resolve()))
-        self.assertEqual(payload["ragas"], ["Bhairavi", "Yaman"])
+        self.assertEqual(payload["ragas"], ["Bhairavi", "Sindhu Bhairavi", "Yaman"])
+
+    def test_raga_list_endpoint_splits_unquoted_extra_columns(self) -> None:
+        csv_path = Path(self.tmp.name) / "ragas_extras.csv"
+        csv_path.write_text(
+            "0,1,names\n1,0,Bageshri,Shudh Bageshri\n",
+            encoding="utf-8",
+        )
+        response = self.client.get("/api/ragas", params={"raga_db": str(csv_path)})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ragas"], ["Bageshri", "Shudh Bageshri"])
 
 
 if __name__ == "__main__":

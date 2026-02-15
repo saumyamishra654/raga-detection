@@ -96,14 +96,26 @@ def _load_raga_names_from_csv(csv_path: Path) -> List[str]:
         seen = set()
         ragas: List[str] = []
         for row in reader:
-            raw = (row.get(name_col) or "").strip()
-            if not raw:
-                continue
-            key = raw.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            ragas.append(raw)
+            raw_values: List[str] = []
+            primary = row.get(name_col)
+            if isinstance(primary, str):
+                raw_values.append(primary)
+
+            # Handle unquoted comma-separated aliases that spill into extras.
+            extras = row.get(None)
+            if isinstance(extras, list):
+                raw_values.extend([item for item in extras if isinstance(item, str)])
+
+            for raw in raw_values:
+                for part in raw.split(","):
+                    name = part.strip()
+                    if not name:
+                        continue
+                    key = name.lower()
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    ragas.append(name)
         ragas.sort(key=lambda x: x.lower())
         return ragas
 

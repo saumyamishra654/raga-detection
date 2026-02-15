@@ -20,7 +20,7 @@
     let lastPayload = null;
     let autoPrefilledFromJobId = null;
     let selectedAudioPath = "";
-    let selectedAudioDirectory = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
+    let selectedAudioDirectory = "";
     let currentReportLinks = { detect: null, analyze: null };
     const ragaNameCacheBySource = new Map();
     const audioFileCacheBySource = new Map();
@@ -34,6 +34,7 @@
         instrument_type: { field: "source_type", equals: "instrumental" },
         skip_separation: { field: "source_type", equals: "instrumental" }
     };
+    selectedAudioDirectory = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
 
     function clearChildren(el) {
         while (el.firstChild) {

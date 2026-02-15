@@ -606,6 +606,7 @@ def run_pipeline(
             results.notes,
             max_gap=config.phrase_max_gap,
             min_length=config.phrase_min_length,
+            min_phrase_duration=config.phrase_min_duration,
         )
         print(f"  Detected {len(results.phrases)} phrases (gap-based)")
 
@@ -628,6 +629,18 @@ def run_pipeline(
             print(f"  Silence split ({silence_thresh:.2f} thresh, "
                   f"{config.silence_min_duration:.2f}s min): "
                   f"{pre_count} -> {len(results.phrases)} phrases")
+
+        # Final phrase exclusion pass after optional silence re-splitting.
+        pre_filter_count = len(results.phrases)
+        results.phrases = [
+            phrase
+            for phrase in results.phrases
+            if phrase.duration >= config.phrase_min_duration
+            and len(phrase.notes) >= config.phrase_min_length
+        ]
+        print(f"  Phrase filter (>= {config.phrase_min_duration:.2f}s, "
+              f">= {config.phrase_min_length} notes): "
+              f"{pre_filter_count} -> {len(results.phrases)} phrases")
         
         # Phrase clustering
         results.phrase_clusters = cluster_phrases(results.phrases)

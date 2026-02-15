@@ -147,6 +147,8 @@ Important:
 *   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes. Default: 0.0.
 *   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10 (set `0` to disable).
 *   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases. Default: 0.25.
+*   `--phrase-min-duration`: Exclude phrases shorter than this duration (seconds). Default: 1.0.
+*   `--phrase-min-notes`: Exclude phrases with fewer notes than this count. Default: 0 (disabled).
 *   `--no-rms-overlay`: Disable the energy overlay on pitch plots in the HTML report.
 *   `--no-smoothing`: Force transcription smoothing off (equivalent to `--transcription-smoothing-ms 0`).
 *   Snapping behavior: Transcription uses chromatic snapping internally; raga correction then removes or keeps non-raga notes depending on `--keep-impure-notes`.

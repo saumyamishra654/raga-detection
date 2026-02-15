@@ -18,6 +18,7 @@ import json
 import uuid
 import io
 import base64
+from urllib.parse import quote
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -1234,6 +1235,9 @@ def _generate_audio_players_section(results: AnalysisResults) -> str:
     original_sources = _build_audio_source_tags(original_local, original_rel)
     vocals_sources = _build_audio_source_tags(vocals_rel, vocals_rel)
     accomp_sources = _build_audio_source_tags(accomp_rel, accomp_rel)
+    original_id = "detection-original-player"
+    vocals_id = "detection-vocals-player"
+    accomp_id = "detection-accomp-player"
     
     return f'''
     <section id="audio-tracks">
@@ -1241,17 +1245,35 @@ def _generate_audio_players_section(results: AnalysisResults) -> str:
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
             <div>
                 <p><strong>Original</strong></p>
-                <audio controls style="width:100%">{original_sources}</audio>
+                <audio id="{original_id}" controls style="width:100%">{original_sources}</audio>
             </div>
             <div>
                 <p><strong>Vocals</strong></p>
-                <audio controls style="width:100%">{vocals_sources}</audio>
+                <audio id="{vocals_id}" controls style="width:100%">{vocals_sources}</audio>
             </div>
             <div>
                 <p><strong>Accompaniment</strong></p>
-                <audio controls style="width:100%">{accomp_sources}</audio>
+                <audio id="{accomp_id}" controls style="width:100%">{accomp_sources}</audio>
             </div>
         </div>
+        <script>
+            (function() {{
+                var audioIds = {json.dumps([original_id, vocals_id, accomp_id])};
+                audioIds.forEach(function(activeId) {{
+                    var activeEl = document.getElementById(activeId);
+                    if (!activeEl) return;
+                    activeEl.addEventListener("play", function() {{
+                        audioIds.forEach(function(otherId) {{
+                            if (otherId === activeId) return;
+                            var otherEl = document.getElementById(otherId);
+                            if (otherEl && !otherEl.paused) {{
+                                otherEl.pause();
+                            }}
+                        }});
+                    }});
+                }});
+            }})();
+        </script>
     </section>
     '''
 
@@ -1264,6 +1286,9 @@ def _build_audio_source_tags(primary_path: str, secondary_path: Optional[str] = 
 
     source_tags: List[str] = []
     for path in paths:
+        # Encode URL path safely so spaces and special characters in filenames
+        # (for example "My Song.mp3") load correctly in browser audio sources.
+        encoded_path = quote(path.replace("\\", "/"), safe="/")
         ext = os.path.splitext(path)[1].lower()
         if ext == ".wav":
             mime_type = "audio/wav"
@@ -1271,9 +1296,15 @@ def _build_audio_source_tags(primary_path: str, secondary_path: Optional[str] = 
             mime_type = "audio/mpeg"
         elif ext == ".flac":
             mime_type = "audio/flac"
+        elif ext == ".m4a":
+            mime_type = "audio/mp4"
+        elif ext == ".mp4":
+            mime_type = "audio/mp4"
+        elif ext == ".aac":
+            mime_type = "audio/aac"
         else:
             mime_type = "audio/*"
-        source_tags.append(f'<source src="{path}" type="{mime_type}">')
+        source_tags.append(f'<source src="{encoded_path}" type="{mime_type}">')
 
     return "".join(source_tags)
 
@@ -2446,6 +2477,7 @@ def generate_analysis_report(
     vocals_id = "vocals-player"
     accomp_id = "accomp-player"
     original_id = "original-player"
+    audio_element_ids = [original_id, vocals_id, accomp_id]
     
     analysis_source_key = "original" if results.config.melody_source == "composite" else "vocals"
     analysis_source_label = (
@@ -2492,6 +2524,16 @@ def generate_analysis_report(
     energy_buttons_html = ""
     track_panels_html = ""
     track_switch_js = ""
+    playback_controls_html = """
+    <div id="playback-rate-controls" style="margin: 0 0 16px 0;">
+        <p style="font-size: 0.86em; color: #8b949e; margin: 0 0 6px 0;">Playback Speed (for transcription verification):</p>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button type="button" data-playback-rate="1" style="padding:8px 12px; border-radius:6px; border:1px solid #30363d; background:#21262d; color:#c9d1d9; cursor:pointer;">1x</button>
+            <button type="button" data-playback-rate="0.5" style="padding:8px 12px; border-radius:6px; border:1px solid #30363d; background:#21262d; color:#c9d1d9; cursor:pointer;">0.5x</button>
+            <button type="button" data-playback-rate="0.25" style="padding:8px 12px; border-radius:6px; border:1px solid #30363d; background:#21262d; color:#c9d1d9; cursor:pointer;">0.25x</button>
+        </div>
+    </div>
+    """
     phrase_ranges = [
         (float(phrase.start), float(phrase.end))
         for phrase in results.phrases
@@ -2578,7 +2620,7 @@ def generate_analysis_report(
                         pitch_data,
                         tonic=results.detected_tonic or 0,
                         raga_name=stats.raga_name,
-                        audio_element_ids=[original_id, vocals_id, accomp_id],
+                        audio_element_ids=audio_element_ids,
                         transcription_smoothing_ms=results.config.transcription_smoothing_ms,
                         transcription_min_duration=results.config.transcription_min_duration,
                         transcription_derivative_threshold=results.config.transcription_derivative_threshold,
@@ -2630,10 +2672,12 @@ def generate_analysis_report(
             var availableTrackKeys = {json.dumps(available_track_keys)};
             var availableEnergyKeys = {json.dumps(available_track_keys)};
             var trackToAudio = {json.dumps(track_to_audio)};
+            var audioIds = {json.dumps(audio_element_ids)};
             var defaultTrack = {json.dumps(default_track_key)};
             var defaultEnergy = {json.dumps(default_energy_key)};
             var currentTrack = defaultTrack;
             var currentEnergy = defaultEnergy;
+            var playbackRates = [1, 0.5, 0.25];
 
             function setActiveTrackButton(trackKey) {{
                 availableTrackKeys.forEach(function(key) {{
@@ -2691,6 +2735,48 @@ def generate_analysis_report(
                 showOverlay(trackKey, currentEnergy);
             }}
 
+            function setActivePlaybackRateButton(rate) {{
+                playbackRates.forEach(function(candidate) {{
+                    var selector = '#playback-rate-controls button[data-playback-rate="' + candidate + '"]';
+                    var btn = document.querySelector(selector);
+                    if (!btn) return;
+                    if (Math.abs(candidate - rate) < 1e-9) {{
+                        btn.style.background = "#e3b341";
+                        btn.style.color = "#0d1117";
+                        btn.style.borderColor = "#e3b341";
+                    }} else {{
+                        btn.style.background = "#21262d";
+                        btn.style.color = "#c9d1d9";
+                        btn.style.borderColor = "#30363d";
+                    }}
+                }});
+            }}
+
+            function applyPlaybackRate(rate) {{
+                audioIds.forEach(function(audioId) {{
+                    var audioEl = document.getElementById(audioId);
+                    if (audioEl) {{
+                        audioEl.playbackRate = rate;
+                    }}
+                }});
+                setActivePlaybackRateButton(rate);
+            }}
+
+            // Keep audio playback exclusive: only one track can play at a time.
+            audioIds.forEach(function(activeId) {{
+                var activeEl = document.getElementById(activeId);
+                if (!activeEl) return;
+                activeEl.addEventListener("play", function() {{
+                    audioIds.forEach(function(otherId) {{
+                        if (otherId === activeId) return;
+                        var otherEl = document.getElementById(otherId);
+                        if (otherEl && !otherEl.paused) {{
+                            otherEl.pause();
+                        }}
+                    }});
+                }});
+            }});
+
             availableTrackKeys.forEach(function(key) {{
                 var btn = document.getElementById("track-btn-" + key);
                 if (btn) {{
@@ -2708,6 +2794,19 @@ def generate_analysis_report(
                     }});
                 }}
             }});
+
+            var rateButtons = document.querySelectorAll("#playback-rate-controls button[data-playback-rate]");
+            rateButtons.forEach(function(btn) {{
+                btn.addEventListener("click", function() {{
+                    var rawRate = btn.getAttribute("data-playback-rate");
+                    if (!rawRate) return;
+                    var parsedRate = parseFloat(rawRate);
+                    if (!isFinite(parsedRate)) return;
+                    applyPlaybackRate(parsedRate);
+                }});
+            }});
+
+            applyPlaybackRate(1.0);
 
             if (defaultTrack) {{
                 showTrackPanel(defaultTrack);
@@ -2732,7 +2831,7 @@ def generate_analysis_report(
         karaoke_html = _generate_karaoke_section(
             results.phrases,
             tonic_for_karaoke,
-            audio_element_ids=[original_id, vocals_id, accomp_id],
+            audio_element_ids=audio_element_ids,
         )
     
     # Pattern Analysis HTML (Motifs + Aaroh/Avroh)
@@ -2921,6 +3020,7 @@ def generate_analysis_report(
                         <audio id="{accomp_id}" controls style="width:100%">{accomp_sources}</audio>
                     </div>
                 </div>
+                {playback_controls_html}
                 
                 <p style="font-size: 0.9em; color: #8b949e;">
                     Analysis source for note detection: <strong>{analysis_source_label}</strong>.

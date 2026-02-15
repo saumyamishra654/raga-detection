@@ -27,6 +27,7 @@
 - [x] Set preprocess default `--audio-dir` to `../audio_test_files`
 - [x] Add preprocess `--start-time`/`--end-time` trimming with duration validation
 - [x] Resolve `output.py` report-generation type errors after preprocess mode migration
+- [x] Trim accidental CLI whitespace in path-like args (`--audio`, `--audio-dir`, `--filename`) before validation
 - [ ] Tune gating for different instrument types (sitar vs vocal)
 - [ ] Refactor and clean up redundancies in `raga_pipeline/sequence.py` (legacy transition matrices, overlapping note detection methods, duplicate sargam logic)
 - [ ] Implement sequence mining for raga identification (see `sequence-mining-plan.md`)

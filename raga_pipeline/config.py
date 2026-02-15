@@ -83,7 +83,8 @@ class PipelineConfig:
 
     # Phrase detection parameters
     phrase_max_gap: float = 1.0           # Max silence between notes in phrase
-    phrase_min_length: int = 13            # Minimum notes per phrase
+    phrase_min_length: int = 0            # Minimum notes per phrase (0 disables note-count filtering)
+    phrase_min_duration: float = 1.0      # Minimum phrase duration in seconds
 
     # Silence-based phrase splitting (RMS energy)
     # When > 0, phrases are additionally split at points where vocal RMS
@@ -119,6 +120,13 @@ class PipelineConfig:
 
     def __post_init__(self):
         """Validate and normalize paths."""
+        if self.audio_path is not None:
+            self.audio_path = self.audio_path.strip()
+        if self.audio_dir is not None:
+            self.audio_dir = self.audio_dir.strip()
+        if self.filename_override is not None:
+            self.filename_override = self.filename_override.strip()
+
         self.output_dir = os.path.abspath(self.output_dir)
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -293,6 +301,10 @@ def load_config_from_cli() -> PipelineConfig:
                                 help="RMS energy threshold (0.0-1.0) for silence-based phrase splitting. 0 disables.")
     analyze_parser.add_argument("--silence-min-duration", type=float, default=0.25,
                                 help="Minimum silence duration (seconds) to trigger a phrase break.")
+    analyze_parser.add_argument("--phrase-min-duration", type=float, default=1.0,
+                                help="Exclude phrases shorter than this duration (seconds).")
+    analyze_parser.add_argument("--phrase-min-notes", type=int, default=0,
+                                help="Exclude phrases with fewer notes than this count. 0 disables.")
     analyze_parser.add_argument("--no-rms-overlay", action="store_true",
                                 help="Disable RMS energy overlay on pitch analysis plots.")
     analyze_parser.add_argument("--no-smoothing", action="store_true", help="Disable transcription smoothing")
@@ -361,6 +373,8 @@ def load_config_from_cli() -> PipelineConfig:
         energy_metric=getattr(args, 'energy_metric', 'rms'),
         silence_threshold=getattr(args, 'silence_threshold', 0.0),
         silence_min_duration=getattr(args, 'silence_min_duration', 0.25),
+        phrase_min_duration=getattr(args, 'phrase_min_duration', 1.0),
+        phrase_min_length=getattr(args, 'phrase_min_notes', 0),
         show_rms_overlay=not getattr(args, 'no_rms_overlay', False),
         melody_source=getattr(args, 'melody_source', "separated"),
         fmin_note=getattr(args, 'fmin_note', "G1"),

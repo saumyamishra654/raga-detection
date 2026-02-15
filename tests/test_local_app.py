@@ -126,6 +126,18 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(uploaded.exists())
         self.assertEqual(uploaded.read_bytes(), b"abc123")
 
+    def test_raga_list_endpoint_reads_names_column(self) -> None:
+        csv_path = Path(self.tmp.name) / "ragas.csv"
+        csv_path.write_text(
+            "0,1,names\n1,0,Bhairavi\n0,1,Yaman\n1,1,bhairavi\n",
+            encoding="utf-8",
+        )
+        response = self.client.get("/api/ragas", params={"raga_db": str(csv_path)})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["source"], str(csv_path.resolve()))
+        self.assertEqual(payload["ragas"], ["Bhairavi", "Yaman"])
+
 
 if __name__ == "__main__":
     unittest.main()

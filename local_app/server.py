@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import csv
 import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -14,12 +15,14 @@ from fastapi.templating import Jinja2Templates
 from local_app.jobs import JobManager, JobRecord
 from local_app.schemas import ArtifactInfo, JobCreateRequest, JobLogsResponse, JobStatusResponse
 from raga_pipeline.cli_schema import get_mode_schema, list_modes
+from raga_pipeline.config import find_default_raga_db_path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg"}
+RAGA_NAME_COLUMNS = ["names", "raga", "raga_name", "name", "Raga", "RagaName"]
 
 
 def _health_checks() -> List[str]:
@@ -65,6 +68,46 @@ def _job_to_response(job: JobRecord) -> JobStatusResponse:
     )
 
 
+def _load_raga_names_from_csv(csv_path: Path) -> List[str]:
+    if not csv_path.exists():
+        return []
+
+    with csv_path.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            return []
+
+        name_col: Optional[str] = None
+        for candidate in RAGA_NAME_COLUMNS:
+            if candidate in reader.fieldnames:
+                name_col = candidate
+                break
+
+        if name_col is None:
+            # Fallback: choose the first non-numeric-like column.
+            for col in reader.fieldnames:
+                if not col.isdigit():
+                    name_col = col
+                    break
+
+        if name_col is None:
+            return []
+
+        seen = set()
+        ragas: List[str] = []
+        for row in reader:
+            raw = (row.get(name_col) or "").strip()
+            if not raw:
+                continue
+            key = raw.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            ragas.append(raw)
+        ragas.sort(key=lambda x: x.lower())
+        return ragas
+
+
 def create_app(job_manager: JobManager | None = None) -> FastAPI:
     app = FastAPI(title="Raga Local App", version="0.1.0")
     manager = job_manager or JobManager(repo_root=REPO_ROOT)
@@ -108,6 +151,20 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             return get_mode_schema(mode)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/ragas")
+    def api_ragas(raga_db: Optional[str] = Query(default=None, description="Optional custom raga DB CSV path")) -> Dict[str, Any]:
+        db_path = Path(raga_db).expanduser().resolve() if raga_db else None
+        if db_path is None:
+            default_path = find_default_raga_db_path()
+            if default_path:
+                db_path = Path(default_path)
+
+        if db_path is None:
+            return {"ragas": [], "source": None}
+
+        ragas = _load_raga_names_from_csv(db_path)
+        return {"ragas": ragas, "source": str(db_path)}
 
     @app.post("/api/upload-audio")
     async def api_upload_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]:

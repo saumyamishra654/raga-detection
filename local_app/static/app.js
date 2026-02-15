@@ -17,6 +17,7 @@
     let pollHandle = null;
     let lastPayload = null;
     let autoPrefilledFromJobId = null;
+    let ragaNameCache = null;
 
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
@@ -40,6 +41,75 @@
         return "field-" + fieldName.replace(/_/g, "-");
     }
 
+    async function fetchRagaNames() {
+        if (Array.isArray(ragaNameCache)) return ragaNameCache;
+        const res = await fetch("/api/ragas");
+        if (!res.ok) {
+            throw new Error("Failed to load raga names");
+        }
+        const payload = await res.json();
+        ragaNameCache = Array.isArray(payload.ragas) ? payload.ragas : [];
+        return ragaNameCache;
+    }
+
+    function normalizeName(text) {
+        return String(text || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "")
+            .trim();
+    }
+
+    function levenshteinDistance(a, b) {
+        const s = normalizeName(a);
+        const t = normalizeName(b);
+        if (!s.length) return t.length;
+        if (!t.length) return s.length;
+
+        const dp = Array.from({ length: s.length + 1 }, function () {
+            return new Array(t.length + 1).fill(0);
+        });
+        for (let i = 0; i <= s.length; i++) dp[i][0] = i;
+        for (let j = 0; j <= t.length; j++) dp[0][j] = j;
+
+        for (let i = 1; i <= s.length; i++) {
+            for (let j = 1; j <= t.length; j++) {
+                const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+                dp[i][j] = Math.min(
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                    dp[i - 1][j - 1] + cost
+                );
+            }
+        }
+        return dp[s.length][t.length];
+    }
+
+    function fuzzyBestRaga(query, ragas) {
+        const q = normalizeName(query);
+        if (!q || !ragas.length) return null;
+
+        let best = null;
+        let bestScore = -1;
+        for (const candidate of ragas) {
+            const c = normalizeName(candidate);
+            if (!c) continue;
+            let score = 0;
+            if (q === c) score = 1.0;
+            else if (c.startsWith(q) || q.startsWith(c)) score = 0.92;
+            else if (c.includes(q) || q.includes(c)) score = 0.86;
+            else {
+                const dist = levenshteinDistance(q, c);
+                score = 1 - dist / Math.max(q.length, c.length);
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+        if (bestScore >= 0.62) return best;
+        return null;
+    }
+
     async function uploadAudioFile(file, targetInput, dropzone) {
         if (!file) return;
         const originalLabel = dropzone.textContent;
@@ -60,6 +130,7 @@
 
             const payload = await res.json();
             targetInput.value = payload.path;
+            targetInput.classList.add("audio-path-hidden");
             dropzone.textContent = "Uploaded: " + payload.filename;
             setStatus("Audio uploaded and autofilled: " + payload.filename);
         } catch (err) {
@@ -117,6 +188,51 @@
         row.appendChild(helperWrap);
     }
 
+    async function attachRagaAutocomplete(row, ragaInput) {
+        try {
+            const ragas = await fetchRagaNames();
+            const listId = "raga-options-datalist";
+            let datalist = document.getElementById(listId);
+            if (!datalist) {
+                datalist = document.createElement("datalist");
+                datalist.id = listId;
+                document.body.appendChild(datalist);
+            }
+            datalist.innerHTML = "";
+            ragas.forEach(function (name) {
+                const option = document.createElement("option");
+                option.value = name;
+                datalist.appendChild(option);
+            });
+            ragaInput.setAttribute("list", listId);
+
+            const fuzzyHint = document.createElement("div");
+            fuzzyHint.className = "hint";
+            fuzzyHint.textContent = "Type freely; closest known raga will be auto-corrected on blur when confidence is high.";
+            row.appendChild(fuzzyHint);
+
+            ragaInput.addEventListener("blur", function () {
+                const typed = ragaInput.value.trim();
+                if (!typed) return;
+                const exact = ragas.find(function (name) {
+                    return normalizeName(name) === normalizeName(typed);
+                });
+                if (exact) {
+                    ragaInput.value = exact;
+                    return;
+                }
+
+                const match = fuzzyBestRaga(typed, ragas);
+                if (match && normalizeName(match) !== normalizeName(typed)) {
+                    ragaInput.value = match;
+                    setStatus("Raga autocorrect: \"" + typed + "\" -> \"" + match + "\"");
+                }
+            });
+        } catch (err) {
+            setStatus("Raga list warning: " + err.message);
+        }
+    }
+
     function createInput(field) {
         const id = fieldInputId(field.name);
         let input;
@@ -170,6 +286,9 @@
 
         input.id = id;
         input.dataset.fieldName = field.name;
+        if (field.name === "audio") {
+            input.classList.add("audio-path-input");
+        }
         return input;
     }
 
@@ -210,6 +329,9 @@
 
                 if (field.name === "audio") {
                     attachAudioDropzone(row, input);
+                }
+                if (field.name === "raga") {
+                    attachRagaAutocomplete(row, input);
                 }
 
                 section.appendChild(row);

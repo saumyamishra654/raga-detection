@@ -84,6 +84,10 @@ main {
     border-color: #38bdf8;
 }
 
+.audio-path-input.audio-path-hidden {
+    display: none;
+}
+
 input,
 select,
 textarea,

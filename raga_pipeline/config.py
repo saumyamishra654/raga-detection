@@ -8,7 +8,7 @@ Provides:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, List
 import argparse
 import os
 
@@ -170,16 +170,7 @@ class PipelineConfig:
 
     def _find_raga_db_path(self) -> Optional[str]:
         """Find raga database in standard locations."""
-        package_dir = Path(__file__).parent.parent
-        candidates = [
-            package_dir / "data" / "raga_list_final.csv",
-            package_dir / "main notebooks" / "raga_list_final.csv",
-            package_dir.parent / "db" / "raga_list_final.csv",
-        ]
-        for path in candidates:
-            if path.exists():
-                return str(path)
-        return None
+        return find_default_raga_db_path()
 
     @property
     def filename(self) -> str:
@@ -439,3 +430,21 @@ def create_config(audio_path: str, output_dir: str, **kwargs) -> PipelineConfig:
         PipelineConfig instance
     """
     return PipelineConfig(audio_path=audio_path, output_dir=output_dir, **kwargs)
+
+
+def get_default_raga_db_candidates() -> List[Path]:
+    """Return candidate paths for the default raga database CSV."""
+    package_dir = Path(__file__).parent.parent
+    return [
+        package_dir / "data" / "raga_list_final.csv",
+        package_dir / "main notebooks" / "raga_list_final.csv",
+        package_dir.parent / "db" / "raga_list_final.csv",
+    ]
+
+
+def find_default_raga_db_path() -> Optional[str]:
+    """Find raga database in standard locations."""
+    for path in get_default_raga_db_candidates():
+        if path.exists():
+            return str(path)
+    return None

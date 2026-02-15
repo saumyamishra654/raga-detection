@@ -3,10 +3,12 @@ from __future__ import annotations
 import base64
 import csv
 import os
+import re
 import shutil
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -35,6 +37,7 @@ KNOWN_ARTIFACT_FILES = [
     "transition_matrix.png",
     "pitch_sargam.png",
 ]
+ASSET_ATTR_RE = re.compile(r'(\b(?:src|href)\s*=\s*)(["\'])([^"\']+)(\2)', re.IGNORECASE)
 
 
 def _health_checks() -> List[str]:
@@ -77,13 +80,60 @@ def _local_file_url(path: Path) -> Optional[str]:
     if not abs_path.exists() or not abs_path.is_file():
         return None
     token = _encode_dir_token(abs_path.parent)
-    return f"/local-files/{token}/{abs_path.name}"
+    return f"/local-files/{token}/{quote(abs_path.name, safe='')}"
+
+
+def _local_report_url(path: Path) -> Optional[str]:
+    abs_path = path.resolve()
+    if not abs_path.exists() or not abs_path.is_file():
+        return None
+    token = _encode_dir_token(abs_path.parent)
+    return f"/local-report/{token}/{quote(abs_path.name, safe='')}"
+
+
+def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
+    report_dir = report_path.parent.resolve()
+
+    def _replace(match: re.Match[str]) -> str:
+        prefix, q1, raw_value, q2 = match.groups()
+        parsed = urlparse(raw_value)
+        candidate = parsed.path.strip()
+        if not candidate:
+            return match.group(0)
+
+        lower = candidate.lower()
+        if lower.startswith(("http://", "https://", "data:", "javascript:", "mailto:")):
+            return match.group(0)
+        if candidate.startswith("#"):
+            return match.group(0)
+        if candidate.startswith("/local-files/") or candidate.startswith("/local-report/") or candidate.startswith("/static/"):
+            return match.group(0)
+
+        decoded = unquote(candidate)
+        if os.path.isabs(decoded):
+            abs_target = Path(decoded).resolve()
+        else:
+            abs_target = (report_dir / decoded).resolve()
+
+        new_url = _local_file_url(abs_target)
+        if not new_url:
+            return match.group(0)
+
+        rebuilt = urlunparse(parsed._replace(path=new_url))
+        return f"{prefix}{q1}{rebuilt}{q2}"
+
+    return ASSET_ATTR_RE.sub(_replace, html)
 
 
 def _artifact_to_response(path: str) -> ArtifactInfo:
     abs_path = Path(path).resolve()
     exists = abs_path.exists()
-    url = _local_file_url(abs_path) if exists else None
+    url = None
+    if exists:
+        if abs_path.suffix.lower() == ".html":
+            url = _local_report_url(abs_path)
+        else:
+            url = _local_file_url(abs_path)
     return ArtifactInfo(name=abs_path.name, path=str(abs_path), exists=exists, url=url)
 
 
@@ -259,6 +309,21 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         if not target.exists() or not target.is_file():
             raise HTTPException(status_code=404, detail="File not found.")
         return FileResponse(path=str(target))
+
+    @app.get("/local-report/{dir_token}/{relative_path:path}")
+    def local_report(dir_token: str, relative_path: str) -> HTMLResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = (base_dir / relative_path).resolve()
+        if not _is_relative_to(report_path, base_dir):
+            raise HTTPException(status_code=403, detail="Path traversal blocked.")
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports are supported by this route.")
+
+        raw_html = report_path.read_text(encoding="utf-8")
+        rewritten_html = _rewrite_report_asset_urls(raw_html, report_path)
+        return HTMLResponse(content=rewritten_html)
 
     @app.get("/app", response_class=HTMLResponse)
     def app_page(request: Request) -> HTMLResponse:

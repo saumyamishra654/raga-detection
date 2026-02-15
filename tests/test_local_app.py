@@ -3,6 +3,7 @@ import time
 import types
 import unittest
 from pathlib import Path
+import re
 
 try:
     from fastapi.testclient import TestClient
@@ -180,6 +181,67 @@ class ApiTests(unittest.TestCase):
         detect_resp = self.client.get(payload["detect_report_url"])
         self.assertEqual(detect_resp.status_code, 200)
         self.assertIn("detect", detect_resp.text)
+        self.assertIn("/local-report/", payload["detect_report_url"])
+
+    def test_local_report_rewrites_relative_audio_sources(self) -> None:
+        output_root = Path(self.tmp.name) / "batch_results"
+        stem_dir = output_root / "htdemucs" / "aahatein"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+
+        # First source is missing in stem dir; second source exists outside stem dir.
+        fallback_audio = Path(self.tmp.name) / "audio_test_files" / "aahatein.mp3"
+        fallback_audio.parent.mkdir(parents=True, exist_ok=True)
+        fallback_audio.write_bytes(b"abc")
+        img_path = stem_dir / "histogram_melody.png"
+        img_path.write_bytes(b"png")
+
+        report_path = stem_dir / "detection_report.html"
+        report_path.write_text(
+            """
+            <html><body>
+              <audio controls>
+                <source src="aahatein.mp3" type="audio/mpeg">
+                <source src="../../../audio_test_files/aahatein.mp3" type="audio/mpeg">
+              </audio>
+              <img src="histogram_melody.png">
+            </body></html>
+            """,
+            encoding="utf-8",
+        )
+
+        response = self.client.get(
+            "/api/audio-artifacts",
+            params={
+                "audio_path": str(fallback_audio),
+                "output_dir": str(output_root),
+                "separator": "demucs",
+                "demucs_model": "htdemucs",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["found"])
+
+        report_url = payload["detect_report_url"]
+        self.assertTrue(report_url)
+        self.assertIn("/local-report/", report_url)
+
+        html_resp = self.client.get(report_url)
+        self.assertEqual(html_resp.status_code, 200)
+        html = html_resp.text
+        self.assertIn("/local-files/", html)
+        self.assertNotIn("../../../audio_test_files/aahatein.mp3", html)
+
+        # At least one rewritten source should be fetchable (the fallback audio).
+        rewritten_links = re.findall(r'(/local-files/[^"\\\']+aahatein\\.mp3)', html)
+        self.assertTrue(rewritten_links)
+        fetched = False
+        for link in rewritten_links:
+            r = self.client.get(link)
+            if r.status_code == 200:
+                fetched = True
+                break
+        self.assertTrue(fetched)
 
     def test_create_batch_job_endpoint(self) -> None:
         response = self.client.post(

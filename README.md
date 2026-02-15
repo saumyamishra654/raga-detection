@@ -64,7 +64,7 @@ What it provides:
 - Auto-prefill of the next mode from printed pipeline suggestions (`preprocess -> detect`, `detect -> analyze`).
 - Optional fields support blank input (parser defaults apply), and dependent fields only appear when relevant (e.g., `vocalist_gender` only when `source_type=vocal`).
 - Drag-and-drop upload for the `--audio` field (detect/analyze): dropped files are uploaded to local app storage and the resolved path is auto-filled.
-- `--raga` field is backed by the raga database CSV list and supports typeahead + fuzzy correction on blur.
+- `--raga` field is backed by the raga database CSV list (default or current `--raga-db`) and supports typeahead + fuzzy correction on blur.
 - After drag/drop upload, the raw audio filepath input is hidden from the form view.
 
 ### Mode 0: Preprocess (`preprocess`)

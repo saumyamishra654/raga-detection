@@ -17,7 +17,7 @@
     let pollHandle = null;
     let lastPayload = null;
     let autoPrefilledFromJobId = null;
-    let ragaNameCache = null;
+    const ragaNameCacheBySource = new Map();
 
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
@@ -41,15 +41,24 @@
         return "field-" + fieldName.replace(/_/g, "-");
     }
 
-    async function fetchRagaNames() {
-        if (Array.isArray(ragaNameCache)) return ragaNameCache;
-        const res = await fetch("/api/ragas");
+    async function fetchRagaNames(ragaDbPath) {
+        const sourceKey = String(ragaDbPath || "").trim() || "__default__";
+        if (ragaNameCacheBySource.has(sourceKey)) {
+            return ragaNameCacheBySource.get(sourceKey);
+        }
+
+        const endpoint = new URL("/api/ragas", window.location.origin);
+        if (sourceKey !== "__default__") {
+            endpoint.searchParams.set("raga_db", sourceKey);
+        }
+        const res = await fetch(endpoint.toString());
         if (!res.ok) {
             throw new Error("Failed to load raga names");
         }
         const payload = await res.json();
-        ragaNameCache = Array.isArray(payload.ragas) ? payload.ragas : [];
-        return ragaNameCache;
+        const ragas = Array.isArray(payload.ragas) ? payload.ragas : [];
+        ragaNameCacheBySource.set(sourceKey, ragas);
+        return ragas;
     }
 
     function normalizeName(text) {
@@ -190,7 +199,6 @@
 
     async function attachRagaAutocomplete(row, ragaInput) {
         try {
-            const ragas = await fetchRagaNames();
             const listId = "raga-options-datalist";
             let datalist = document.getElementById(listId);
             if (!datalist) {
@@ -198,13 +206,37 @@
                 datalist.id = listId;
                 document.body.appendChild(datalist);
             }
-            datalist.innerHTML = "";
-            ragas.forEach(function (name) {
-                const option = document.createElement("option");
-                option.value = name;
-                datalist.appendChild(option);
-            });
             ragaInput.setAttribute("list", listId);
+
+            let ragas = [];
+            async function refreshRagaOptions() {
+                const ragaDbInput = document.getElementById(fieldInputId("raga_db"));
+                const ragaDbPath = ragaDbInput ? ragaDbInput.value.trim() : "";
+                ragas = await fetchRagaNames(ragaDbPath);
+                datalist.innerHTML = "";
+                ragas.forEach(function (name) {
+                    const option = document.createElement("option");
+                    option.value = name;
+                    datalist.appendChild(option);
+                });
+            }
+
+            await refreshRagaOptions();
+            const ragaDbInput = document.getElementById(fieldInputId("raga_db"));
+            if (ragaDbInput) {
+                const refreshWithErrorHandling = function () {
+                    refreshRagaOptions().catch(function (err) {
+                        setStatus("Raga list warning: " + err.message);
+                    });
+                };
+                ragaDbInput.addEventListener("change", refreshWithErrorHandling);
+                ragaDbInput.addEventListener("blur", refreshWithErrorHandling);
+            }
+            ragaInput.addEventListener("focus", function () {
+                refreshRagaOptions().catch(function (err) {
+                    setStatus("Raga list warning: " + err.message);
+                });
+            });
 
             const fuzzyHint = document.createElement("div");
             fuzzyHint.className = "hint";

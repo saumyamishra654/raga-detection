@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raga Local App</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Raga Local App</h1>
+        <p>Run preprocess, detect, and analyze locally with live parameter tuning.</p>
+    </header>
+
+    {% if warnings %}
+    <section class="warnings">
+        <h2>Startup Warnings</h2>
+        <ul>
+            {% for warning in warnings %}
+            <li>{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <main>
+        <section class="panel">
+            <h2>Run Pipeline</h2>
+            <div class="row">
+                <label for="mode-select">Mode</label>
+                <select id="mode-select">
+                    {% for mode in modes %}
+                    <option value="{{ mode }}">{{ mode }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="schema-forms"></div>
+
+            <div class="row">
+                <label for="extra-args">Extra Args</label>
+                <textarea id="extra-args" rows="2" placeholder="Optional extra flags (forward-compat)"></textarea>
+            </div>
+
+            <div class="actions">
+                <button id="run-btn">Run</button>
+                <button id="rerun-btn" disabled>Rerun Last</button>
+                <button id="cancel-btn" disabled>Cancel Active</button>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Job Status</h2>
+            <div id="status-line">Idle</div>
+            <progress id="progress" max="1.0" value="0"></progress>
+            <div id="job-argv"></div>
+        </section>
+
+        <section class="panel">
+            <h2>Artifacts</h2>
+            <ul id="artifact-list"></ul>
+        </section>
+
+        <section class="panel">
+            <h2>Logs</h2>
+            <pre id="logs"></pre>
+        </section>
+
+        <section class="panel">
+            <h2>Report Viewer</h2>
+            <iframe id="report-frame" title="report viewer"></iframe>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+

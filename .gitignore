@@ -48,6 +48,8 @@ venv.bak/
 analysis_results/
 analysis_results_mlp/
 results/
+.local_app_data/
+local_app_data/
 
 # Stem separation output (intermediate files)
 htdemucs/

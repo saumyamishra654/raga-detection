@@ -47,6 +47,25 @@ python driver.py <subcommand> [args...]
 
 ---
 
+## Local App (Parameter Tuning UI)
+
+The repository also includes a local-only FastAPI app for macOS development:
+
+```bash
+./run_local_app.sh
+```
+
+Open:
+- `http://127.0.0.1:8765/app`
+
+Design notes:
+- Uses the same pipeline code path (`parse_config_from_argv(...)` -> `driver.run_pipeline(...)`).
+- Uses parser introspection (`build_cli_parser()` + `get_mode_schema(...)`) as the single source of truth, so parameter changes in `config.py` flow into the UI automatically.
+- Runs jobs serially in a local background worker and persists status/log snapshots in `.local_app_data/`.
+- Serves generated artifacts directly and embeds report HTML in-app.
+
+---
+
 ## CLI Reference
 
 ### Preprocess (`preprocess`)
@@ -205,4 +224,3 @@ The stem directory is:
 - `batch_results/htdemucs/song/`
 
 Within that folder, the pipeline caches stems and pitch CSVs and writes HTML reports and plots. Re-running with the same options reuses cached stems/pitch unless `--force` is passed.
-

@@ -46,6 +46,22 @@ The project is designed to be run via the `run_pipeline.sh` script, which handle
 
 Note: `run_pipeline.sh` assumes a Conda environment named `raga` and a Conda install at `/opt/miniconda3`. If that does not match your machine, activate your environment manually and run `python driver.py ...` with the same arguments.
 
+### Local Parameter-Tuning App (macOS)
+
+You can launch a local web app that wraps the same pipeline and exposes schema-driven parameter controls for `preprocess`, `detect`, and `analyze`.
+
+```bash
+./run_local_app.sh
+```
+
+Then open: `http://127.0.0.1:8765/app`
+
+What it provides:
+- Dynamic form generation from the live argparse schema (`config.py`) so new CLI flags show up automatically.
+- Serial background job execution with logs, progress (`[STEP x/y]` parsing), and cancel support.
+- Artifact discovery and in-app HTML report viewing (`detection_report.html`, `analysis_report.html`).
+- Rerun support with last-used parameters plus optional raw `extra args` passthrough.
+
 ### Mode 0: Preprocess (`preprocess`)
 
 Downloads audio from YouTube and saves it locally as an MP3 so it can be used by `detect` and `analyze`.

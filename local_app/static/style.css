@@ -64,6 +64,26 @@ main {
     margin-top: 2px;
 }
 
+.audio-library-wrap {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.audio-library-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+}
+
+.audio-dir-refresh {
+    white-space: nowrap;
+}
+
+.audio-file-select {
+    width: 100%;
+}
+
 .audio-dropzone {
     border: 1px dashed #64748b;
     border-radius: 8px;

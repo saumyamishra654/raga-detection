@@ -126,6 +126,32 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(uploaded.exists())
         self.assertEqual(uploaded.read_bytes(), b"abc123")
 
+    def test_audio_files_endpoint_lists_supported_audio(self) -> None:
+        audio_dir = Path(self.tmp.name) / "audio_dir"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        (audio_dir / "trackB.mp3").write_bytes(b"1")
+        (audio_dir / "trackA.wav").write_bytes(b"2")
+        (audio_dir / "notes.txt").write_text("ignore", encoding="utf-8")
+        (audio_dir / "nested").mkdir()
+
+        response = self.client.get("/api/audio-files", params={"audio_dir": str(audio_dir)})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["exists"])
+        self.assertEqual(payload["directory"], str(audio_dir.resolve()))
+        self.assertEqual(
+            [item["name"] for item in payload["files"]],
+            ["trackA.wav", "trackB.mp3"],
+        )
+
+    def test_audio_files_endpoint_handles_missing_dir(self) -> None:
+        missing = Path(self.tmp.name) / "does_not_exist"
+        response = self.client.get("/api/audio-files", params={"audio_dir": str(missing)})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertFalse(payload["exists"])
+        self.assertEqual(payload["files"], [])
+
     def test_raga_list_endpoint_reads_names_column(self) -> None:
         csv_path = Path(self.tmp.name) / "ragas.csv"
         csv_path.write_text(

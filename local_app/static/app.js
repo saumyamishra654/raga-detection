@@ -18,6 +18,11 @@
     let lastPayload = null;
     let autoPrefilledFromJobId = null;
     const ragaNameCacheBySource = new Map();
+    const audioFileCacheBySource = new Map();
+    const AUDIO_DIR_STORAGE_KEY = "ragaLocalApp.audioDirectory";
+    const DEFAULT_AUDIO_DIR_REL = (document.body && document.body.dataset && document.body.dataset.defaultAudioDir)
+        ? document.body.dataset.defaultAudioDir
+        : "../audio_test_files";
 
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
@@ -39,6 +44,42 @@
 
     function fieldInputId(fieldName) {
         return "field-" + fieldName.replace(/_/g, "-");
+    }
+
+    function getSavedAudioDirectory() {
+        try {
+            const value = window.localStorage.getItem(AUDIO_DIR_STORAGE_KEY);
+            return value ? value.trim() : "";
+        } catch (_err) {
+            return "";
+        }
+    }
+
+    function saveAudioDirectory(pathValue) {
+        const value = String(pathValue || "").trim();
+        if (!value) return;
+        try {
+            window.localStorage.setItem(AUDIO_DIR_STORAGE_KEY, value);
+        } catch (_err) {
+            // Ignore localStorage failures for private/incognito contexts.
+        }
+    }
+
+    async function fetchAudioFiles(audioDirPath, forceRefresh) {
+        const sourceKey = String(audioDirPath || "").trim() || DEFAULT_AUDIO_DIR_REL;
+        if (!forceRefresh && audioFileCacheBySource.has(sourceKey)) {
+            return audioFileCacheBySource.get(sourceKey);
+        }
+
+        const endpoint = new URL("/api/audio-files", window.location.origin);
+        endpoint.searchParams.set("audio_dir", sourceKey);
+        const res = await fetch(endpoint.toString());
+        if (!res.ok) {
+            throw new Error("Failed to load audio files");
+        }
+        const payload = await res.json();
+        audioFileCacheBySource.set(sourceKey, payload);
+        return payload;
     }
 
     async function fetchRagaNames(ragaDbPath) {
@@ -195,6 +236,111 @@
         helperWrap.appendChild(dropzone);
         helperWrap.appendChild(picker);
         row.appendChild(helperWrap);
+    }
+
+    function attachAudioDirectoryPicker(row, audioInput) {
+        const helperWrap = document.createElement("div");
+        helperWrap.className = "hint audio-library-wrap";
+
+        const controls = document.createElement("div");
+        controls.className = "audio-library-controls";
+
+        const dirInput = document.createElement("input");
+        dirInput.type = "text";
+        dirInput.className = "audio-dir-input";
+        dirInput.placeholder = "Audio directory";
+        dirInput.value = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
+
+        const refreshBtn = document.createElement("button");
+        refreshBtn.type = "button";
+        refreshBtn.className = "audio-dir-refresh";
+        refreshBtn.textContent = "Refresh";
+
+        controls.appendChild(dirInput);
+        controls.appendChild(refreshBtn);
+        helperWrap.appendChild(controls);
+
+        const fileSelect = document.createElement("select");
+        fileSelect.className = "audio-file-select";
+        helperWrap.appendChild(fileSelect);
+
+        const info = document.createElement("div");
+        info.className = "hint";
+        helperWrap.appendChild(info);
+
+        function setSelectOptions(payload) {
+            fileSelect.innerHTML = "";
+
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Select audio file from directory...";
+            placeholder.selected = true;
+            fileSelect.appendChild(placeholder);
+
+            if (!payload.exists) {
+                info.textContent = "Directory not found: " + payload.directory;
+                return;
+            }
+
+            const files = Array.isArray(payload.files) ? payload.files : [];
+            if (!files.length) {
+                info.textContent = "No audio files found in: " + payload.directory;
+                return;
+            }
+
+            files.forEach(function (item) {
+                const option = document.createElement("option");
+                option.value = String(item.path || "");
+                option.textContent = String(item.name || item.path || "");
+                if (audioInput.value && audioInput.value === option.value) {
+                    option.selected = true;
+                    placeholder.selected = false;
+                }
+                fileSelect.appendChild(option);
+            });
+            info.textContent = files.length + " audio file(s) found in: " + payload.directory;
+        }
+
+        async function refreshAudioFileOptions(forceRefresh) {
+            const entered = dirInput.value.trim() || DEFAULT_AUDIO_DIR_REL;
+            dirInput.value = entered;
+            saveAudioDirectory(entered);
+            const payload = await fetchAudioFiles(entered, forceRefresh);
+            setSelectOptions(payload);
+        }
+
+        fileSelect.addEventListener("change", function () {
+            if (!fileSelect.value) return;
+            audioInput.value = fileSelect.value;
+            audioInput.classList.add("audio-path-hidden");
+            const chosen = fileSelect.options[fileSelect.selectedIndex];
+            if (chosen) {
+                setStatus("Audio selected: " + chosen.textContent);
+            }
+        });
+
+        refreshBtn.addEventListener("click", function () {
+            refreshAudioFileOptions(true).catch(function (err) {
+                setStatus("Audio directory error: " + err.message);
+            });
+        });
+
+        dirInput.addEventListener("change", function () {
+            refreshAudioFileOptions(true).catch(function (err) {
+                setStatus("Audio directory error: " + err.message);
+            });
+        });
+
+        dirInput.addEventListener("blur", function () {
+            refreshAudioFileOptions(false).catch(function (err) {
+                setStatus("Audio directory error: " + err.message);
+            });
+        });
+
+        row.appendChild(helperWrap);
+        refreshAudioFileOptions(true).catch(function (err) {
+            setStatus("Audio directory error: " + err.message);
+        });
     }
 
     async function attachRagaAutocomplete(row, ragaInput) {
@@ -360,6 +506,7 @@
                 row.appendChild(hint);
 
                 if (field.name === "audio") {
+                    attachAudioDirectoryPicker(row, input);
                     attachAudioDropzone(row, input);
                 }
                 if (field.name === "raga") {

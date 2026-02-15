@@ -22,6 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg"}
+DEFAULT_AUDIO_DIR_REL = "../audio_test_files"
 RAGA_NAME_COLUMNS = ["names", "raga", "raga_name", "name", "Raga", "RagaName"]
 
 
@@ -120,6 +121,16 @@ def _load_raga_names_from_csv(csv_path: Path) -> List[str]:
         return ragas
 
 
+def _resolve_audio_dir(audio_dir: Optional[str]) -> Path:
+    raw = (audio_dir or "").strip() or DEFAULT_AUDIO_DIR_REL
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = (REPO_ROOT / path).resolve()
+    else:
+        path = path.resolve()
+    return path
+
+
 def create_app(job_manager: JobManager | None = None) -> FastAPI:
     app = FastAPI(title="Raga Local App", version="0.1.0")
     manager = job_manager or JobManager(repo_root=REPO_ROOT)
@@ -143,6 +154,7 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             context={
                 "modes": list_modes(),
                 "warnings": list(app.state.warnings),
+                "default_audio_dir": DEFAULT_AUDIO_DIR_REL,
             },
         )
 
@@ -177,6 +189,32 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
 
         ragas = _load_raga_names_from_csv(db_path)
         return {"ragas": ragas, "source": str(db_path)}
+
+    @app.get("/api/audio-files")
+    def api_audio_files(audio_dir: Optional[str] = Query(default=None, description="Audio directory to list files from")) -> Dict[str, Any]:
+        directory = _resolve_audio_dir(audio_dir)
+        if not directory.exists() or not directory.is_dir():
+            return {
+                "directory": str(directory),
+                "exists": False,
+                "files": [],
+                "default_directory": DEFAULT_AUDIO_DIR_REL,
+            }
+
+        files = []
+        for entry in sorted(directory.iterdir(), key=lambda p: p.name.lower()):
+            if not entry.is_file():
+                continue
+            if entry.suffix.lower() not in ALLOWED_AUDIO_EXTENSIONS:
+                continue
+            files.append({"name": entry.name, "path": str(entry.resolve())})
+
+        return {
+            "directory": str(directory),
+            "exists": True,
+            "files": files,
+            "default_directory": DEFAULT_AUDIO_DIR_REL,
+        }
 
     @app.post("/api/upload-audio")
     async def api_upload_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]:

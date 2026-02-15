@@ -59,13 +59,15 @@ Then open: `http://127.0.0.1:8765/app`
 What it provides:
 - Dynamic form generation from the live argparse schema (`config.py`) so new CLI flags show up automatically.
 - Serial background job execution with logs, progress (`[STEP x/y]` parsing), and cancel support.
-- Artifact discovery and in-app HTML report viewing (`detection_report.html`, `analysis_report.html`).
+- Artifact discovery from existing output folders by selected audio filename stem.
+- Top-right quick actions to open detect/analyze reports (when available) in a new tab.
 - Rerun support with last-used parameters plus optional raw `extra args` passthrough.
 - Auto-prefill of the next mode from printed pipeline suggestions (`preprocess -> detect`, `detect -> analyze`).
 - Optional fields support blank input (parser defaults apply), and dependent fields only appear when relevant (e.g., `vocalist_gender` only when `source_type=vocal`).
 - Drag-and-drop upload for the `--audio` field (detect/analyze): dropped files are uploaded to local app storage and the resolved path is auto-filled.
 - Audio browser for `--audio`: defaults to `../audio_test_files`, lets you pick a custom directory, and shows a song dropdown from that directory.
 - Selected audio directory is persisted locally in the browser and reused on next load.
+- Batch trigger for the selected audio directory (`raga_pipeline.batch` in `auto` mode from the local app).
 - `--raga` field is backed by the raga database CSV list (default or current `--raga-db`) and supports typeahead + fuzzy correction on blur.
 - After drag/drop upload, the raw audio filepath input is hidden from the form view.
 

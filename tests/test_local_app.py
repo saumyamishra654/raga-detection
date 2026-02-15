@@ -152,6 +152,50 @@ class ApiTests(unittest.TestCase):
         self.assertFalse(payload["exists"])
         self.assertEqual(payload["files"], [])
 
+    def test_audio_artifacts_endpoint_finds_reports_by_audio_stem(self) -> None:
+        output_root = Path(self.tmp.name) / "batch_results"
+        stem_dir = output_root / "htdemucs" / "bhimpalasi"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+        detect_path = stem_dir / "detection_report.html"
+        analyze_path = stem_dir / "analysis_report.html"
+        detect_path.write_text("<html>detect</html>", encoding="utf-8")
+        analyze_path.write_text("<html>analyze</html>", encoding="utf-8")
+
+        response = self.client.get(
+            "/api/audio-artifacts",
+            params={
+                "audio_path": "/tmp/audio_test_files/bhimpalasi.mp3",
+                "output_dir": str(output_root),
+                "separator": "demucs",
+                "demucs_model": "htdemucs",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["found"])
+        self.assertEqual(Path(payload["stem_dir"]), stem_dir.resolve())
+        self.assertTrue(payload["detect_report_url"])
+        self.assertTrue(payload["analyze_report_url"])
+
+        detect_resp = self.client.get(payload["detect_report_url"])
+        self.assertEqual(detect_resp.status_code, 200)
+        self.assertIn("detect", detect_resp.text)
+
+    def test_create_batch_job_endpoint(self) -> None:
+        response = self.client.post(
+            "/api/batch-jobs",
+            json={
+                "input_dir": self.tmp.name,
+                "output_dir": "batch_results",
+                "mode": "auto",
+                "silent": True,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["mode"], "batch")
+        self.assertIn(payload["status"], {"queued", "running", "completed"})
+
     def test_raga_list_endpoint_reads_names_column(self) -> None:
         csv_path = Path(self.tmp.name) / "ragas.csv"
         csv_path.write_text(

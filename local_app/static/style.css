@@ -15,6 +15,20 @@ header {
     background: linear-gradient(110deg, #0f172a, #1e293b);
 }
 
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 header h1 {
     margin: 0 0 6px 0;
 }
@@ -163,14 +177,6 @@ button:disabled {
 
 a {
     color: #7dd3fc;
-}
-
-#report-frame {
-    width: 100%;
-    min-height: 420px;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    background: #fff;
 }
 
 progress {

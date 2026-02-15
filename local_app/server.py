@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import csv
 import os
 import shutil
@@ -8,12 +9,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from local_app.jobs import JobManager, JobRecord
-from local_app.schemas import ArtifactInfo, JobCreateRequest, JobLogsResponse, JobStatusResponse
+from local_app.schemas import ArtifactInfo, BatchJobRequest, JobCreateRequest, JobLogsResponse, JobStatusResponse
 from raga_pipeline.cli_schema import get_mode_schema, list_modes
 from raga_pipeline.config import find_default_raga_db_path
 
@@ -23,7 +24,17 @@ TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg"}
 DEFAULT_AUDIO_DIR_REL = "../audio_test_files"
+DEFAULT_OUTPUT_DIR_REL = "batch_results"
 RAGA_NAME_COLUMNS = ["names", "raga", "raga_name", "name", "Raga", "RagaName"]
+KNOWN_ARTIFACT_FILES = [
+    "detection_report.html",
+    "analysis_report.html",
+    "report.html",
+    "candidates.csv",
+    "transcribed_notes.csv",
+    "transition_matrix.png",
+    "pitch_sargam.png",
+]
 
 
 def _health_checks() -> List[str]:
@@ -39,16 +50,40 @@ def _health_checks() -> List[str]:
     return warnings
 
 
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _encode_dir_token(path: Path) -> str:
+    payload = str(path.resolve()).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_dir_token(token: str) -> Path:
+    padded = token + "=" * ((4 - len(token) % 4) % 4)
+    try:
+        raw = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid file token.") from exc
+    return Path(raw).resolve()
+
+
+def _local_file_url(path: Path) -> Optional[str]:
+    abs_path = path.resolve()
+    if not abs_path.exists() or not abs_path.is_file():
+        return None
+    token = _encode_dir_token(abs_path.parent)
+    return f"/local-files/{token}/{abs_path.name}"
+
+
 def _artifact_to_response(path: str) -> ArtifactInfo:
     abs_path = Path(path).resolve()
     exists = abs_path.exists()
-    url = None
-    try:
-        rel = abs_path.relative_to(REPO_ROOT.resolve())
-        rel_posix = str(rel).replace(os.sep, "/")
-        url = f"/artifacts/{rel_posix}"
-    except Exception:
-        url = None
+    url = _local_file_url(abs_path) if exists else None
     return ArtifactInfo(name=abs_path.name, path=str(abs_path), exists=exists, url=url)
 
 
@@ -131,6 +166,76 @@ def _resolve_audio_dir(audio_dir: Optional[str]) -> Path:
     return path
 
 
+def _resolve_output_dir(output_dir: Optional[str]) -> Path:
+    raw = (output_dir or "").strip() or DEFAULT_OUTPUT_DIR_REL
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = (REPO_ROOT / path).resolve()
+    else:
+        path = path.resolve()
+    return path
+
+
+def _discover_stem_dirs(output_dir: Path, stem_name: str, separator: Optional[str], demucs_model: Optional[str]) -> List[Path]:
+    candidates: List[Path] = []
+    if separator == "spleeter":
+        candidates.append(output_dir / "spleeter" / stem_name)
+    else:
+        candidates.append(output_dir / (demucs_model or "htdemucs") / stem_name)
+
+    for subdir in ["htdemucs", "htdemucs_ft", "mdx", "mdx_extra", "spleeter"]:
+        candidates.append(output_dir / subdir / stem_name)
+
+    if output_dir.exists():
+        for child in sorted(output_dir.iterdir(), key=lambda p: p.name.lower()):
+            if child.is_dir():
+                candidates.append(child / stem_name)
+
+    deduped: List[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+    return deduped
+
+
+def _collect_stem_artifacts(stem_dir: Path) -> List[ArtifactInfo]:
+    artifacts: List[ArtifactInfo] = []
+    seen: set[str] = set()
+
+    for name in KNOWN_ARTIFACT_FILES:
+        path = stem_dir / name
+        if path.exists() and path.is_file():
+            key = str(path.resolve()).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            artifacts.append(_artifact_to_response(str(path)))
+
+    if stem_dir.exists():
+        for path in sorted(stem_dir.iterdir(), key=lambda p: p.name.lower()):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in {".html", ".csv", ".png", ".jpg", ".jpeg", ".svg"}:
+                continue
+            key = str(path.resolve()).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            artifacts.append(_artifact_to_response(str(path)))
+
+    return artifacts
+
+
+def _artifact_to_dict(item: ArtifactInfo) -> Dict[str, Any]:
+    if hasattr(item, "model_dump"):
+        return item.model_dump()  # type: ignore[no-any-return]
+    return item.dict()  # type: ignore[no-any-return]
+
+
 def create_app(job_manager: JobManager | None = None) -> FastAPI:
     app = FastAPI(title="Raga Local App", version="0.1.0")
     manager = job_manager or JobManager(repo_root=REPO_ROOT)
@@ -140,11 +245,20 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-    app.mount("/artifacts", StaticFiles(directory=str(REPO_ROOT)), name="artifacts")
 
     @app.get("/", response_class=HTMLResponse)
     def root() -> RedirectResponse:
         return RedirectResponse(url="/app")
+
+    @app.get("/local-files/{dir_token}/{relative_path:path}")
+    def local_files(dir_token: str, relative_path: str) -> FileResponse:
+        base_dir = _decode_dir_token(dir_token)
+        target = (base_dir / relative_path).resolve()
+        if not _is_relative_to(target, base_dir):
+            raise HTTPException(status_code=403, detail="Path traversal blocked.")
+        if not target.exists() or not target.is_file():
+            raise HTTPException(status_code=404, detail="File not found.")
+        return FileResponse(path=str(target))
 
     @app.get("/app", response_class=HTMLResponse)
     def app_page(request: Request) -> HTMLResponse:
@@ -216,6 +330,57 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "default_directory": DEFAULT_AUDIO_DIR_REL,
         }
 
+    @app.get("/api/audio-artifacts")
+    def api_audio_artifacts(
+        audio_path: str = Query(..., description="Selected audio file path"),
+        output_dir: Optional[str] = Query(default=None, description="Pipeline output directory"),
+        separator: Optional[str] = Query(default=None, description="Separator engine (demucs|spleeter)"),
+        demucs_model: Optional[str] = Query(default=None, description="Demucs model name"),
+    ) -> Dict[str, Any]:
+        stem_name = Path(audio_path).stem.strip()
+        if not stem_name:
+            raise HTTPException(status_code=400, detail="audio_path must include a file name.")
+
+        resolved_output = _resolve_output_dir(output_dir)
+        stem_dirs = _discover_stem_dirs(resolved_output, stem_name, separator, demucs_model)
+        existing_dirs = [d.resolve() for d in stem_dirs if d.exists() and d.is_dir()]
+
+        if not existing_dirs:
+            return {
+                "found": False,
+                "audio_path": audio_path,
+                "audio_stem": stem_name,
+                "output_dir": str(resolved_output),
+                "searched_dirs": [str(p.resolve()) for p in stem_dirs],
+                "stem_dir": None,
+                "artifacts": [],
+                "detect_report_url": None,
+                "analyze_report_url": None,
+            }
+
+        stem_dir = existing_dirs[0]
+        artifacts = _collect_stem_artifacts(stem_dir)
+        detect_url = None
+        analyze_url = None
+        for item in artifacts:
+            lower_name = item.name.lower()
+            if detect_url is None and lower_name == "detection_report.html":
+                detect_url = item.url
+            if analyze_url is None and lower_name in {"analysis_report.html", "report.html"}:
+                analyze_url = item.url
+
+        return {
+            "found": True,
+            "audio_path": audio_path,
+            "audio_stem": stem_name,
+            "output_dir": str(resolved_output),
+            "searched_dirs": [str(p.resolve()) for p in stem_dirs],
+            "stem_dir": str(stem_dir),
+            "artifacts": [_artifact_to_dict(item) for item in artifacts],
+            "detect_report_url": detect_url,
+            "analyze_report_url": analyze_url,
+        }
+
     @app.post("/api/upload-audio")
     async def api_upload_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]:
         filename = Path(audio_file.filename or "").name
@@ -256,6 +421,24 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             mode=payload.mode,
             params=payload.params,
             extra_args=payload.extra_args,
+        )
+        return _job_to_response(job)
+
+    @app.post("/api/batch-jobs", response_model=JobStatusResponse)
+    def api_create_batch_job(payload: BatchJobRequest) -> JobStatusResponse:
+        mode = payload.mode.strip() if payload.mode else "auto"
+        if mode not in {"auto", "detect"}:
+            raise HTTPException(status_code=400, detail="Batch mode must be 'auto' or 'detect'.")
+        job = app.state.job_manager.submit(
+            mode="batch",
+            params={
+                "input_dir": payload.input_dir,
+                "output_dir": payload.output_dir or DEFAULT_OUTPUT_DIR_REL,
+                "batch_mode": mode,
+                "ground_truth": payload.ground_truth,
+                "silent": payload.silent,
+            },
+            extra_args=[],
         )
         return _job_to_response(job)
 

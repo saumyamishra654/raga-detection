@@ -9,14 +9,19 @@
     const progressEl = document.getElementById("progress");
     const logsEl = document.getElementById("logs");
     const artifactListEl = document.getElementById("artifact-list");
-    const reportFrame = document.getElementById("report-frame");
     const jobArgvEl = document.getElementById("job-argv");
+    const openDetectReportBtn = document.getElementById("open-detect-report-btn");
+    const openAnalyzeReportBtn = document.getElementById("open-analyze-report-btn");
+    const runBatchBtn = document.getElementById("run-batch-btn");
 
     let currentSchema = null;
     let activeJobId = null;
     let pollHandle = null;
     let lastPayload = null;
     let autoPrefilledFromJobId = null;
+    let selectedAudioPath = "";
+    let selectedAudioDirectory = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
+    let currentReportLinks = { detect: null, analyze: null };
     const ragaNameCacheBySource = new Map();
     const audioFileCacheBySource = new Map();
     const AUDIO_DIR_STORAGE_KEY = "ragaLocalApp.audioDirectory";
@@ -80,6 +85,93 @@
         const payload = await res.json();
         audioFileCacheBySource.set(sourceKey, payload);
         return payload;
+    }
+
+    function getFieldDefault(name, fallbackValue) {
+        if (!currentSchema || !Array.isArray(currentSchema.fields)) return fallbackValue;
+        const field = currentSchema.fields.find(function (item) { return item.name === name; });
+        if (!field || field.default === null || field.default === undefined || field.default === "") {
+            return fallbackValue;
+        }
+        return String(field.default);
+    }
+
+    function getCurrentOutputDirectory() {
+        const outputInput = document.getElementById(fieldInputId("output"));
+        if (outputInput && String(outputInput.value || "").trim()) {
+            return String(outputInput.value || "").trim();
+        }
+        return getFieldDefault("output", "batch_results");
+    }
+
+    function getCurrentSeparator() {
+        const separatorInput = document.getElementById(fieldInputId("separator"));
+        if (separatorInput && String(separatorInput.value || "").trim()) {
+            return String(separatorInput.value || "").trim();
+        }
+        return getFieldDefault("separator", "demucs");
+    }
+
+    function getCurrentDemucsModel() {
+        const modelInput = document.getElementById(fieldInputId("demucs_model"));
+        if (modelInput && String(modelInput.value || "").trim()) {
+            return String(modelInput.value || "").trim();
+        }
+        return getFieldDefault("demucs_model", "htdemucs");
+    }
+
+    function applyReportLinks(detectUrl, analyzeUrl) {
+        currentReportLinks = {
+            detect: detectUrl || null,
+            analyze: analyzeUrl || null,
+        };
+        if (openDetectReportBtn) {
+            openDetectReportBtn.disabled = !currentReportLinks.detect;
+        }
+        if (openAnalyzeReportBtn) {
+            openAnalyzeReportBtn.disabled = !currentReportLinks.analyze;
+        }
+    }
+
+    async function fetchAudioArtifacts(audioPath) {
+        const endpoint = new URL("/api/audio-artifacts", window.location.origin);
+        endpoint.searchParams.set("audio_path", audioPath);
+        endpoint.searchParams.set("output_dir", getCurrentOutputDirectory());
+        endpoint.searchParams.set("separator", getCurrentSeparator());
+        endpoint.searchParams.set("demucs_model", getCurrentDemucsModel());
+        const res = await fetch(endpoint.toString());
+        if (!res.ok) {
+            const body = await res.json().catch(function () { return {}; });
+            throw new Error(body.detail || "Failed to load artifacts for selected audio");
+        }
+        return res.json();
+    }
+
+    async function loadArtifactsForSelectedAudio() {
+        if (!selectedAudioPath) {
+            applyReportLinks(null, null);
+            clearChildren(artifactListEl);
+            return;
+        }
+
+        const payload = await fetchAudioArtifacts(selectedAudioPath);
+        renderArtifacts(payload.artifacts || []);
+        applyReportLinks(payload.detect_report_url, payload.analyze_report_url);
+        if (payload.found) {
+            setStatus("Loaded existing artifacts for " + (payload.audio_stem || "selected audio"));
+        } else {
+            setStatus("No existing artifacts found yet for selected audio.");
+        }
+    }
+
+    function onAudioSelectionChanged(audioPath, options) {
+        selectedAudioPath = String(audioPath || "").trim();
+        if (selectedAudioPath && options && options.directory) {
+            selectedAudioDirectory = options.directory;
+        }
+        loadArtifactsForSelectedAudio().catch(function (err) {
+            setStatus("Artifact lookup error: " + err.message);
+        });
     }
 
     async function fetchRagaNames(ragaDbPath) {
@@ -183,6 +275,7 @@
             targetInput.classList.add("audio-path-hidden");
             dropzone.textContent = "Uploaded: " + payload.filename;
             setStatus("Audio uploaded and autofilled: " + payload.filename);
+            onAudioSelectionChanged(payload.path);
         } catch (err) {
             dropzone.textContent = originalLabel;
             setStatus("Audio upload error: " + err.message);
@@ -270,6 +363,7 @@
 
         function setSelectOptions(payload) {
             fileSelect.innerHTML = "";
+            let matchedExistingValue = false;
 
             const placeholder = document.createElement("option");
             placeholder.value = "";
@@ -295,10 +389,15 @@
                 if (audioInput.value && audioInput.value === option.value) {
                     option.selected = true;
                     placeholder.selected = false;
+                    matchedExistingValue = true;
                 }
                 fileSelect.appendChild(option);
             });
             info.textContent = files.length + " audio file(s) found in: " + payload.directory;
+
+            if (matchedExistingValue && audioInput.value) {
+                onAudioSelectionChanged(audioInput.value, { directory: selectedAudioDirectory });
+            }
         }
 
         async function refreshAudioFileOptions(forceRefresh) {
@@ -306,6 +405,7 @@
             dirInput.value = entered;
             saveAudioDirectory(entered);
             const payload = await fetchAudioFiles(entered, forceRefresh);
+            selectedAudioDirectory = payload.directory || entered;
             setSelectOptions(payload);
         }
 
@@ -317,6 +417,7 @@
             if (chosen) {
                 setStatus("Audio selected: " + chosen.textContent);
             }
+            onAudioSelectionChanged(fileSelect.value, { directory: selectedAudioDirectory });
         });
 
         refreshBtn.addEventListener("click", function () {
@@ -338,6 +439,14 @@
         });
 
         row.appendChild(helperWrap);
+        audioInput.addEventListener("change", function () {
+            onAudioSelectionChanged(audioInput.value, { directory: selectedAudioDirectory });
+        });
+        audioInput.addEventListener("blur", function () {
+            if (audioInput.value) {
+                onAudioSelectionChanged(audioInput.value, { directory: selectedAudioDirectory });
+            }
+        });
         refreshAudioFileOptions(true).catch(function (err) {
             setStatus("Audio directory error: " + err.message);
         });
@@ -521,6 +630,7 @@
 
         bindConditionalVisibilityHandlers();
         updateConditionalVisibility();
+        bindArtifactContextHandlers();
     }
 
     function bindConditionalVisibilityHandlers() {
@@ -528,6 +638,25 @@
         if (!sourceInput) return;
         sourceInput.addEventListener("change", function () {
             updateConditionalVisibility();
+        });
+    }
+
+    function bindArtifactContextHandlers() {
+        ["output", "separator", "demucs_model"].forEach(function (name) {
+            const input = document.getElementById(fieldInputId(name));
+            if (!input) return;
+            input.addEventListener("change", function () {
+                if (!selectedAudioPath) return;
+                loadArtifactsForSelectedAudio().catch(function (err) {
+                    setStatus("Artifact lookup error: " + err.message);
+                });
+            });
+            input.addEventListener("blur", function () {
+                if (!selectedAudioPath) return;
+                loadArtifactsForSelectedAudio().catch(function (err) {
+                    setStatus("Artifact lookup error: " + err.message);
+                });
+            });
         });
     }
 
@@ -691,6 +820,10 @@
         }
 
         updateConditionalVisibility();
+        const audioInput = document.getElementById(fieldInputId("audio"));
+        if (audioInput && audioInput.value) {
+            onAudioSelectionChanged(audioInput.value, { directory: selectedAudioDirectory });
+        }
         return true;
     }
 
@@ -708,14 +841,31 @@
     function setBusy(isBusy) {
         runBtn.disabled = isBusy;
         cancelBtn.disabled = !isBusy || !activeJobId;
+        if (runBatchBtn) {
+            runBatchBtn.disabled = isBusy;
+        }
     }
 
-    function renderArtifacts(job) {
-        clearChildren(artifactListEl);
-        const artifacts = job.artifacts || [];
-        let preferredReport = null;
+    function deriveReportLinksFromArtifacts(artifacts) {
+        let detectUrl = null;
+        let analyzeUrl = null;
+        (artifacts || []).forEach(function (artifact) {
+            if (!artifact || !artifact.url || !artifact.name) return;
+            const lowerName = String(artifact.name).toLowerCase();
+            if (!detectUrl && lowerName === "detection_report.html") {
+                detectUrl = artifact.url;
+            }
+            if (!analyzeUrl && (lowerName === "analysis_report.html" || lowerName === "report.html")) {
+                analyzeUrl = artifact.url;
+            }
+        });
+        return { detectUrl: detectUrl, analyzeUrl: analyzeUrl };
+    }
 
-        artifacts.forEach(function (artifact) {
+    function renderArtifacts(artifacts) {
+        clearChildren(artifactListEl);
+
+        (artifacts || []).forEach(function (artifact) {
             const li = document.createElement("li");
             if (artifact.url) {
                 const a = document.createElement("a");
@@ -727,15 +877,7 @@
                 li.textContent = artifact.name + " (" + artifact.path + ")";
             }
             artifactListEl.appendChild(li);
-
-            if (!preferredReport && artifact.name.endsWith("report.html") && artifact.url) {
-                preferredReport = artifact.url;
-            }
         });
-
-        if (preferredReport) {
-            reportFrame.src = preferredReport;
-        }
     }
 
     async function refreshJob(jobId) {
@@ -754,9 +896,18 @@
         progressEl.value = Number(job.progress || 0);
         logsEl.textContent = (logs.logs || []).join("\n");
         jobArgvEl.textContent = job.argv && job.argv.length ? ("argv: " + job.argv.join(" ")) : "";
-        renderArtifacts(job);
+        renderArtifacts(job.artifacts || []);
 
-        if (job.status === "completed" && autoPrefilledFromJobId !== job.job_id) {
+        const reportLinks = deriveReportLinksFromArtifacts(job.artifacts || []);
+        if (reportLinks.detectUrl || reportLinks.analyzeUrl) {
+            applyReportLinks(reportLinks.detectUrl, reportLinks.analyzeUrl);
+        } else if (selectedAudioPath) {
+            loadArtifactsForSelectedAudio().catch(function () {
+                // Keep silent; status line already reflects job updates.
+            });
+        }
+
+        if (job.status === "completed" && job.mode !== "batch" && autoPrefilledFromJobId !== job.job_id) {
             const applied = await applySuggestedCommandFromLogs(logs.logs || []);
             if (applied) {
                 autoPrefilledFromJobId = job.job_id;
@@ -787,8 +938,8 @@
         }, 1000);
     }
 
-    async function submit(payload) {
-        const res = await fetch("/api/jobs", {
+    async function submitJob(payload, endpoint) {
+        const res = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -809,7 +960,7 @@
                 params: params,
                 extra_args: parseExtraArgs(extraArgsEl.value),
             };
-            const job = await submit(payload);
+            const job = await submitJob(payload, "/api/jobs");
             lastPayload = payload;
             rerunBtn.disabled = false;
             activeJobId = job.job_id;
@@ -817,7 +968,7 @@
             setStatus("Submitted: " + job.job_id);
             logsEl.textContent = "";
             artifactListEl.textContent = "";
-            reportFrame.src = "";
+            applyReportLinks(null, null);
             startPolling(job.job_id);
             await refreshJob(job.job_id);
         } catch (err) {
@@ -828,19 +979,61 @@
     rerunBtn.addEventListener("click", async function () {
         if (!lastPayload) return;
         try {
-            const job = await submit(lastPayload);
+            const job = await submitJob(lastPayload, "/api/jobs");
             activeJobId = job.job_id;
             setBusy(true);
             setStatus("Rerun submitted: " + job.job_id);
             logsEl.textContent = "";
             artifactListEl.textContent = "";
-            reportFrame.src = "";
+            applyReportLinks(null, null);
             startPolling(job.job_id);
             await refreshJob(job.job_id);
         } catch (err) {
             setStatus("Error: " + err.message);
         }
     });
+
+    if (openDetectReportBtn) {
+        openDetectReportBtn.addEventListener("click", function () {
+            if (!currentReportLinks.detect) return;
+            window.open(currentReportLinks.detect, "_blank", "noopener");
+        });
+    }
+
+    if (openAnalyzeReportBtn) {
+        openAnalyzeReportBtn.addEventListener("click", function () {
+            if (!currentReportLinks.analyze) return;
+            window.open(currentReportLinks.analyze, "_blank", "noopener");
+        });
+    }
+
+    if (runBatchBtn) {
+        runBatchBtn.addEventListener("click", async function () {
+            try {
+                const inputDir = (selectedAudioDirectory || getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL).trim();
+                if (!inputDir) {
+                    throw new Error("Select or enter an audio directory first.");
+                }
+                const payload = {
+                    input_dir: inputDir,
+                    output_dir: getCurrentOutputDirectory(),
+                    mode: "auto",
+                    silent: true,
+                };
+                const job = await submitJob(payload, "/api/batch-jobs");
+                activeJobId = job.job_id;
+                setBusy(true);
+                setStatus("Batch submitted: " + job.job_id);
+                logsEl.textContent = "";
+                artifactListEl.textContent = "";
+                applyReportLinks(null, null);
+                startPolling(job.job_id);
+                await refreshJob(job.job_id);
+            } catch (err) {
+                setStatus("Batch error: " + err.message);
+            }
+        });
+    }
 
     cancelBtn.addEventListener("click", async function () {
         if (!activeJobId) return;

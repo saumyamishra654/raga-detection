@@ -11,6 +11,14 @@ class JobCreateRequest(BaseModel):
     extra_args: List[str] = Field(default_factory=list)
 
 
+class BatchJobRequest(BaseModel):
+    input_dir: str
+    output_dir: Optional[str] = None
+    mode: str = Field(default="auto", description="auto | detect")
+    ground_truth: Optional[str] = None
+    silent: bool = True
+
+
 class ArtifactInfo(BaseModel):
     name: str
     path: str

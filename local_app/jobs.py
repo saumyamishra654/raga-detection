@@ -228,6 +228,9 @@ class JobManager:
             self._persist_locked(job)
 
     def _run_job(self, job: JobRecord) -> List[Artifact]:
+        if job.mode == "batch":
+            return self._run_batch_job(job)
+
         from driver import run_pipeline
 
         argv = params_to_argv(job.mode, job.params, job.extra_args)
@@ -243,6 +246,76 @@ class JobManager:
         logger.flush()
 
         return self._collect_artifacts(config.stem_dir, results.plot_paths)
+
+    def _run_batch_job(self, job: JobRecord) -> List[Artifact]:
+        from raga_pipeline.batch import process_directory
+
+        input_dir_raw = str(job.params.get("input_dir", "")).strip()
+        if not input_dir_raw:
+            raise ValueError("Batch job requires input_dir.")
+
+        input_dir = os.path.abspath(os.path.expanduser(input_dir_raw))
+        if not os.path.isdir(input_dir):
+            raise FileNotFoundError(f"Input directory not found: {input_dir}")
+
+        output_dir_raw = str(job.params.get("output_dir", "")).strip() or "batch_results"
+        output_dir_expanded = os.path.expanduser(output_dir_raw)
+        if os.path.isabs(output_dir_expanded):
+            output_dir = os.path.abspath(output_dir_expanded)
+        else:
+            output_dir = os.path.abspath(self.repo_root / output_dir_expanded)
+
+        batch_mode = str(job.params.get("batch_mode", "auto")).strip() or "auto"
+        if batch_mode not in {"auto", "detect"}:
+            raise ValueError("batch_mode must be 'auto' or 'detect'.")
+
+        ground_truth_raw = job.params.get("ground_truth")
+        ground_truth: Optional[str]
+        if isinstance(ground_truth_raw, str) and ground_truth_raw.strip():
+            ground_truth = os.path.abspath(os.path.expanduser(ground_truth_raw.strip()))
+        elif batch_mode == "auto":
+            input_dir_name = os.path.basename(os.path.normpath(input_dir))
+            ground_truth = os.path.join(input_dir, f"{input_dir_name}_gt.csv")
+        else:
+            ground_truth = None
+
+        silent = bool(job.params.get("silent", True))
+        argv = [
+            "python",
+            "-m",
+            "raga_pipeline.batch",
+            input_dir,
+            "--output",
+            output_dir,
+            "--mode",
+            batch_mode,
+        ]
+        if ground_truth:
+            argv.extend(["--ground-truth", ground_truth])
+        if silent:
+            argv.append("--silent")
+
+        with self._lock:
+            job.argv = list(argv)
+            self._persist_locked(job)
+
+        logger = _LogWriter(lambda line: self._append_log(job, line))
+        with redirect_stdout(logger), redirect_stderr(logger):
+            process_directory(
+                input_dir=input_dir,
+                ground_truth_path=ground_truth,
+                output_dir=output_dir,
+                mode=batch_mode,
+                silent=silent,
+            )
+        logger.flush()
+
+        artifacts: List[Artifact] = []
+        logs_dir = Path(output_dir) / "logs"
+        if logs_dir.exists():
+            for log_path in sorted(logs_dir.glob("*.log")):
+                artifacts.append(Artifact(name=f"log:{log_path.name}", path=str(log_path.resolve())))
+        return artifacts
 
     def _collect_artifacts(self, stem_dir: str, plot_paths: Dict[str, str]) -> List[Artifact]:
         candidates: Dict[str, str] = {}

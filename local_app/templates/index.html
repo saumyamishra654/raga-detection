@@ -8,7 +8,14 @@
 </head>
 <body data-default-audio-dir="{{ default_audio_dir }}">
     <header>
-        <h1>Raga Local App</h1>
+        <div class="header-row">
+            <h1>Raga Local App</h1>
+            <div class="header-actions">
+                <button id="open-detect-report-btn" type="button" disabled>Open Detect Report</button>
+                <button id="open-analyze-report-btn" type="button" disabled>Open Analyze Report</button>
+                <button id="run-batch-btn" type="button">Run Batch (Selected Dir)</button>
+            </div>
+        </div>
         <p>Run preprocess, detect, and analyze locally with live parameter tuning.</p>
     </header>
 
@@ -64,11 +71,6 @@
         <section class="panel">
             <h2>Logs</h2>
             <pre id="logs"></pre>
-        </section>
-
-        <section class="panel">
-            <h2>Report Viewer</h2>
-            <iframe id="report-frame" title="report viewer"></iframe>
         </section>
     </main>
 

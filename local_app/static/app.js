@@ -16,6 +16,13 @@
     let activeJobId = null;
     let pollHandle = null;
     let lastPayload = null;
+    let autoPrefilledFromJobId = null;
+
+    const FIELD_DEPENDENCIES = {
+        vocalist_gender: { field: "source_type", equals: "vocal" },
+        instrument_type: { field: "source_type", equals: "instrumental" },
+        skip_separation: { field: "source_type", equals: "instrumental" }
+    };
 
     function clearChildren(el) {
         while (el.firstChild) {
@@ -39,11 +46,20 @@
 
         if (field.choices && field.choices.length > 0) {
             input = document.createElement("select");
+            if (!field.required) {
+                const blank = document.createElement("option");
+                blank.value = "";
+                blank.textContent = field.default !== null && field.default !== undefined
+                    ? "(none: use default " + String(field.default) + ")"
+                    : "(none)";
+                blank.selected = true;
+                input.appendChild(blank);
+            }
             field.choices.forEach(function (choice) {
                 const option = document.createElement("option");
                 option.value = String(choice);
                 option.textContent = String(choice);
-                if (field.default !== null && String(field.default) === String(choice)) {
+                if (field.required && field.default !== null && String(field.default) === String(choice)) {
                     option.selected = true;
                 }
                 input.appendChild(option);
@@ -65,8 +81,10 @@
             } else {
                 input.type = "text";
             }
-            if (field.default !== null && field.default !== undefined) {
+            if (field.required && field.default !== null && field.default !== undefined) {
                 input.value = String(field.default);
+            } else if (!field.required && field.default !== null && field.default !== undefined) {
+                input.placeholder = "Default: " + String(field.default);
             }
             if (field.required) {
                 input.required = true;
@@ -98,6 +116,7 @@
             fields.forEach(function (field) {
                 const row = document.createElement("div");
                 row.className = "row";
+                row.dataset.fieldName = field.name;
 
                 const label = document.createElement("label");
                 label.htmlFor = fieldInputId(field.name);
@@ -117,6 +136,50 @@
 
             schemaForms.appendChild(section);
         });
+
+        bindConditionalVisibilityHandlers();
+        updateConditionalVisibility();
+    }
+
+    function bindConditionalVisibilityHandlers() {
+        const sourceInput = document.getElementById(fieldInputId("source_type"));
+        if (!sourceInput) return;
+        sourceInput.addEventListener("change", function () {
+            updateConditionalVisibility();
+        });
+    }
+
+    function resetHiddenField(fieldName) {
+        const field = currentSchema.fields.find(function (x) { return x.name === fieldName; });
+        const input = document.getElementById(fieldInputId(fieldName));
+        if (!field || !input) return;
+
+        if (field.value_type === "bool") {
+            if (field.action === "store_true") {
+                input.checked = false;
+            } else if (field.action === "store_false") {
+                input.checked = true;
+            } else {
+                input.checked = false;
+            }
+            return;
+        }
+        input.value = "";
+    }
+
+    function updateConditionalVisibility() {
+        Object.keys(FIELD_DEPENDENCIES).forEach(function (targetField) {
+            const row = schemaForms.querySelector('.row[data-field-name="' + targetField + '"]');
+            if (!row) return;
+
+            const dep = FIELD_DEPENDENCIES[targetField];
+            const sourceInput = document.getElementById(fieldInputId(dep.field));
+            const shouldShow = Boolean(sourceInput) && sourceInput.value === dep.equals;
+            row.style.display = shouldShow ? "grid" : "none";
+            if (!shouldShow) {
+                resetHiddenField(targetField);
+            }
+        });
     }
 
     function normalizeFieldValue(field, inputEl) {
@@ -127,10 +190,14 @@
             return null;
         }
         if (field.value_type === "int") {
-            return parseInt(inputEl.value, 10);
+            const parsed = parseInt(inputEl.value, 10);
+            if (Number.isNaN(parsed)) throw new Error("Invalid integer value for " + field.flag);
+            return parsed;
         }
         if (field.value_type === "float") {
-            return parseFloat(inputEl.value);
+            const parsed = parseFloat(inputEl.value);
+            if (Number.isNaN(parsed)) throw new Error("Invalid numeric value for " + field.flag);
+            return parsed;
         }
         return inputEl.value;
     }
@@ -158,6 +225,91 @@
         });
 
         return params;
+    }
+
+    function parseSuggestedCommand(logLines) {
+        if (!Array.isArray(logLines) || !logLines.length) return null;
+        let startIdx = -1;
+        for (let i = logLines.length - 1; i >= 0; i--) {
+            if (logLines[i].includes("./run_pipeline.sh ")) {
+                startIdx = i;
+                break;
+            }
+        }
+        if (startIdx < 0) return null;
+
+        const firstLine = logLines[startIdx].trim().replace(/\\$/, "").trim();
+        const firstMatch = firstLine.match(/\.\/run_pipeline\.sh\s+([a-zA-Z0-9_-]+)/);
+        if (!firstMatch) return null;
+        const mode = firstMatch[1];
+
+        const paramsByFlag = {};
+        const consumedFlags = [];
+        for (let i = startIdx + 1; i < logLines.length; i++) {
+            const line = logLines[i].trim();
+            if (!line || line.startsWith("=") || line.startsWith("Next:")) {
+                if (line.startsWith("=")) break;
+                continue;
+            }
+            if (!line.startsWith("--")) continue;
+
+            const clean = line.replace(/\\$/, "").trim();
+            const match = clean.match(/^(--[a-zA-Z0-9-]+)(?:\s+"([^"]*)"|\s+(\S+))?$/);
+            if (!match) continue;
+            const flag = match[1];
+            const value = match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : true);
+            paramsByFlag[flag] = value;
+            consumedFlags.push(flag);
+        }
+
+        return { mode, paramsByFlag, consumedFlags };
+    }
+
+    async function applySuggestedCommandFromLogs(logLines) {
+        const suggestion = parseSuggestedCommand(logLines);
+        if (!suggestion) return false;
+
+        if (modeSelect.value !== suggestion.mode) {
+            modeSelect.value = suggestion.mode;
+            await loadSchema(suggestion.mode);
+        }
+
+        const flagToField = {};
+        currentSchema.fields.forEach(function (field) {
+            (field.flags || []).forEach(function (flag) {
+                flagToField[flag] = field;
+            });
+        });
+
+        const unknownFlags = [];
+        Object.keys(suggestion.paramsByFlag).forEach(function (flag) {
+            const field = flagToField[flag];
+            if (!field) {
+                unknownFlags.push(flag);
+                return;
+            }
+            const input = document.getElementById(fieldInputId(field.name));
+            if (!input) return;
+
+            if (field.value_type === "bool") {
+                if (field.action === "store_true") {
+                    input.checked = true;
+                } else if (field.action === "store_false") {
+                    input.checked = false;
+                }
+                return;
+            }
+
+            const value = suggestion.paramsByFlag[flag];
+            input.value = value === true ? "" : String(value);
+        });
+
+        if (unknownFlags.length > 0) {
+            extraArgsEl.value = unknownFlags.join(" ");
+        }
+
+        updateConditionalVisibility();
+        return true;
     }
 
     async function loadSchema(mode) {
@@ -221,6 +373,14 @@
         logsEl.textContent = (logs.logs || []).join("\n");
         jobArgvEl.textContent = job.argv && job.argv.length ? ("argv: " + job.argv.join(" ")) : "";
         renderArtifacts(job);
+
+        if (job.status === "completed" && autoPrefilledFromJobId !== job.job_id) {
+            const applied = await applySuggestedCommandFromLogs(logs.logs || []);
+            if (applied) {
+                autoPrefilledFromJobId = job.job_id;
+                setStatus("Completed. Loaded suggested " + modeSelect.value + " command into form.");
+            }
+        }
 
         if (job.status === "queued" || job.status === "running") {
             setBusy(true);
@@ -324,4 +484,3 @@
         setStatus("Schema load error: " + err.message);
     });
 })();
-

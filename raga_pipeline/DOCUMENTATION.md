@@ -63,6 +63,8 @@ Design notes:
 - Uses parser introspection (`build_cli_parser()` + `get_mode_schema(...)`) as the single source of truth, so parameter changes in `config.py` flow into the UI automatically.
 - Runs jobs serially in a local background worker and persists status/log snapshots in `.local_app_data/`.
 - Serves generated artifacts directly and embeds report HTML in-app.
+- Parses printed "next step" commands from logs and auto-loads suggested params into the next mode form (`preprocess -> detect`, `detect -> analyze`).
+- Optional fields can be left blank to fall back to parser defaults; dependent fields are conditionally shown based on related selections.
 
 ---
 

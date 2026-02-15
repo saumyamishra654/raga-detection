@@ -61,6 +61,8 @@ What it provides:
 - Serial background job execution with logs, progress (`[STEP x/y]` parsing), and cancel support.
 - Artifact discovery and in-app HTML report viewing (`detection_report.html`, `analysis_report.html`).
 - Rerun support with last-used parameters plus optional raw `extra args` passthrough.
+- Auto-prefill of the next mode from printed pipeline suggestions (`preprocess -> detect`, `detect -> analyze`).
+- Optional fields support blank input (parser defaults apply), and dependent fields only appear when relevant (e.g., `vocalist_gender` only when `source_type=vocal`).
 
 ### Mode 0: Preprocess (`preprocess`)
 

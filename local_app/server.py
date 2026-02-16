@@ -96,6 +96,18 @@ def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
 
     def _replace(match: re.Match[str]) -> str:
         prefix, q1, raw_value, q2 = match.groups()
+        raw_value_stripped = raw_value.strip()
+        raw_value_lower = raw_value_stripped.lower()
+
+        # Fast-path skip for absolute/external/data URIs.
+        # Analysis reports embed very large base64 image URIs; avoid urlparse on them.
+        if raw_value_lower.startswith(("http://", "https://", "data:", "javascript:", "mailto:")):
+            return match.group(0)
+        if raw_value_stripped.startswith("#"):
+            return match.group(0)
+        if raw_value_stripped.startswith(("/local-files/", "/local-report/", "/static/")):
+            return match.group(0)
+
         parsed = urlparse(raw_value)
         candidate = parsed.path.strip()
         if not candidate:

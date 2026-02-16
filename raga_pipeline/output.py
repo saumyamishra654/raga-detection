@@ -18,6 +18,7 @@ import json
 import uuid
 import io
 import base64
+from html import escape
 from urllib.parse import quote
 from datetime import datetime
 import numpy as np
@@ -1316,25 +1317,101 @@ def _require_audio_path(config: PipelineConfig) -> str:
     return config.audio_path
 
 
-def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], tonic: int) -> str:
+def _strip_octave_markers(label: str) -> str:
+    """Remove octave glyphs from a sargam label."""
+    return label.replace("'", "").replace("·", "").strip()
+
+
+def _estimate_median_sa_octave(notes: List[Note], tonic: int) -> int:
+    """
+    Estimate recording-specific Sa octave anchor from note data.
+
+    Preference order:
+    1) Median octave of notes whose pitch class matches Sa.
+    2) Median octave of all notes.
+    3) Fallback to octave index 5 (near middle register for tonic pitch classes).
+    """
+    if not notes:
+        return 5
+
+    tonic_pc = int(round(tonic)) % 12
+    sa_octaves: List[int] = []
+    all_octaves: List[int] = []
+
+    for note in notes:
+        midi_rounded = int(round(note.pitch_midi))
+        octave_index = int(round((midi_rounded - tonic_pc) / 12.0))
+        all_octaves.append(octave_index)
+        if midi_rounded % 12 == tonic_pc:
+            sa_octaves.append(octave_index)
+
+    source = sa_octaves if sa_octaves else all_octaves
+    if not source:
+        return 5
+    return int(round(float(np.median(source))))
+
+
+def _format_note_sargam_for_report(
+    note: Note,
+    tonic: int,
+    median_sa_octave: int,
+    octave_marker_threshold: int = 3,
+) -> str:
+    """
+    Format note sargam for report display.
+
+    Octave markers are suppressed near the singer's median Sa and only shown for
+    large deviations (>= `octave_marker_threshold` octaves from that anchor).
+    """
+    base = _strip_octave_markers(note.sargam or "")
+    if not base:
+        base = OFFSET_TO_SARGAM.get(int(round(note.pitch_midi - tonic)) % 12, "?")
+
+    tonic_pc = int(round(tonic)) % 12
+    midi_rounded = int(round(note.pitch_midi))
+    octave_index = int(round((midi_rounded - tonic_pc) / 12.0))
+    relative_octave = octave_index - median_sa_octave
+
+    # User-facing report policy: suppress octave markers unless the note is
+    # extremely low relative to the recording's median Sa anchor.
+    if relative_octave <= -octave_marker_threshold:
+        return base + ("'" * abs(relative_octave))
+    return base
+
+
+def _generate_transcription_section(
+    notes: List[Note],
+    phrases: List[Phrase],
+    tonic: int,
+    audio_element_ids: Optional[List[str]] = None,
+) -> str:
     """Generate phrase-by-phrase musical transcription section."""
     section_id = f"transcription-{uuid.uuid4().hex[:8]}"
     visible_limit = 10
+    median_sa_octave = _estimate_median_sa_octave(notes, tonic)
     phrase_rows: List[str] = []
     for i, phrase in enumerate(phrases):
-        labels: List[str] = []
-        for n in phrase.notes:
-            label = (n.sargam or "").strip()
-            if not label:
-                label = OFFSET_TO_SARGAM.get(int(round(n.pitch_midi - tonic)) % 12, "?")
-            labels.append(label)
-        phrase_text = " ".join(labels).strip() if labels else "--"
+        note_spans: List[str] = []
+        for note_idx, n in enumerate(phrase.notes):
+            label = _format_note_sargam_for_report(
+                n,
+                tonic=tonic,
+                median_sa_octave=median_sa_octave,
+            )
+            note_spans.append(
+                (
+                    f'<span class="transcription-note" data-start="{n.start:.3f}" '
+                    f'data-end="{n.end:.3f}" data-phrase-index="{i}" data-note-index="{note_idx}">'
+                    f"{escape(label)}</span>"
+                )
+            )
+        phrase_text = " ".join(note_spans).strip() if note_spans else "<span class=\"transcription-note transcription-note-empty\">--</span>"
         row_style = "display: none;" if i >= visible_limit else ""
         phrase_rows.append(
             f'''
             <div class="transcription-phrase-row {'transcription-phrase-hidden' if i >= visible_limit else ''}" style="padding: 10px 12px; border: 1px solid #30363d; border-radius: 8px; background: #0d1117; {row_style}">
                 <div style="font-size: 12px; color: #8b949e; margin-bottom: 4px;">Phrase {i+1} · {phrase.start:.2f}s to {phrase.end:.2f}s</div>
-                <div style="font-size: 16px; line-height: 1.5; color: #c9d1d9; word-break: break-word;">{phrase_text}</div>
+                <div class="transcription-phrase-notes" style="font-size: 16px; line-height: 1.8; color: #c9d1d9; word-break: break-word;">{phrase_text}</div>
             </div>
             '''
         )
@@ -1347,6 +1424,168 @@ def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], to
         <button type="button" id="{section_id}-toggle" style="margin-top: 10px; padding: 8px 14px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer;">
             Show more ({hidden_count} more phrases)
         </button>
+        '''
+
+    sync_script_html = ""
+    if phrases and audio_element_ids:
+        sync_script_html = f"""
+        <script>
+        (function() {{
+            var root = document.getElementById("{section_id}");
+            if (!root) return;
+            var audioIds = {json.dumps(audio_element_ids)};
+            if (!audioIds || !audioIds.length) return;
+
+            var noteEls = Array.from(root.querySelectorAll(".transcription-note[data-start][data-end]"));
+            if (!noteEls.length) return;
+
+            var notes = noteEls
+                .map(function(el) {{
+                    return {{
+                        el: el,
+                        start: parseFloat(el.dataset.start || "0"),
+                        end: parseFloat(el.dataset.end || "0")
+                    }};
+                }})
+                .filter(function(n) {{
+                    return Number.isFinite(n.start) && Number.isFinite(n.end) && n.end >= n.start;
+                }})
+                .sort(function(a, b) {{
+                    return (a.start - b.start) || (a.end - b.end);
+                }});
+
+            if (!notes.length) return;
+
+            var activeAudio = null;
+            var lastActiveIdx = -1;
+
+            function findActiveNoteIndex(t) {{
+                var lo = 0;
+                var hi = notes.length - 1;
+                var best = -1;
+                while (lo <= hi) {{
+                    var mid = (lo + hi) >> 1;
+                    if (notes[mid].start <= t) {{
+                        best = mid;
+                        lo = mid + 1;
+                    }} else {{
+                        hi = mid - 1;
+                    }}
+                }}
+                if (best < 0) return -1;
+                var tolerance = 0.04;
+                if (t <= notes[best].end + tolerance) return best;
+                return -1;
+            }}
+
+            function setActiveByIndex(idx) {{
+                if (idx === lastActiveIdx) return;
+                if (lastActiveIdx >= 0 && lastActiveIdx < notes.length) {{
+                    notes[lastActiveIdx].el.classList.remove("active");
+                }}
+                if (idx >= 0 && idx < notes.length) {{
+                    notes[idx].el.classList.add("active");
+                }}
+                lastActiveIdx = idx;
+            }}
+
+            function updateAtTime(t) {{
+                var idx = findActiveNoteIndex(t);
+                setActiveByIndex(idx);
+            }}
+
+            function getPlayingAudio() {{
+                for (var i = 0; i < audioIds.length; i += 1) {{
+                    var el = document.getElementById(audioIds[i]);
+                    if (el && !el.paused && !el.ended) {{
+                        return el;
+                    }}
+                }}
+                return null;
+            }}
+
+            function resolveActiveAudio(preferredEl) {{
+                var playing = getPlayingAudio();
+                if (playing) {{
+                    activeAudio = playing;
+                    return activeAudio;
+                }}
+                if (preferredEl && !preferredEl.ended) {{
+                    activeAudio = preferredEl;
+                    return activeAudio;
+                }}
+                if (activeAudio && !activeAudio.ended) {{
+                    return activeAudio;
+                }}
+                for (var j = 0; j < audioIds.length; j += 1) {{
+                    var fallbackEl = document.getElementById(audioIds[j]);
+                    if (fallbackEl) {{
+                        activeAudio = fallbackEl;
+                        return activeAudio;
+                    }}
+                }}
+                return null;
+            }}
+
+            audioIds.forEach(function(id) {{
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener("play", function() {{
+                    activeAudio = resolveActiveAudio(el);
+                    updateAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0);
+                }});
+                el.addEventListener("timeupdate", function() {{
+                    if (activeAudio === el || !activeAudio || activeAudio.paused) {{
+                        activeAudio = resolveActiveAudio(el);
+                        updateAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0);
+                    }}
+                }});
+                el.addEventListener("seeked", function() {{
+                    activeAudio = resolveActiveAudio(el);
+                    updateAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0);
+                }});
+            }});
+
+            function frameSync() {{
+                var el = resolveActiveAudio();
+                if (el) {{
+                    updateAtTime(el.currentTime || 0);
+                }}
+                requestAnimationFrame(frameSync);
+            }}
+            frameSync();
+        }})();
+        </script>
+        """
+
+    return f'''
+    <section id="{section_id}">
+        <h2>Musical Transcription</h2>
+        <p><strong>Total Notes:</strong> {len(notes)} | <strong>Phrases:</strong> {len(phrases)}</p>
+        <style>
+        #{section_id} .transcription-note {{
+            display: inline-block;
+            margin: 1px 2px;
+            padding: 1px 6px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            transition: background-color 120ms linear, color 120ms linear, border-color 120ms linear;
+        }}
+        #{section_id} .transcription-note.active {{
+            background: #f2cc60;
+            color: #0d1117;
+            border-color: #f2cc60;
+            box-shadow: 0 0 8px rgba(242, 204, 96, 0.45);
+        }}
+        #{section_id} .transcription-note-empty {{
+            opacity: 0.7;
+        }}
+        </style>
+        <div class="phrase-list" style="display: grid; gap: 8px;">
+            <h3>Phrase-by-Phrase Transcription</h3>
+            {phrases_html}
+        </div>
+        {show_more_html}
         <script>
         (function() {{
             var root = document.getElementById("{section_id}");
@@ -1355,7 +1594,6 @@ def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], to
             if (!btn) return;
             var hiddenRows = root.querySelectorAll(".transcription-phrase-hidden");
             var expanded = false;
-
             btn.addEventListener("click", function() {{
                 expanded = !expanded;
                 hiddenRows.forEach(function(row) {{
@@ -1365,17 +1603,7 @@ def _generate_transcription_section(notes: List[Note], phrases: List[Phrase], to
             }});
         }})();
         </script>
-        '''
-
-    return f'''
-    <section id="{section_id}">
-        <h2>Musical Transcription</h2>
-        <p><strong>Total Notes:</strong> {len(notes)} | <strong>Phrases:</strong> {len(phrases)}</p>
-        <div class="phrase-list" style="display: grid; gap: 8px;">
-            <h3>Phrase-by-Phrase Transcription</h3>
-            {phrases_html}
-        </div>
-        {show_more_html}
+        {sync_script_html}
     </section>
     '''
 
@@ -1789,10 +2017,10 @@ def plot_pitch_wide_to_base64_with_legend(
     overlay_timestamps: Optional[np.ndarray] = None,
     overlay_label: str = "RMS Energy",
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
-) -> Tuple[str, str, int]:
+) -> Tuple[str, str, int, float, float]:
     """
     Generate wide pitch contour and overlay sargam lines, returning base64 images.
-    Returns: (legend_b64, plot_b64, pixel_width)
+    Returns: (legend_b64, plot_b64, pixel_width, x_axis_start, x_axis_end)
     """
     import io
     import base64
@@ -1834,9 +2062,10 @@ def plot_pitch_wide_to_base64_with_legend(
     
     if not np.any(voiced_mask):
          # Return empty placeholders
-         return "", "", 100
+         return "", "", 100, 0.0, 1.0
 
     voiced_midi = librosa.hz_to_midi(pitch_hz[voiced_mask])
+    voiced_midi_rounded = np.round(voiced_midi).astype(int)
     
     # Calculate range dynamically based on data min/max
     data_min = np.min(voiced_midi)
@@ -2005,13 +2234,23 @@ def plot_pitch_wide_to_base64_with_legend(
             ax.plot(e_times, scaled_e, color='darkcyan', linewidth=0.6, alpha=0.4, zorder=0)
 
     ax.set_ylim(min_m - 1, max_m + 1)
-    ax.set_xlim(0, max(timestamps[-1], 1.0))
+    x_axis_start = 0.0
+    x_axis_end = max(float(timestamps[-1]), 1.0)
+    ax.set_xlim(x_axis_start, x_axis_end)
     ax.set_xlabel('Time (s)')
     ax.grid(alpha=0.3)
     ax.xaxis.set_major_locator(MultipleLocator(2)) # Tick every 2 seconds
     ax.set_title(f"Pitch Contour Analysis ({raga_name} / {tonic_label})")
 
     # Horizontal Lines
+    # Recording-relative Sa baseline for display labels:
+    # avoid dense octave markers for normal ranges.
+    sa_mask = (voiced_midi_rounded % 12) == tonic_midi
+    if np.any(sa_mask):
+        median_sa_octave = int(round(float(np.median(np.round((voiced_midi[sa_mask] - tonic_midi_base) / 12.0)))))
+    else:
+        median_sa_octave = int(round(float(np.median(np.round((voiced_midi - tonic_midi_base) / 12.0)))))
+
     for midi_val in rng:
         pc = int(midi_val) % 12
         offset = (pc - tonic_midi) % 12
@@ -2045,9 +2284,10 @@ def plot_pitch_wide_to_base64_with_legend(
             label = OFFSET_TO_SARGAM.get(offset, '')
             octave_diff = int((midi_val - tonic_midi_base) // 12)
             
-            # Markers
-            if octave_diff < 0: label += "'" * abs(octave_diff)
-            elif octave_diff > 0: label += "·" * octave_diff
+            # Only show octave markers when far from the recording's median Sa.
+            relative_octave = octave_diff - median_sa_octave
+            if relative_octave <= -3:
+                label += "'" * abs(relative_octave)
             
             text_color = OCTAVE_COLORS.get(octave_diff, 'gray')
             # Stronger text
@@ -2061,7 +2301,7 @@ def plot_pitch_wide_to_base64_with_legend(
     plt.close(legend_fig)
     legend_b64 = base64.b64encode(lbuf.getvalue()).decode('ascii')
 
-    return legend_b64, plot_b64, pixel_width
+    return legend_b64, plot_b64, pixel_width, x_axis_start, x_axis_end
 
 def create_scrollable_pitch_plot_html(
     pitch_data: PitchData,
@@ -2081,7 +2321,7 @@ def create_scrollable_pitch_plot_html(
     """
     Create HTML component for scrollable pitch plot with audio sync.
     """
-    legend_b64, plot_b64, px_width = plot_pitch_wide_to_base64_with_legend(
+    legend_b64, plot_b64, px_width, x_axis_start, x_axis_end = plot_pitch_wide_to_base64_with_legend(
         pitch_data, tonic, raga_name, raga_notes, 
         transcription_smoothing_ms=transcription_smoothing_ms,
         transcription_min_duration=transcription_min_duration,
@@ -2097,7 +2337,7 @@ def create_scrollable_pitch_plot_html(
         return "<p>No pitch data for validation plot.</p>"
         
     unique_id = f"sp_{uuid.uuid4().hex[:6]}"
-    duration = pitch_data.timestamps[-1] if len(pitch_data.timestamps) > 0 else 1.0
+    duration = x_axis_end - x_axis_start
     
     html = f"""
     <div class="scroll-plot-wrapper" id="{unique_id}-wrapper" style="border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin: 20px 0; background: #0d1117;">
@@ -2127,9 +2367,9 @@ def create_scrollable_pitch_plot_html(
         const trackIds = {json.dumps(audio_element_ids)};
         const container = document.getElementById("{unique_id}-container");
         const cursor = document.getElementById("{unique_id}-cursor");
-        const status = document.getElementById("{unique_id}-status");
-        
-        const totalDuration = {duration};
+        const xStart = {x_axis_start};
+        const xEnd = {x_axis_end};
+        const totalDuration = xEnd - xStart;
         const pixelWidth = {px_width};
         
         if (container && cursor) {{
@@ -2138,46 +2378,98 @@ def create_scrollable_pitch_plot_html(
             // Plot margins (matches python subplots_adjust)
             const marginL = 0.005;
             const marginR = 0.995;
-            const plotContentWidthPct = marginR - marginL;
+            const plotStartPx = marginL * pixelWidth;
+            const plotEndPx = marginR * pixelWidth;
+            let seekSnapUntil = 0;
+            let activeAudio = null;
+
+            function clamp(v, lo, hi) {{
+                return Math.max(lo, Math.min(hi, v));
+            }}
+
+            function timeToX(t) {{
+                const safeT = clamp(t, xStart, xEnd);
+                const pct = totalDuration > 0 ? ((safeT - xStart) / totalDuration) : 0;
+                return plotStartPx + (pct * (plotEndPx - plotStartPx));
+            }}
+
+            function xToTime(x) {{
+                const safeX = clamp(x, plotStartPx, plotEndPx);
+                const pct = (safeX - plotStartPx) / Math.max(plotEndPx - plotStartPx, 1e-6);
+                return xStart + (pct * totalDuration);
+            }}
+
+            function seekAllTracks(targetTime) {{
+                trackIds.forEach(function(id) {{
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    try {{
+                        el.currentTime = targetTime;
+                    }} catch (_err) {{
+                        // Ignore tracks that reject seek before metadata is ready.
+                    }}
+                }});
+            }}
+
+            function getPlayingAudio() {{
+                for (const id of trackIds) {{
+                    const el = document.getElementById(id);
+                    if (el && !el.paused && !el.ended) {{
+                        return el;
+                    }}
+                }}
+                return null;
+            }}
+
+            function resolveActiveAudio(preferredEl) {{
+                const playing = getPlayingAudio();
+                if (playing) {{
+                    activeAudio = playing;
+                    return activeAudio;
+                }}
+                if (preferredEl && !preferredEl.ended) {{
+                    activeAudio = preferredEl;
+                    return activeAudio;
+                }}
+                if (activeAudio && !activeAudio.ended) {{
+                    return activeAudio;
+                }}
+                for (const id of trackIds) {{
+                    const el = document.getElementById(id);
+                    if (el) {{
+                        activeAudio = el;
+                        return activeAudio;
+                    }}
+                }}
+                return null;
+            }}
+
+            function renderAtTime(t, follow) {{
+                const x = timeToX(t);
+                cursor.style.left = x + 'px';
+
+                if (!follow) {{
+                    return;
+                }}
+
+                const viewWidth = container.clientWidth;
+                const maxScroll = Math.max(0, container.scrollWidth - viewWidth);
+                const targetScroll = clamp(x - (viewWidth / 2), 0, maxScroll);
+
+                if ((performance.now() < seekSnapUntil) || (Math.abs(container.scrollLeft - targetScroll) > 100)) {{
+                    container.scrollLeft = targetScroll;
+                }} else {{
+                    container.scrollLeft = container.scrollLeft * 0.85 + targetScroll * 0.15;
+                }}
+            }}
             
             // Sync Loop
             function updateSync() {{
-                let activeAudio = null;
-                for (const id of trackIds) {{
-                    const el = document.getElementById(id);
-                    if (el && !el.paused) {{
-                        activeAudio = el;
-                        break;
-                    }}
-                }}
-            
-                if (activeAudio) {{
-                    const t = activeAudio.currentTime;
-                    // Safety: clamp t
-                    const t_safe = Math.max(0, Math.min(t, totalDuration));
-                    
-                    // Map time to x position accounting for margins
-                    // t=0 -> marginL
-                    // t=dur -> marginR
-                    const pct = t_safe / totalDuration;
-                    const x_pct = marginL + (pct * plotContentWidthPct);
-                    const x = x_pct * pixelWidth;
-                    
-                    // Move cursor
-                    cursor.style.left = x + 'px';
-                    
-                    // Auto-scroll request (only if playing)
-                    const viewWidth = container.clientWidth;
-                    const targetScroll = x - (viewWidth / 2);
-                    
-                    // Smooth vs instant scroll
-                    if (Math.abs(container.scrollLeft - targetScroll) > 100) {{
-                        // Jump if far behind
-                        container.scrollLeft = targetScroll;
-                    }} else {{
-                         // Smooth follow
-                         container.scrollLeft = container.scrollLeft * 0.95 + targetScroll * 0.05;
-                    }}
+                const src = resolveActiveAudio();
+                if (src) {{
+                    const t = src.currentTime || 0;
+                    const follow = (!src.paused && !src.ended) || (performance.now() < seekSnapUntil);
+                    renderAtTime(t, follow);
                 }}
                 requestAnimationFrame(updateSync);
             }}
@@ -2187,23 +2479,50 @@ def create_scrollable_pitch_plot_html(
             container.addEventListener('click', function(e) {{
                 const rect = container.getBoundingClientRect();
                 const clickX = e.clientX - rect.left + container.scrollLeft;
-                
-                // Inverse mapping: x -> t
-                const x_pct = clickX / pixelWidth;
-                const pct = (x_pct - marginL) / plotContentWidthPct;
-                const seekT = pct * totalDuration;
-                
-                if (isFinite(seekT) && seekT >= 0 && seekT <= totalDuration) {{
+                const seekT = xToTime(clickX);
+
+                if (isFinite(seekT) && seekT >= xStart && seekT <= xEnd) {{
                     console.log("Seeking to:", seekT);
+                    const sourceBeforeSeek = getPlayingAudio() || activeAudio;
                     // Seek ALL tracks to keep them in sync if swapped
-                    trackIds.forEach(id => {{
-                        const el = document.getElementById(id);
-                        if (el) el.currentTime = seekT;
-                    }});
-                    
-                    // Update cursor immediately
-                    cursor.style.left = clickX + 'px';
+                    seekAllTracks(seekT);
+                    activeAudio = resolveActiveAudio(sourceBeforeSeek || undefined);
+                    const t = (activeAudio ? activeAudio.currentTime : seekT) || seekT;
+                    renderAtTime(t, true);
+                    seekSnapUntil = performance.now() + 300;
                 }}
+            }});
+
+            // Keep cursor/timeline aligned immediately after native seek events too.
+            trackIds.forEach(function(id) {{
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('play', function() {{
+                    activeAudio = resolveActiveAudio(el);
+                    renderAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0, true);
+                }});
+                el.addEventListener('seeked', function() {{
+                    activeAudio = resolveActiveAudio(el);
+                    const t = (activeAudio ? activeAudio.currentTime : el.currentTime) || 0;
+                    renderAtTime(t, true);
+                    seekSnapUntil = performance.now() + 300;
+                }});
+                el.addEventListener('loadedmetadata', function() {{
+                    if (!activeAudio) {{
+                        activeAudio = resolveActiveAudio(el);
+                        renderAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0, false);
+                    }}
+                }});
+                el.addEventListener('pause', function() {{
+                    if (activeAudio === el) {{
+                        activeAudio = resolveActiveAudio();
+                    }}
+                }});
+                el.addEventListener('ended', function() {{
+                    if (activeAudio === el) {{
+                        activeAudio = resolveActiveAudio();
+                    }}
+                }});
             }});
         }}
     }});
@@ -2256,40 +2575,73 @@ def _generate_karaoke_section(
         return ""
 
     uid = f"karaoke_{uuid.uuid4().hex[:6]}"
+    flat_notes: List[Note] = [note for phrase in phrases for note in phrase.notes]
+    median_sa_octave = _estimate_median_sa_octave(flat_notes, tonic)
 
     # Build phrase data.
     phrase_data = []
+    note_timeline = []
     for idx, phrase in enumerate(phrases):
-        labels: List[str] = []
+        note_items = []
         for n in phrase.notes:
-            label = (n.sargam or "").strip()
-            if not label:
-                label = OFFSET_TO_SARGAM.get(int(round(n.pitch_midi - tonic)) % 12, "?")
+            label = _format_note_sargam_for_report(
+                n,
+                tonic=tonic,
+                median_sa_octave=median_sa_octave,
+            )
             if label:
-                labels.append(label)
+                note_item = {
+                    "label": label,
+                    "start": round(n.start, 3),
+                    "end": round(n.end, 3),
+                    "phrase_idx": idx,
+                    "note_idx": len(note_timeline),
+                }
+                note_items.append(note_item)
+                note_timeline.append(note_item)
 
-        phrase_text = " ".join(labels).strip()
-        if not phrase_text:
+        if not note_items:
             continue
+        phrase_text = " ".join(item["label"] for item in note_items).strip()
         phrase_data.append({
             "idx": idx + 1,
             "start": round(phrase.start, 3),
             "end": round(phrase.end, 3),
             "text": phrase_text,
+            "notes": note_items,
         })
 
-    if not phrase_data:
+    if not phrase_data or not note_timeline:
         return ""
 
     phrases_json = json.dumps(phrase_data)
+    notes_json = json.dumps(note_timeline)
 
     return f'''
     <section id="{uid}-section">
         <h2>Phrase Karaoke</h2>
-        <p style="font-size: 0.9em; color: #8b949e;">
-            Phrase-level transcription that auto-scrolls with playback.
-            Click any phrase to seek.
-        </p>
+
+        <style>
+        #{uid}-lyrics .karaoke-phrase-note {{
+            display: inline-block;
+            margin: 1px 2px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            transition: all 0.16s ease;
+        }}
+        #{uid}-lyrics .karaoke-phrase-note.sung {{
+            background: rgba(242, 204, 96, 0.16);
+            border-color: rgba(242, 204, 96, 0.45);
+            color: #f0f6fc;
+        }}
+        #{uid}-lyrics .karaoke-phrase-note.current {{
+            background: #f2cc60;
+            border-color: #f2cc60;
+            color: #111827;
+            box-shadow: 0 0 8px rgba(242, 204, 96, 0.35);
+        }}
+        </style>
 
         <div id="{uid}-lyrics" style="
             overflow-y: auto;
@@ -2319,13 +2671,15 @@ def _generate_karaoke_section(
         <script>
         (function() {{
             var phrases = {phrases_json};
+            var noteTimeline = {notes_json};
             var listEl = document.getElementById("{uid}-lyrics");
             var timeEl = document.getElementById("{uid}-time");
             var phraseEl = document.getElementById("{uid}-phrase");
             var trackIds = {json.dumps(audio_element_ids)};
-            if (!listEl || !phrases.length) return;
+            if (!listEl || !phrases.length || !noteTimeline.length) return;
 
             var rows = [];
+            var phraseNoteSpans = [];
             var BASE_STYLE = "width:100%; padding:10px 12px; border-radius:10px; " +
                 "border:1px solid #30363d; background:#161b22; color:#8b949e; " +
                 "opacity:0.45; transform:scale(0.98); transition:all 0.2s ease; " +
@@ -2346,7 +2700,29 @@ def _generate_karaoke_section(
 
                 var phraseLine = document.createElement("div");
                 phraseLine.style.cssText = "font-size:17px;word-break:break-word;";
-                phraseLine.textContent = p.text;
+                p.notes.forEach(function(n, notePos) {{
+                    var noteSpan = document.createElement("span");
+                    noteSpan.className = "karaoke-phrase-note";
+                    noteSpan.textContent = n.label;
+                    noteSpan.dataset.noteIdx = String(n.note_idx);
+                    noteSpan.addEventListener("click", function(evt) {{
+                        evt.stopPropagation();
+                        trackIds.forEach(function(id) {{
+                            var el = document.getElementById(id);
+                            if (!el) return;
+                            try {{
+                                el.currentTime = n.start;
+                            }} catch (_err) {{
+                            }}
+                        }});
+                        queueSync(getPlayingAudio() || activeAudio || null, true);
+                    }});
+                    phraseLine.appendChild(noteSpan);
+                    phraseNoteSpans[n.note_idx] = noteSpan;
+                    if (notePos < p.notes.length - 1) {{
+                        phraseLine.appendChild(document.createTextNode(" "));
+                    }}
+                }});
 
                 row.appendChild(meta);
                 row.appendChild(phraseLine);
@@ -2354,16 +2730,21 @@ def _generate_karaoke_section(
                 row.addEventListener("click", function() {{
                     trackIds.forEach(function(id) {{
                         var el = document.getElementById(id);
-                        if (el) el.currentTime = p.start;
+                        if (!el) return;
+                        try {{
+                            el.currentTime = p.start;
+                        }} catch (_err) {{
+                        }}
                     }});
+                    queueSync(getPlayingAudio() || activeAudio || null, true);
                 }});
 
                 listEl.appendChild(row);
                 rows.push(row);
             }});
 
-            // Binary search for active phrase at time t
-            function findActive(t) {{
+            // Binary search for active phrase at time t.
+            function findActivePhrase(t) {{
                 var lo = 0, hi = phrases.length - 1;
                 while (lo <= hi) {{
                     var mid = (lo + hi) >>> 1;
@@ -2372,6 +2753,32 @@ def _generate_karaoke_section(
                     else return mid;
                 }}
                 return -1;
+            }}
+
+            // Binary search for active token at time t.
+            function findActiveToken(t) {{
+                var lo = 0, hi = noteTimeline.length - 1;
+                while (lo <= hi) {{
+                    var mid = (lo + hi) >>> 1;
+                    if (t < noteTimeline[mid].start) hi = mid - 1;
+                    else if (t > noteTimeline[mid].end) lo = mid + 1;
+                    else return mid;
+                }}
+                return -1;
+            }}
+
+            function findLastCompletedToken(t) {{
+                var lo = 0, hi = noteTimeline.length - 1, best = -1;
+                while (lo <= hi) {{
+                    var mid = (lo + hi) >>> 1;
+                    if (noteTimeline[mid].end <= t) {{
+                        best = mid;
+                        lo = mid + 1;
+                    }} else {{
+                        hi = mid - 1;
+                    }}
+                }}
+                return best;
             }}
 
             function setPhraseInactive(phraseIdx) {{
@@ -2384,24 +2791,135 @@ def _generate_karaoke_section(
                 rows[phraseIdx].style.cssText = BASE_STYLE + ACTIVE_STYLE;
             }}
 
-            var lastActive = -1;
+            function setTokenSung(tokenIdx, isSung) {{
+                var phraseNote = phraseNoteSpans[tokenIdx];
+                if (phraseNote) phraseNote.classList.toggle("sung", isSung);
+            }}
 
-            function onTimeUpdate() {{
-                // Find which audio is playing
-                var audio = null;
+            function setTokenCurrent(tokenIdx, isCurrent) {{
+                var phraseNote = phraseNoteSpans[tokenIdx];
+                if (phraseNote) phraseNote.classList.toggle("current", isCurrent);
+            }}
+
+            var activeAudio = null;
+            var lastActive = -1;
+            var lastCurrentToken = -1;
+            var lastCompletedToken = -1;
+            var sungAppliedIdx = -1;
+            var sungRafScheduled = false;
+            var syncRafScheduled = false;
+            var pendingPreferredAudio = null;
+            var pendingFromSeek = false;
+
+            function getPlayingAudio() {{
                 for (var i = 0; i < trackIds.length; i++) {{
                     var el = document.getElementById(trackIds[i]);
-                    if (el && !el.paused) {{ audio = el; break; }}
+                    if (el && !el.paused && !el.ended) return el;
                 }}
+                return null;
+            }}
+
+            function resolveActiveAudio(preferredEl) {{
+                var playing = getPlayingAudio();
+                if (playing) {{
+                    activeAudio = playing;
+                    return activeAudio;
+                }}
+                if (preferredEl && !preferredEl.ended) {{
+                    activeAudio = preferredEl;
+                    return activeAudio;
+                }}
+                if (activeAudio && !activeAudio.ended) {{
+                    return activeAudio;
+                }}
+                for (var i = 0; i < trackIds.length; i++) {{
+                    var fallback = document.getElementById(trackIds[i]);
+                    if (fallback) {{
+                        activeAudio = fallback;
+                        return activeAudio;
+                    }}
+                }}
+                return null;
+            }}
+
+            function queueSync(preferredEl, fromSeek) {{
+                if (preferredEl) {{
+                    pendingPreferredAudio = preferredEl;
+                }}
+                if (fromSeek) {{
+                    pendingFromSeek = true;
+                }}
+                if (syncRafScheduled) return;
+                syncRafScheduled = true;
+                requestAnimationFrame(function() {{
+                    syncRafScheduled = false;
+                    var preferred = pendingPreferredAudio;
+                    var seekFlag = pendingFromSeek;
+                    pendingPreferredAudio = null;
+                    pendingFromSeek = false;
+                    syncAtCurrentTime(preferred, seekFlag);
+                }});
+            }}
+
+            function processSungUpdates() {{
+                sungRafScheduled = false;
+                if (sungAppliedIdx === lastCompletedToken) return;
+
+                var chunkSize = 48;
+                if (sungAppliedIdx < lastCompletedToken) {{
+                    var hi = Math.min(lastCompletedToken, sungAppliedIdx + chunkSize);
+                    for (var up = sungAppliedIdx + 1; up <= hi; up++) {{
+                        setTokenSung(up, true);
+                    }}
+                    sungAppliedIdx = hi;
+                }} else {{
+                    var loExclusive = Math.max(lastCompletedToken, sungAppliedIdx - chunkSize);
+                    for (var down = sungAppliedIdx; down > loExclusive; down--) {{
+                        setTokenSung(down, false);
+                    }}
+                    sungAppliedIdx = loExclusive;
+                }}
+
+                if (sungAppliedIdx !== lastCompletedToken) {{
+                    sungRafScheduled = true;
+                    requestAnimationFrame(processSungUpdates);
+                }}
+            }}
+
+            function scheduleSungUpdates() {{
+                if (sungRafScheduled) return;
+                sungRafScheduled = true;
+                requestAnimationFrame(processSungUpdates);
+            }}
+
+            function syncAtCurrentTime(preferredEl, fromSeek) {{
+                var audio = resolveActiveAudio(preferredEl || null);
                 if (!audio) return;
 
                 var t = audio.currentTime;
                 if (timeEl) timeEl.textContent = t.toFixed(2) + " s";
 
-                var prevActive = lastActive;
-                var idx = findActive(t);
+                var completedIdx = findLastCompletedToken(t);
+                if (completedIdx !== lastCompletedToken) {{
+                    lastCompletedToken = completedIdx;
+                    scheduleSungUpdates();
+                }}
 
-                // Deactivate old
+                var tokenIdx = findActiveToken(t);
+                if (tokenIdx !== lastCurrentToken && lastCurrentToken >= 0) {{
+                    setTokenCurrent(lastCurrentToken, false);
+                }}
+                if (tokenIdx >= 0 && tokenIdx !== lastCurrentToken) {{
+                    setTokenCurrent(tokenIdx, true);
+                }}
+                if (tokenIdx < 0 && lastCurrentToken >= 0) {{
+                    setTokenCurrent(lastCurrentToken, false);
+                }}
+                lastCurrentToken = tokenIdx;
+
+                var prevActive = lastActive;
+                var idx = findActivePhrase(t);
+
                 if (idx !== prevActive && prevActive >= 0) {{
                     setPhraseInactive(prevActive);
                 }}
@@ -2419,21 +2937,53 @@ def _generate_karaoke_section(
                     }}
                 }}
 
-                // Scroll when phrase changes so active row stays centered.
                 if (phraseChanged || prevActive === -1) {{
                     var row = rows[idx];
                     var targetTop = row.offsetTop - (listEl.clientHeight / 2) + (row.offsetHeight / 2);
-                    listEl.scrollTo({{ top: Math.max(0, targetTop), behavior: "smooth" }});
+                    if (fromSeek) {{
+                        listEl.scrollTop = Math.max(0, targetTop);
+                    }} else {{
+                        listEl.scrollTo({{ top: Math.max(0, targetTop), behavior: "smooth" }});
+                    }}
                 }}
 
                 lastActive = idx;
             }}
 
-            // Bind to all audio timeupdate events
+            // Prime once on load.
+            queueSync(null, false);
+
+            // Bind to all audio timing events for low-lag updates after seeks.
             trackIds.forEach(function(id) {{
                 var el = document.getElementById(id);
-                if (el) el.addEventListener("timeupdate", onTimeUpdate);
+                if (!el) return;
+                ["timeupdate", "seeked", "play", "loadedmetadata"].forEach(function(evt) {{
+                    el.addEventListener(evt, function() {{
+                        queueSync(el, evt === "seeked");
+                    }});
+                }});
+                el.addEventListener("pause", function() {{
+                    if (activeAudio === el) {{
+                        activeAudio = resolveActiveAudio();
+                    }}
+                    queueSync(activeAudio || null, false);
+                }});
+                el.addEventListener("ended", function() {{
+                    if (activeAudio === el) {{
+                        activeAudio = resolveActiveAudio();
+                    }}
+                    queueSync(activeAudio || null, false);
+                }});
             }});
+
+            function frameSync() {{
+                var playing = getPlayingAudio();
+                if (playing) {{
+                    queueSync(playing, false);
+                }}
+                requestAnimationFrame(frameSync);
+            }}
+            frameSync();
         }})();
         </script>
     </section>
@@ -2821,19 +3371,19 @@ def generate_analysis_report(
     transcription_html = _generate_transcription_section(
         results.notes,
         results.phrases,
-        results.detected_tonic or 0
+        results.detected_tonic or 0,
+        audio_element_ids=None,
     )
 
-    # Karaoke scrolling transcription
+    # Phrase karaoke section (top interactive view)
     karaoke_html = ""
     if results.phrases:
-        tonic_for_karaoke = results.detected_tonic or 0
         karaoke_html = _generate_karaoke_section(
             results.phrases,
-            tonic_for_karaoke,
+            results.detected_tonic or 0,
             audio_element_ids=audio_element_ids,
         )
-    
+
     # Pattern Analysis HTML (Motifs + Aaroh/Avroh)
     pattern_html = ""
     if stats.pattern_analysis:

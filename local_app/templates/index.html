@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raga Local App</title>
+    <link rel="stylesheet" href="/static/style.css?v={{ static_version or '1' }}">
+</head>
+<body data-default-audio-dir="{{ default_audio_dir }}" data-default-mode="{{ default_mode or 'detect' }}">
+    <header>
+        <div class="header-row">
+            <h1>Raga Local App</h1>
+            <div class="header-actions">
+                <button id="open-detect-report-btn" type="button" disabled>Open Detect Report</button>
+                <button id="open-analyze-report-btn" type="button" disabled>Open Analyze Report</button>
+                <button id="run-batch-btn" type="button">Run Batch (Selected Dir)</button>
+            </div>
+        </div>
+        <p>Run preprocess, detect, and analyze locally with live parameter tuning.</p>
+    </header>
+
+    {% if warnings %}
+    <section class="warnings">
+        <h2>Startup Warnings</h2>
+        <ul>
+            {% for warning in warnings %}
+            <li>{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <main>
+        <section class="panel">
+            <h2>Run Pipeline</h2>
+            <div class="actions">
+                <button id="run-btn">Run</button>
+                <button id="next-btn" type="button" disabled>Next</button>
+                <button id="cancel-btn" disabled>Cancel Active</button>
+            </div>
+            <div class="row">
+                <label for="mode-select">Mode</label>
+                <select id="mode-select">
+                    {% for mode in modes %}
+                    <option value="{{ mode }}" {% if mode == (default_mode or 'detect') %}selected{% endif %}>{{ mode }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="schema-forms"></div>
+
+            <div class="row">
+                <label for="extra-args">Extra Args</label>
+                <textarea id="extra-args" rows="2" placeholder="Optional extra flags (forward-compat)"></textarea>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Job Status</h2>
+            <div id="status-line">Idle</div>
+            <progress id="progress" max="1.0" value="0"></progress>
+            <div id="job-argv"></div>
+        </section>
+
+        <section class="panel">
+            <h2>Artifacts</h2>
+            <ul id="artifact-list"></ul>
+        </section>
+
+        <section class="panel">
+            <h2>Logs</h2>
+            <pre id="logs"></pre>
+        </section>
+    </main>
+
+    <script src="/static/app.js?v={{ static_version or '1' }}"></script>
+</body>
+</html>

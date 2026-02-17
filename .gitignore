@@ -48,6 +48,8 @@ venv.bak/
 analysis_results/
 analysis_results_mlp/
 results/
+.local_app_data/
+local_app_data/
 
 # Stem separation output (intermediate files)
 htdemucs/
@@ -89,6 +91,7 @@ primer/
 *_PLAN.md
 *-plan.md
 aaroh-avroh-reconstruction.md
+LOCAL_APP_INTERFACE_EXPLAINER.md
 
 # Trained models
 *.pkl

@@ -47,6 +47,34 @@ python driver.py <subcommand> [args...]
 
 ---
 
+## Local App (Parameter Tuning UI)
+
+The repository also includes a local-only FastAPI app for macOS development:
+
+```bash
+./run_local_app.sh
+```
+
+Open:
+- `http://127.0.0.1:8765/app`
+
+Design notes:
+- Uses the same pipeline code path (`parse_config_from_argv(...)` -> `driver.run_pipeline(...)`).
+- Uses parser introspection (`build_cli_parser()` + `get_mode_schema(...)`) as the single source of truth, so parameter changes in `config.py` flow into the UI automatically.
+- Runs jobs serially in a local background worker and persists status/log snapshots in `.local_app_data/`.
+- Serves generated artifacts directly and exposes quick-open detect/analyze report actions.
+- Parses printed "next step" commands from logs and auto-loads suggested params into the next mode form (`preprocess -> detect`, `detect -> analyze`).
+- Optional fields can be left blank to fall back to parser defaults; dependent fields are conditionally shown based on related selections.
+- Detect/analyze `--audio` input supports drag-and-drop uploads; uploaded files are saved in local app storage and the resulting absolute path is used by pipeline runs.
+- Detect/analyze `--audio` also includes a directory-driven file picker: default source directory is `../audio_test_files`, you can override it, and files are listed as dropdown options.
+- The chosen audio directory is saved in browser local storage for future local app sessions.
+- When an audio file is selected, local app auto-discovers matching artifacts by filename stem in output folders and loads them.
+- Local app can launch batch processing (`raga_pipeline.batch`) for the selected directory.
+- `--raga` input uses values from the raga DB CSV (`names` column fallback heuristics), with browser typeahead and fuzzy matching on blur; options refresh when `--raga-db` changes.
+- After successful audio upload, the raw file path textbox is hidden from the visible form while retained as the submitted value.
+
+---
+
 ## CLI Reference
 
 ### Preprocess (`preprocess`)
@@ -205,4 +233,3 @@ The stem directory is:
 - `batch_results/htdemucs/song/`
 
 Within that folder, the pipeline caches stems and pitch CSVs and writes HTML reports and plots. Re-running with the same options reuses cached stems/pitch unless `--force` is passed.
-

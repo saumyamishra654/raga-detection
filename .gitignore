@@ -91,6 +91,7 @@ primer/
 *_PLAN.md
 *-plan.md
 aaroh-avroh-reconstruction.md
+LOCAL_APP_INTERFACE_EXPLAINER.md
 
 # Trained models
 *.pkl

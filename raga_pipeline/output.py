@@ -633,6 +633,69 @@ def plot_energy_distribution(
     plt.close()
 
 
+def plot_note_duration_histogram(
+    notes: List[Note],
+    output_path: str,
+    title: str = "Note Duration Distribution",
+) -> str:
+    """
+    Plot histogram of transcribed note durations (seconds).
+
+    Args:
+        notes: Transcribed notes.
+        output_path: Path to save PNG.
+        title: Plot title.
+
+    Returns:
+        Path to saved figure.
+    """
+    durations = np.asarray(
+        [float(note.duration) for note in notes if float(note.duration) > 0.0],
+        dtype=float,
+    )
+
+    plt.figure(figsize=(10, 5))
+
+    if durations.size == 0:
+        plt.text(
+            0.5, 0.5,
+            "No valid note durations available",
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#8b949e",
+            transform=plt.gca().transAxes,
+        )
+        plt.xlim(0, 1)
+        plt.ylim(0, 1)
+        plt.xlabel("Duration (seconds)")
+        plt.ylabel("Count")
+        plt.title(title)
+        plt.grid(True, alpha=0.25)
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=120)
+        plt.close()
+        return output_path
+
+    bins = int(np.clip(np.sqrt(durations.size) * 2, 12, 60))
+    plt.hist(durations, bins=bins, color="#4ea1ff", edgecolor="#1f3b5c", alpha=0.85)
+
+    mean_dur = float(np.mean(durations))
+    median_dur = float(np.median(durations))
+    plt.axvline(mean_dur, color="#ff7b72", linestyle="--", linewidth=1.2, label=f"Mean: {mean_dur:.3f}s")
+    plt.axvline(median_dur, color="#f2cc60", linestyle="-.", linewidth=1.2, label=f"Median: {median_dur:.3f}s")
+
+    plt.xlabel("Duration (seconds)")
+    plt.ylabel("Count")
+    plt.title(title)
+    plt.grid(True, alpha=0.25)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=120)
+    plt.close()
+    return output_path
+
+
 def plot_energy_over_time(
     timestamps: np.ndarray,
     energy_vals: np.ndarray,
@@ -3513,6 +3576,15 @@ def generate_analysis_report(
     # Pitch contour static image (optional, since we have scrollable one now)
     # But user might still want the standard one.
     pp_rel = os.path.relpath(stats.pitch_plot_path, output_dir)
+    note_duration_html = ""
+    if 'note_duration_histogram' in results.plot_paths:
+        note_duration_rel = os.path.relpath(results.plot_paths['note_duration_histogram'], output_dir)
+        note_duration_html = f"""
+        <div class="viz-container">
+            <h3>Note Duration Histogram</h3>
+            <img src="{note_duration_rel}" alt="Note Duration Histogram" style="width:100%; max-width:900px;">
+        </div>
+        """
     images_html = f"""
     <section id="visualizations">
         <h2>Detailed Visualizations</h2>
@@ -3524,6 +3596,7 @@ def generate_analysis_report(
             <h3>Transition Matrix</h3>
             <img src="{tm_rel}" alt="Transition Matrix" style="width:100%; max-width:600px;">
         </div>
+        {note_duration_html}
     </section>
     """
 

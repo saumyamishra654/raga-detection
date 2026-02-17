@@ -68,6 +68,7 @@ from raga_pipeline.output import (
     plot_absolute_note_histogram,
     plot_gmm_overlay,
     plot_note_segments,
+    plot_note_duration_histogram,
     generate_html_report,
     generate_analysis_report,
     plot_pitch_with_sargam_lines,
@@ -595,6 +596,16 @@ def run_pipeline(
         # Merge consecutive notes to fix fragmentation
         results.notes = merge_consecutive_notes(results.notes, max_gap=0.1, pitch_tolerance=0.7)
         print(f"  Merged {len(results.notes)} notes (joined consecutive identical notes)")
+
+        # Note duration histogram (analyze mode)
+        note_duration_hist_path = os.path.join(config.stem_dir, "note_duration_histogram.png")
+        plot_note_duration_histogram(
+            results.notes,
+            note_duration_hist_path,
+            title="Transcribed Note Duration Distribution",
+        )
+        results.plot_paths["note_duration_histogram"] = note_duration_hist_path
+        print(f"  Saved: {note_duration_hist_path}")
         
         # Save transcription to CSV
         csv_path = os.path.join(config.stem_dir, "transcribed_notes.csv")

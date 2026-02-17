@@ -3,7 +3,7 @@
     const schemaForms = document.getElementById("schema-forms");
     const extraArgsEl = document.getElementById("extra-args");
     const runBtn = document.getElementById("run-btn");
-    const rerunBtn = document.getElementById("rerun-btn");
+    const nextBtn = document.getElementById("next-btn");
     const cancelBtn = document.getElementById("cancel-btn");
     const statusLine = document.getElementById("status-line");
     const progressEl = document.getElementById("progress");
@@ -17,10 +17,11 @@
     let currentSchema = null;
     let activeJobId = null;
     let pollHandle = null;
-    let lastPayload = null;
-    let autoPrefilledFromJobId = null;
+    let isBusy = false;
     let selectedAudioPath = "";
     let selectedAudioDirectory = "";
+    let pendingNextJobId = null;
+    const modeDrafts = new Map();
     let currentReportLinks = { detect: null, analyze: null };
     const ragaNameCacheBySource = new Map();
     const audioFileCacheBySource = new Map();
@@ -28,6 +29,9 @@
     const DEFAULT_AUDIO_DIR_REL = (document.body && document.body.dataset && document.body.dataset.defaultAudioDir)
         ? document.body.dataset.defaultAudioDir
         : "../audio_test_files";
+    const DEFAULT_MODE = (document.body && document.body.dataset && document.body.dataset.defaultMode)
+        ? String(document.body.dataset.defaultMode).trim()
+        : "detect";
 
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
@@ -739,51 +743,151 @@
         return params;
     }
 
+    function captureDraftForCurrentMode() {
+        if (!currentSchema || !Array.isArray(currentSchema.fields)) return;
+        const draft = {
+            params: {},
+            extraArgs: String(extraArgsEl.value || ""),
+        };
+
+        currentSchema.fields.forEach(function (field) {
+            const input = document.getElementById(fieldInputId(field.name));
+            if (!input) return;
+            if (field.value_type === "bool") {
+                draft.params[field.name] = Boolean(input.checked);
+                return;
+            }
+            draft.params[field.name] = String(input.value || "");
+        });
+
+        modeDrafts.set(currentSchema.mode, draft);
+    }
+
+    function restoreDraftForCurrentMode() {
+        if (!currentSchema) return;
+        const draft = modeDrafts.get(currentSchema.mode);
+        if (!draft) return;
+
+        if (typeof draft.extraArgs === "string") {
+            extraArgsEl.value = draft.extraArgs;
+        }
+
+        currentSchema.fields.forEach(function (field) {
+            if (!Object.prototype.hasOwnProperty.call(draft.params, field.name)) return;
+            const input = document.getElementById(fieldInputId(field.name));
+            if (!input) return;
+
+            const value = draft.params[field.name];
+            if (field.value_type === "bool") {
+                input.checked = Boolean(value);
+                return;
+            }
+            input.value = value === null || value === undefined ? "" : String(value);
+        });
+
+        updateConditionalVisibility();
+        const audioInput = document.getElementById(fieldInputId("audio"));
+        if (audioInput && audioInput.value) {
+            onAudioSelectionChanged(audioInput.value, { directory: selectedAudioDirectory });
+        }
+    }
+
+    function clearPendingNextSuggestion() {
+        pendingNextJobId = null;
+    }
+
+    function updateNextButtonState() {
+        if (!nextBtn) return;
+        const modeAllowsNext = modeSelect.value === "preprocess" || modeSelect.value === "detect";
+        const canAdvance = Boolean(pendingNextJobId) && modeAllowsNext && !isBusy;
+        nextBtn.disabled = !canAdvance;
+        nextBtn.classList.toggle("ready", canAdvance);
+    }
+
+    function stripAnsi(text) {
+        return String(text || "").replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "");
+    }
+
     function parseSuggestedCommand(logLines) {
         if (!Array.isArray(logLines) || !logLines.length) return null;
+        const cleanedLines = logLines.map(function (line) {
+            return stripAnsi(line).trim();
+        });
+
         let startIdx = -1;
-        for (let i = logLines.length - 1; i >= 0; i--) {
-            if (logLines[i].includes("./run_pipeline.sh ")) {
+        for (let i = cleanedLines.length - 1; i >= 0; i--) {
+            if (cleanedLines[i].includes("run_pipeline.sh")) {
                 startIdx = i;
                 break;
             }
         }
         if (startIdx < 0) return null;
 
-        const firstLine = logLines[startIdx].trim().replace(/\\$/, "").trim();
-        const firstMatch = firstLine.match(/\.\/run_pipeline\.sh\s+([a-zA-Z0-9_-]+)/);
-        if (!firstMatch) return null;
-        const mode = firstMatch[1];
+        const commandParts = [];
+        for (let i = startIdx; i < cleanedLines.length; i++) {
+            const line = cleanedLines[i];
+            if (!line) continue;
+            if (i > startIdx && (line.startsWith("=") || line.startsWith("Next:"))) {
+                break;
+            }
+            const normalized = line.replace(/\\$/, "").trim();
+            if (!normalized) continue;
+            commandParts.push(normalized);
+        }
+        if (!commandParts.length) return null;
+
+        const commandText = commandParts.join(" ");
+        const tokenRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|(\S+)/g;
+        const tokens = [];
+        let match;
+        while ((match = tokenRegex.exec(commandText)) !== null) {
+            const token = match[1] !== undefined ? match[1] : (match[2] !== undefined ? match[2] : match[3]);
+            if (token !== undefined && token !== null && token !== "") {
+                tokens.push(token);
+            }
+        }
+        if (!tokens.length) return null;
+
+        let runIdx = -1;
+        for (let i = 0; i < tokens.length; i++) {
+            if (tokens[i] === "./run_pipeline.sh" || tokens[i].endsWith("/run_pipeline.sh")) {
+                runIdx = i;
+                break;
+            }
+        }
+        if (runIdx < 0 || runIdx + 1 >= tokens.length) return null;
+
+        const mode = tokens[runIdx + 1];
+        if (!mode) return null;
 
         const paramsByFlag = {};
         const consumedFlags = [];
-        for (let i = startIdx + 1; i < logLines.length; i++) {
-            const line = logLines[i].trim();
-            if (!line || line.startsWith("=") || line.startsWith("Next:")) {
-                if (line.startsWith("=")) break;
-                continue;
-            }
-            if (!line.startsWith("--")) continue;
+        for (let i = runIdx + 2; i < tokens.length; i++) {
+            const token = tokens[i];
+            if (!(token.startsWith("--") || token.startsWith("-"))) continue;
 
-            const clean = line.replace(/\\$/, "").trim();
-            const match = clean.match(/^(--[a-zA-Z0-9-]+)(?:\s+"([^"]*)"|\s+(\S+))?$/);
-            if (!match) continue;
-            const flag = match[1];
-            const value = match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : true);
-            paramsByFlag[flag] = value;
-            consumedFlags.push(flag);
+            let value = true;
+            const next = i + 1 < tokens.length ? tokens[i + 1] : null;
+            if (next && !(next.startsWith("--") || next.startsWith("-"))) {
+                value = next;
+                i += 1;
+            }
+            paramsByFlag[token] = value;
+            consumedFlags.push(token);
         }
 
+        if (!consumedFlags.length) {
+            return null;
+        }
         return { mode, paramsByFlag, consumedFlags };
     }
 
-    async function applySuggestedCommandFromLogs(logLines) {
-        const suggestion = parseSuggestedCommand(logLines);
+    async function applySuggestedCommand(suggestion) {
         if (!suggestion) return false;
 
         if (modeSelect.value !== suggestion.mode) {
             modeSelect.value = suggestion.mode;
-            await loadSchema(suggestion.mode);
+            await loadSchema(suggestion.mode, { restoreDraft: false });
         }
 
         const flagToField = {};
@@ -816,35 +920,41 @@
             input.value = value === true ? "" : String(value);
         });
 
-        if (unknownFlags.length > 0) {
-            extraArgsEl.value = unknownFlags.join(" ");
-        }
+        extraArgsEl.value = unknownFlags.length > 0 ? unknownFlags.join(" ") : "";
 
         updateConditionalVisibility();
         const audioInput = document.getElementById(fieldInputId("audio"));
         if (audioInput && audioInput.value) {
             onAudioSelectionChanged(audioInput.value, { directory: selectedAudioDirectory });
         }
+        captureDraftForCurrentMode();
         return true;
     }
 
-    async function loadSchema(mode) {
+    async function loadSchema(mode, options) {
         const res = await fetch("/api/schema/" + mode);
         if (!res.ok) throw new Error("Failed to load schema for mode " + mode);
         currentSchema = await res.json();
         renderSchema(currentSchema);
+        const shouldRestoreDraft = !options || options.restoreDraft !== false;
+        if (shouldRestoreDraft) {
+            restoreDraftForCurrentMode();
+        }
+        updateNextButtonState();
     }
 
     function setStatus(text) {
         statusLine.textContent = text;
     }
 
-    function setBusy(isBusy) {
+    function setBusy(busy) {
+        isBusy = Boolean(busy);
         runBtn.disabled = isBusy;
         cancelBtn.disabled = !isBusy || !activeJobId;
         if (runBatchBtn) {
             runBatchBtn.disabled = isBusy;
         }
+        updateNextButtonState();
     }
 
     function deriveReportLinksFromArtifacts(artifacts) {
@@ -892,10 +1002,11 @@
 
         const job = await jobRes.json();
         const logs = await logRes.json();
+        const logLines = logs.logs || [];
 
         setStatus(job.status + " - " + (job.message || ""));
         progressEl.value = Number(job.progress || 0);
-        logsEl.textContent = (logs.logs || []).join("\n");
+        logsEl.textContent = logLines.join("\n");
         jobArgvEl.textContent = job.argv && job.argv.length ? ("argv: " + job.argv.join(" ")) : "";
         renderArtifacts(job.artifacts || []);
 
@@ -908,12 +1019,18 @@
             });
         }
 
-        if (job.status === "completed" && job.mode !== "batch" && autoPrefilledFromJobId !== job.job_id) {
-            const applied = await applySuggestedCommandFromLogs(logs.logs || []);
-            if (applied) {
-                autoPrefilledFromJobId = job.job_id;
-                setStatus("Completed. Loaded suggested " + modeSelect.value + " command into form.");
+        if (
+            job.status === "completed" &&
+            (job.mode === "preprocess" || job.mode === "detect")
+        ) {
+            pendingNextJobId = job.job_id;
+            const preview = parseSuggestedCommand(logLines);
+            if (preview) {
+                setStatus("Completed. Click Next to load suggested " + preview.mode + " command.");
+            } else {
+                setStatus("Completed. Click Next to parse the suggested next command.");
             }
+            updateNextButtonState();
         }
 
         if (job.status === "queued" || job.status === "running") {
@@ -954,6 +1071,7 @@
 
     runBtn.addEventListener("click", async function () {
         try {
+            captureDraftForCurrentMode();
             const mode = modeSelect.value;
             const params = collectParamsOrThrow();
             const payload = {
@@ -961,9 +1079,9 @@
                 params: params,
                 extra_args: parseExtraArgs(extraArgsEl.value),
             };
+            clearPendingNextSuggestion();
+            updateNextButtonState();
             const job = await submitJob(payload, "/api/jobs");
-            lastPayload = payload;
-            rerunBtn.disabled = false;
             activeJobId = job.job_id;
             setBusy(true);
             setStatus("Submitted: " + job.job_id);
@@ -977,22 +1095,36 @@
         }
     });
 
-    rerunBtn.addEventListener("click", async function () {
-        if (!lastPayload) return;
-        try {
-            const job = await submitJob(lastPayload, "/api/jobs");
-            activeJobId = job.job_id;
-            setBusy(true);
-            setStatus("Rerun submitted: " + job.job_id);
-            logsEl.textContent = "";
-            artifactListEl.textContent = "";
-            applyReportLinks(null, null);
-            startPolling(job.job_id);
-            await refreshJob(job.job_id);
-        } catch (err) {
-            setStatus("Error: " + err.message);
-        }
-    });
+    if (nextBtn) {
+        nextBtn.addEventListener("click", async function () {
+            if (!pendingNextJobId || isBusy) return;
+            try {
+                captureDraftForCurrentMode();
+                const logRes = await fetch("/api/jobs/" + pendingNextJobId + "/logs");
+                if (!logRes.ok) {
+                    throw new Error("Failed to fetch logs for Next transition.");
+                }
+                const logsPayload = await logRes.json();
+                const suggestion = parseSuggestedCommand(logsPayload.logs || []);
+                if (!suggestion) {
+                    setStatus("Next: no suggested command found yet. Wait for logs and retry.");
+                    return;
+                }
+                const targetMode = suggestion.mode;
+                const applied = await applySuggestedCommand(suggestion);
+                if (!applied) return;
+                clearPendingNextSuggestion();
+                updateNextButtonState();
+                setStatus(
+                    "Loaded suggested " + targetMode + " command (" +
+                    String(suggestion.consumedFlags.length) +
+                    " flags). Review parameters, then run."
+                );
+            } catch (err) {
+                setStatus("Next error: " + err.message);
+            }
+        });
+    }
 
     if (openDetectReportBtn) {
         openDetectReportBtn.addEventListener("click", function () {
@@ -1011,6 +1143,7 @@
     if (runBatchBtn) {
         runBatchBtn.addEventListener("click", async function () {
             try {
+                captureDraftForCurrentMode();
                 const inputDir = (selectedAudioDirectory || getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL).trim();
                 if (!inputDir) {
                     throw new Error("Select or enter an audio directory first.");
@@ -1021,6 +1154,8 @@
                     mode: "auto",
                     silent: true,
                 };
+                clearPendingNextSuggestion();
+                updateNextButtonState();
                 const job = await submitJob(payload, "/api/batch-jobs");
                 activeJobId = job.job_id;
                 setBusy(true);
@@ -1051,10 +1186,25 @@
     });
 
     modeSelect.addEventListener("change", function () {
+        captureDraftForCurrentMode();
         loadSchema(modeSelect.value).catch(function (err) {
             setStatus("Schema load error: " + err.message);
         });
     });
+
+    if (DEFAULT_MODE) {
+        const hasDefaultModeOption = Array.from(modeSelect.options).some(function (option) {
+            return option.value === DEFAULT_MODE;
+        });
+        if (hasDefaultModeOption) {
+            modeSelect.value = DEFAULT_MODE;
+        }
+    }
+
+    schemaForms.addEventListener("input", captureDraftForCurrentMode);
+    schemaForms.addEventListener("change", captureDraftForCurrentMode);
+    extraArgsEl.addEventListener("input", captureDraftForCurrentMode);
+    extraArgsEl.addEventListener("change", captureDraftForCurrentMode);
 
     loadSchema(modeSelect.value).catch(function (err) {
         setStatus("Schema load error: " + err.message);

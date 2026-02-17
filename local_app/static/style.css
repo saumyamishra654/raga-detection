@@ -146,6 +146,15 @@ button:disabled {
 .actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+#next-btn.ready {
+    border-color: #10b981;
+    background: #064e3b;
+    color: #d1fae5;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35), 0 0 14px rgba(16, 185, 129, 0.2);
 }
 
 .warnings {

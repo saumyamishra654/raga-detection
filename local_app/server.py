@@ -27,6 +27,8 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg"}
 DEFAULT_AUDIO_DIR_REL = "../audio_test_files"
 DEFAULT_OUTPUT_DIR_REL = "batch_results"
+DEFAULT_UI_MODE = "detect"
+STATIC_VERSION = str(int((STATIC_DIR / "app.js").stat().st_mtime)) if (STATIC_DIR / "app.js").exists() else "1"
 RAGA_NAME_COLUMNS = ["names", "raga", "raga_name", "name", "Raga", "RagaName"]
 KNOWN_ARTIFACT_FILES = [
     "detection_report.html",
@@ -344,8 +346,10 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             name="index.html",
             context={
                 "modes": list_modes(),
+                "default_mode": DEFAULT_UI_MODE,
                 "warnings": list(app.state.warnings),
                 "default_audio_dir": DEFAULT_AUDIO_DIR_REL,
+                "static_version": STATIC_VERSION,
             },
         )
 

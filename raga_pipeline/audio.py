@@ -11,7 +11,7 @@ Note: torch and demucs are imported lazily to avoid import errors if not install
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Tuple, Optional, Any, cast
+from typing import Any, Optional, Tuple, cast
 import glob
 import os
 import re
@@ -509,10 +509,8 @@ def _separate_spleeter(
 
     # Move files to the expected location (stem_dir root)
     if os.path.exists(spleeter_vocals) and spleeter_vocals != vocals_path:
-        import shutil
         shutil.move(spleeter_vocals, vocals_path)
     if os.path.exists(spleeter_accomp) and spleeter_accomp != accompaniment_path:
-        import shutil
         shutil.move(spleeter_accomp, accompaniment_path)
 
     # Clean up empty subdirectory
@@ -589,10 +587,6 @@ def load_audio_direct(
         print(f"[CACHE] Direct audio already exists: {melody_path}")
         return melody_path, None
 
-    # Copy audio to output (convert to WAV if needed)
-    import shutil
-    import subprocess
-
     input_ext = os.path.splitext(audio_path)[1].lower()
     if input_ext == ".wav":
         # Just copy
@@ -619,6 +613,15 @@ def load_audio_direct(
 
     # Return None for accompaniment since we're not separating
     return melody_path, None
+
+
+def _fit_array_to_length(values: np.ndarray, target_len: int, fill_value: float = 0.0) -> np.ndarray:
+    """Trim or pad a 1D array to a target length."""
+    if len(values) > target_len:
+        return values[:target_len]
+    if len(values) < target_len:
+        return np.pad(values, (0, target_len - len(values)), mode="constant", constant_values=fill_value)
+    return values
 
 
 # =============================================================================
@@ -721,10 +724,7 @@ def extract_pitch(
         print("[AUDIO] Calculating log-amplitude (dBFS) energy...")
         # Frame-level RMS as the amplitude proxy, then convert to dB
         rms = librosa.feature.rms(y=y, hop_length=hop_length, center=False)[0]
-        if len(rms) > target_len:
-            rms = rms[:target_len]
-        elif len(rms) < target_len:
-            rms = np.pad(rms, (0, target_len - len(rms)), mode='constant', constant_values=0.0)
+        rms = _fit_array_to_length(rms, target_len)
 
         eps = 1e-10  # avoid log(0)
         db = 20.0 * np.log10(rms + eps)  # dBFS (full-scale relative to 1.0)
@@ -743,10 +743,7 @@ def extract_pitch(
         # ----- RMS with peak normalisation (original behaviour) -----
         print("[AUDIO] Calculating RMS energy...")
         rms = librosa.feature.rms(y=y, hop_length=hop_length, center=False)[0]
-        if len(rms) > target_len:
-            rms = rms[:target_len]
-        elif len(rms) < target_len:
-            rms = np.pad(rms, (0, target_len - len(rms)), mode='constant', constant_values=0.0)
+        rms = _fit_array_to_length(rms, target_len)
 
         # Normalize energy (0-1)
         energy_max = rms.max() if rms.max() > 0 else 1.0
@@ -778,7 +775,7 @@ def extract_pitch(
         df = df.iloc[:min_len]
         energy_norm = energy_norm[:min_len]
 
-    df['energy'] = energy_norm
+    df["energy"] = energy_norm
     df.to_csv(csv_path, index=False)
     print(f"[WRITE] Exported CSV with energy: {csv_path}")
 

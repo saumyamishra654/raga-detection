@@ -15,7 +15,7 @@ Provides:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Set, Dict, Tuple, Optional, Union, Sequence, Any, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import librosa
 from scipy import ndimage
@@ -356,6 +356,7 @@ def smooth_pitch_contour(
         voicing=voicing,
         valid_freqs=valid_freqs,
         midi_vals=midi_vals,
+        energy=pitch_data.energy,
         frame_period=pitch_data.frame_period,
         audio_path=pitch_data.audio_path,
     )
@@ -1347,36 +1348,22 @@ def analyze_raga_patterns(
 # ADVANCED PHRASE DETECTION (User Methods)
 # =============================================================================
 
-def _extract_times_and_labels(notes: Sequence[Union[Dict[str, Any], Note]], label_key: str = 'sargam'):
-    """
-    Accepts notes: list-of-dicts with 'start','end' fields OR list of Note objects.
-    Returns arrays: starts, ends, mids, labels (strings), original indices.
-    """
-    starts, ends, mids, labels, idxs = [], [], [], [], []
-    for i, n in enumerate(notes):
-        if isinstance(n, dict):
-            if 'start' not in n or 'end' not in n:
+def _extract_note_bounds(notes: Sequence[Union[Dict[str, Any], Note]]) -> Tuple[np.ndarray, np.ndarray]:
+    """Return aligned start/end arrays for note dicts or Note objects."""
+    starts: List[float] = []
+    ends: List[float] = []
+
+    for note in notes:
+        if isinstance(note, dict):
+            if "start" not in note or "end" not in note:
                 raise ValueError("Each note dict must have 'start' and 'end' keys.")
-            s = float(n['start'])
-            e = float(n['end'])
-            midi_val = n.get('midi')
-            if midi_val is None:
-                midi_val = n.get('midi_note')
-            m = int(round(float(midi_val))) if midi_val is not None else 0
-            l = str(n.get(label_key, n.get('sargam', n.get('midi',''))))
+            starts.append(float(note["start"]))
+            ends.append(float(note["end"]))
         else:
-            # Assume Note object
-            s = n.start
-            e = n.end
-            m = int(round(n.pitch_midi))
-            l = getattr(n, label_key, n.sargam)
-            
-        starts.append(s)
-        ends.append(e)
-        mids.append(m)
-        labels.append(l)
-        idxs.append(i)
-    return np.array(starts), np.array(ends), np.array(mids), labels, np.array(idxs)
+            starts.append(note.start)
+            ends.append(note.end)
+
+    return np.asarray(starts, dtype=float), np.asarray(ends, dtype=float)
 
 
 def cluster_notes_into_phrases(
@@ -1409,33 +1396,19 @@ def cluster_notes_into_phrases(
     Returns:
         phrases (List[Phrase]), breaks_indices, threshold_used
     """
-    import matplotlib.pyplot as plt
-    
+    # Reserved for compatibility with older call sites.
+    _ = (label_key, plot_timeline)
+
     # Defensive copy and stable type narrowing before sort.
     notes_list: List[Union[Dict[str, Any], Note]] = list(notes)
     if not notes_list:
         return [], [], 0.0
 
-    if isinstance(notes_list[0], dict):
-        notes_sorted_dict = sorted(
-            cast(List[Dict[str, Any]], notes_list),
-            key=lambda n: float(n['start'])
-        )
-        notes_sorted: List[Union[Dict[str, Any], Note]] = cast(
-            List[Union[Dict[str, Any], Note]],
-            notes_sorted_dict,
-        )
-    else:
-        notes_sorted_note = sorted(
-            cast(List[Note], notes_list),
-            key=lambda n: n.start
-        )
-        notes_sorted = cast(
-            List[Union[Dict[str, Any], Note]],
-            notes_sorted_note,
-        )
-        
-    starts, ends, mids, labels, idxs = _extract_times_and_labels(notes_sorted, label_key=label_key)
+    def _note_start(note: Union[Dict[str, Any], Note]) -> float:
+        return float(note["start"]) if isinstance(note, dict) else note.start
+
+    notes_sorted = sorted(notes_list, key=_note_start)
+    starts, ends = _extract_note_bounds(notes_sorted)
     n = len(starts)
     if n == 0:
         return [], [], 0.0
@@ -1449,8 +1422,7 @@ def cluster_notes_into_phrases(
         gaps = np.maximum(gaps, 0.0)
 
     # pick threshold
-    threshold_used = 0.5 # default
-    actual_method_used = method  # Track what method was actually used
+    threshold_used = 0.5  # default
     
     if method == 'dbscan':
         if fixed_threshold is None:
@@ -1481,7 +1453,6 @@ def cluster_notes_into_phrases(
                 # n_init='auto' handles warning
                 km = KMeans(n_clusters=2, random_state=0, n_init='auto').fit(X)
                 centers = km.cluster_centers_.reshape(-1)
-                labels_km = km.labels_
                 # cluster with smaller center = within-phrase short gaps
                 short_cluster = np.argmin(centers)
                 long_cluster = np.argmax(centers)
@@ -1491,7 +1462,6 @@ def cluster_notes_into_phrases(
                 # Check if auto threshold is below minimum - if so, switch to dbscan
                 if auto_threshold < min_auto_threshold:
                     threshold_used = min_auto_threshold
-                    actual_method_used = 'dbscan'
                     print(f"[INFO] Auto threshold ({auto_threshold:.3f}s) below minimum ({min_auto_threshold:.3f}s), switching to dbscan with threshold {min_auto_threshold:.3f}s")
                 else:
                     threshold_used = auto_threshold
@@ -1505,7 +1475,6 @@ def cluster_notes_into_phrases(
                 # Check if fallback threshold is below minimum
                 if auto_threshold < min_auto_threshold:
                     threshold_used = min_auto_threshold
-                    actual_method_used = 'dbscan'
                     print(f"[INFO] Fallback threshold ({auto_threshold:.3f}s) below minimum ({min_auto_threshold:.3f}s), switching to dbscan with threshold {min_auto_threshold:.3f}s")
                 else:
                     threshold_used = auto_threshold
@@ -1534,18 +1503,19 @@ def cluster_notes_into_phrases(
     raw_phrases.append(notes_sorted[start_idx:])
 
     # postprocess: merge tiny phrases or those with fewer notes than min_notes_in_phrase
-    def _phrase_duration_raw(ph):
-        if not ph: return 0.0
+    def _phrase_duration_raw(ph: List[Union[Dict[str, Any], Note]]) -> float:
+        if not ph:
+            return 0.0
         # handle dict/object diff
-        s = ph[0]['start'] if isinstance(ph[0], dict) else ph[0].start
-        e = ph[-1]['end'] if isinstance(ph[-1], dict) else ph[-1].end
+        s = float(ph[0]["start"]) if isinstance(ph[0], dict) else ph[0].start
+        e = float(ph[-1]["end"]) if isinstance(ph[-1], dict) else ph[-1].end
         return e - s
 
-    def _get_start(ph):
-        return ph[0]['start'] if isinstance(ph[0], dict) else ph[0].start
+    def _get_start(ph: List[Union[Dict[str, Any], Note]]) -> float:
+        return float(ph[0]["start"]) if isinstance(ph[0], dict) else ph[0].start
 
-    def _get_end(ph):
-        return ph[-1]['end'] if isinstance(ph[-1], dict) else ph[-1].end
+    def _get_end(ph: List[Union[Dict[str, Any], Note]]) -> float:
+        return float(ph[-1]["end"]) if isinstance(ph[-1], dict) else ph[-1].end
 
     # 1) merge phrases separated by very small gaps (< merge_gap_threshold)
     if len(raw_phrases) > 1:

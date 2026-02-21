@@ -1,9 +1,12 @@
 import csv
-import os
-import subprocess
 import argparse
+import os
 import sys
-from typing import Dict, Optional, Tuple
+import subprocess
+from typing import Dict, Optional
+
+
+AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac"}
 
 
 def _is_valid_audio_file(filename: str, valid_exts: set) -> bool:
@@ -11,6 +14,21 @@ def _is_valid_audio_file(filename: str, valid_exts: set) -> bool:
     if not filename or filename.startswith("."):
         return False
     return os.path.splitext(filename)[1].lower() in valid_exts
+
+
+def _append_metadata_args(cmd: list[str], gt_info: dict) -> None:
+    """Append optional CSV metadata fields shared by detect/analyze modes."""
+    metadata_fields = [
+        ("instrument_type", "--instrument-type", "Instrument"),
+        ("vocalist_gender", "--vocalist-gender", "Gender"),
+        ("source_type", "--source-type", "Source"),
+        ("melody_source", "--melody-source", "Melody Source"),
+    ]
+    for key, flag, label in metadata_fields:
+        value = gt_info.get(key)
+        if value:
+            cmd.extend([flag, value])
+            print(f"     + {label}: {value}")
 
 def load_ground_truth(csv_path: str) -> Dict[str, dict]:
     """
@@ -69,17 +87,16 @@ def load_ground_truth(csv_path: str) -> Dict[str, dict]:
         
     return ground_truth
 
-def init_ground_truth_csv(input_dir: str, output_csv: str):
+def init_ground_truth_csv(input_dir: str, output_csv: str) -> None:
     """
     Initialize a ground truth CSV with files from input_dir.
     Sets defaults: source_type='vocal', melody_source='separated'.
     """
-    valid_exts = {'.mp3', '.wav', '.m4a', '.flac'}
     files_to_process = []
     
-    for root, dirs, files in os.walk(input_dir):
+    for root, _dirs, files in os.walk(input_dir):
         for file in files:
-            if _is_valid_audio_file(file, valid_exts):
+            if _is_valid_audio_file(file, AUDIO_EXTS):
                 files_to_process.append(file)
                 
     files_to_process.sort()
@@ -111,143 +128,88 @@ def init_ground_truth_csv(input_dir: str, output_csv: str):
     except Exception as e:
         print(f"Error creating CSV: {e}")
 
-def process_directory(input_dir: str, ground_truth_path: Optional[str] = None, output_dir: str = "results", mode: str = "auto", silent: bool = False):
-    """
-    walk through directory and process audio files.
-    """
-    # list of allowed filetypes
-    valid_exts = {'.mp3', '.wav', '.m4a', '.flac'}
-    
-    # load ground truth
-    gt_data = {}
-    if ground_truth_path and mode == "auto":
+def process_directory(
+    input_dir: str,
+    ground_truth_path: Optional[str] = None,
+    output_dir: str = "results",
+    mode: str = "auto",
+    silent: bool = False,
+) -> None:
+    """Walk an input directory and run the pipeline on each audio file."""
+    gt_data: Dict[str, dict] = {}
+    if ground_truth_path:
         gt_data = load_ground_truth(ground_truth_path)
         print(f"Loaded {len(gt_data)} ground truth entries.")
     elif mode == "detect":
-        print("Mode set to 'detect'. Ignoring ground truth.")
+        print("Mode set to 'detect' with no ground truth CSV.")
 
-    # walk directory
-    tasks = []
-    for root, dirs, files in os.walk(input_dir):
+    tasks: list[str] = []
+    for root, _dirs, files in os.walk(input_dir):
         for file in files:
-            if _is_valid_audio_file(file, valid_exts):
-                full_path = os.path.join(root, file)
-                tasks.append(full_path)
+            if _is_valid_audio_file(file, AUDIO_EXTS):
+                tasks.append(os.path.join(root, file))
+    tasks.sort()
 
     print(f"Found {len(tasks)} audio files to process.")
-    
-    # Process each file
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_dir)
+    pipeline_script = os.path.join(project_root, "run_pipeline.sh")
+
     for i, audio_path in enumerate(tasks):
         fname = os.path.basename(audio_path)
         print(f"\n[{i+1}/{len(tasks)}] Processing: {fname}")
-        
-        # Check for ground truth
-        gt_info = gt_data.get(fname)
-        
-        # Build command to use run_pipeline.sh
-        # We need the absolute path to run_pipeline.sh
-        # Assuming raga_pipeline/batch.py -> ../run_pipeline.sh
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(current_dir)
-        pipeline_script = os.path.join(project_root, "run_pipeline.sh")
-        
-        base_cmd = [pipeline_script]
-        
-        # Determine mode
+
+        gt_info = gt_data.get(fname, {})
+        cmd = [pipeline_script, "detect", "--audio", audio_path, "--output", output_dir]
+
         if mode == "auto" and gt_info:
-            raga = gt_info.get('raga')
-            tonic = gt_info.get('tonic')
-            
+            raga = gt_info.get("raga")
+            tonic = gt_info.get("tonic")
             if raga and tonic:
                 print(f"  -> Found Ground Truth: Raga='{raga}', Tonic='{tonic}'")
                 print("  -> Running in ANALYZE mode")
-                
-                cmd = base_cmd + [
+                cmd = [
+                    pipeline_script,
                     "analyze",
-                    "--audio", audio_path,
-                    "--output", output_dir,
-                    "--raga", raga,
-                    "--tonic", tonic
+                    "--audio",
+                    audio_path,
+                    "--output",
+                    output_dir,
+                    "--raga",
+                    raga,
+                    "--tonic",
+                    tonic,
                 ]
-                
-                # Add optional metadata args if present in CSV
-                if gt_info.get('instrument_type'):
-                    cmd.extend(["--instrument-type", gt_info['instrument_type']])
-                    print(f"     + Instrument: {gt_info['instrument_type']}")
-                    
-                if gt_info.get('vocalist_gender'):
-                    cmd.extend(["--vocalist-gender", gt_info['vocalist_gender']])
-                    print(f"     + Gender: {gt_info['vocalist_gender']}")
-                    
-                if gt_info.get('source_type'):
-                    cmd.extend(["--source-type", gt_info['source_type']])
-                    print(f"     + Source: {gt_info['source_type']}")
-                    
-                if gt_info.get('melody_source'):
-                    cmd.extend(["--melody-source", gt_info['melody_source']])
-                    print(f"     + Melody Source: {gt_info['melody_source']}")
-
             else:
-                 print("  -> Ground truth entry found but missing Raga/Tonic. Falling back to DETECT.")
-                 cmd = base_cmd + [
-                    "detect",
-                    "--audio", audio_path,
-                    "--output", output_dir
-                ]
+                print("  -> Ground truth entry found but missing Raga/Tonic. Falling back to DETECT.")
+        elif mode == "detect":
+            print("  -> Forced DETECT mode")
         else:
-            if mode == "detect":
-                 print("  -> Forced DETECT mode")
-            else:
-                 print("  -> No Ground Truth found")
-                 print("  -> Running in DETECT mode")
-            
-            cmd = base_cmd + [
-                "detect",
-                "--audio", audio_path,
-                "--output", output_dir
-            ]
-            
-            # Forward CSV metadata even in DETECT mode so detect/analyze flags share the same hints.
-            if mode == "detect" and gt_info:
-                if gt_info.get('instrument_type'):
-                    cmd.extend(["--instrument-type", gt_info['instrument_type']])
-                    print(f"     + Instrument: {gt_info['instrument_type']}")
-                    
-                if gt_info.get('vocalist_gender'):
-                    cmd.extend(["--vocalist-gender", gt_info['vocalist_gender']])
-                    print(f"     + Gender: {gt_info['vocalist_gender']}")
-                    
-                if gt_info.get('source_type'):
-                    cmd.extend(["--source-type", gt_info['source_type']])
-                    print(f"     + Source: {gt_info['source_type']}")
-                    
-                if gt_info.get('melody_source'):
-                    cmd.extend(["--melody-source", gt_info['melody_source']])
-                    print(f"     + Melody Source: {gt_info['melody_source']}")
+            print("  -> No Ground Truth found")
+            print("  -> Running in DETECT mode")
 
+        if gt_info:
+            _append_metadata_args(cmd, gt_info)
 
-        # Run pipeline
         try:
             log_dir = os.path.join(output_dir, "logs")
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, f"{fname}.log")
-            
-            # Use Popen to stream output
-            with open(log_file, "w") as f_log:
+
+            with open(log_file, "w", encoding="utf-8") as f_log:
                 process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
-                    bufsize=1,  # Line buffered
-                    env=os.environ  # Inherit full environment including PATH
+                    bufsize=1,
+                    env=os.environ,
                 )
-
                 if process.stdout is None:
                     raise RuntimeError("Failed to capture subprocess stdout.")
-                
-                # Read char by char so tqdm-style progress lines using '\r' render correctly.
-                
+
+                # Read char-by-char so tqdm-style '\r' progress lines are preserved.
                 while True:
                     char = process.stdout.read(1)
                     if not char and process.poll() is not None:
@@ -257,15 +219,14 @@ def process_directory(input_dir: str, ground_truth_path: Optional[str] = None, o
                         if not silent:
                             sys.stdout.write(char)
                             sys.stdout.flush()
-                
+
                 process.wait()
                 returncode = process.returncode
-                
+
             if returncode == 0:
                 print(f"  [SUCCESS] Log: {log_file}")
             else:
                 print(f"  [FAILURE] Exit Code: {returncode}. Check Log: {log_file}")
-                
         except Exception as e:
             print(f"  [ERROR] Execution failed: {e}")
 

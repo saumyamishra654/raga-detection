@@ -5,7 +5,7 @@ Helpers to convert structured UI payloads into pipeline argv lists.
 from __future__ import annotations
 
 import shlex
-from typing import Any, Dict, Iterable, List, Sequence
+from typing import Any, Dict, List, Sequence
 
 from .cli_schema import get_mode_schema, list_modes
 
@@ -18,10 +18,6 @@ def _coerce_extra_args(extra_args: Any) -> List[str]:
     if isinstance(extra_args, Sequence):
         return [str(x) for x in extra_args if str(x).strip()]
     raise TypeError("extra_args must be a string, sequence, or None.")
-
-
-def _normalize_scalar(value: Any) -> str:
-    return str(value)
 
 
 def params_to_argv(mode: str, params: Dict[str, Any], extra_args: Any = None) -> List[str]:
@@ -70,8 +66,7 @@ def params_to_argv(mode: str, params: Dict[str, Any], extra_args: Any = None) ->
         if isinstance(value, str) and not value.strip():
             continue
 
-        argv.extend([flag, _normalize_scalar(value)])
+        argv.extend([flag, str(value)])
 
     argv.extend(_coerce_extra_args(extra_args))
     return argv
-

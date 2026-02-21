@@ -748,8 +748,8 @@ def get_raga_notes(raga_db: RagaDatabase, raga_name: str, tonic: Union[int, str]
         if mask_abs: break
     
     if mask_abs is None:
-         print(f"[WARN] Raga '{raga_name}' (or sub-names) not found in DB. Allowing all notes.")
-         return list(range(12))
+        print(f"[WARN] Raga '{raga_name}' (or sub-names) not found in DB. Allowing all notes.")
+        return list(range(12))
     
     print(f"  [INFO] Found raga match: '{matched_name}'")
     
@@ -875,8 +875,8 @@ def apply_raga_correction_to_notes(
         )
         if not info_list:
             # Implicitly discarded if logic returned nothing
-             stats['discarded'] += 1
-             continue
+            stats['discarded'] += 1
+            continue
              
         info = info_list[0]
         all_corrections.append(info)
@@ -888,8 +888,8 @@ def apply_raga_correction_to_notes(
             continue
             
         elif action == 'unchanged' or action == 'unchanged_far':
-             stats['unchanged'] += 1
-             corrected_sequence.append(note)
+            stats['unchanged'] += 1
+            corrected_sequence.append(note)
              
         elif action == 'corrected':
             new_pitch = float(info['corrected_midi'])
@@ -899,7 +899,10 @@ def apply_raga_correction_to_notes(
                 end=note.end,
                 pitch_midi=new_pitch,
                 pitch_hz=float(librosa.midi_to_hz(new_pitch)),
-                confidence=note.confidence
+                confidence=note.confidence,
+                energy=note.energy,
+                sargam=note.sargam,
+                pitch_class=int(round(new_pitch)) % 12,
             )
             corrected_sequence.append(new_note)
                  

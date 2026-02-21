@@ -15,7 +15,7 @@ Key Concepts:
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict, Union, Literal
+from typing import List, Literal, Optional, Tuple, Union
 import math
 import numpy as np
 import librosa
@@ -268,12 +268,15 @@ def _snap_pitch(
     tonic_midi: float,
     mode: str,
     allowed_pcs: Optional[List[int]],
-    tolerance_cents: float
+    tolerance_cents: float,
 ) -> Tuple[Optional[float], float, str, bool]:
     """
     Snap a raw MIDI pitch to a target scale.
     Returns: (snapped_pitch, error_in_cents, label, keep_note)
     """
+    # Reserved for backwards-compatible call sites.
+    _ = tolerance_cents
+
     # 1. Normalize to 0-11 relative to tonic
     # Note: tonic_midi might be e.g. 61.5 (if microtonal tonic)
     # But usually standard MIDI integers.
@@ -322,18 +325,22 @@ def _get_sargam_label(midi_val: float, tonic_midi: float) -> str:
 
 
 def _resolve_tonic(tonic: Union[int, str, float]) -> float:
-    # Helper to get MIDI float from various tonic formats
-    # Copy logic from sequence.tonic_to_midi_class but keep absolute value if float
-    if isinstance(tonic, (int, float)):
-        # Interpret large tonic values as Hz and convert to MIDI, otherwise use as-is.
-        # The user pipeline usually passes MIDI or Letter.
-        # Let's assume standard MIDI or Hz -> MIDI
-           if tonic > 200: # Hz
-               return float(librosa.hz_to_midi(tonic))
-           return float(tonic)
-    elif isinstance(tonic, str):
-           return float(librosa.note_to_midi(tonic))
-    return 60.0 # Fallback C4
+    """Resolve tonic to an absolute MIDI value."""
+    if isinstance(tonic, (float, np.floating)) and tonic > 200:
+        # Treat large float values as Hz and map them to MIDI.
+        return float(librosa.hz_to_midi(float(tonic)))
+
+    if isinstance(tonic, (int, float, np.integer, np.floating)):
+        return float(tonic)
+
+    if isinstance(tonic, str):
+        try:
+            return float(librosa.note_to_midi(tonic))
+        except Exception:
+            # Fall back to pitch-class parsing and anchor at octave 4.
+            return float(60 + tonic_to_midi_class(tonic))
+
+    return 60.0
 
 
 def transcribe_to_notes(
@@ -362,9 +369,8 @@ def transcribe_to_notes(
     3. Filter Inflection Points overlapping Stationary Events.
     4. Convert all to Note objects.
     """
-    # Prefer explicit min_duration if distinct, but usually they map to same config
-    # Respect the smallest duration threshold supplied.
-    # Let's trust the passed args.
+    if transcription_min_duration > 0:
+        min_event_duration = transcription_min_duration
     
     # 1. Stationary Events
     events = detect_stationary_events(
@@ -380,7 +386,7 @@ def transcribe_to_notes(
         min_event_duration=min_event_duration,
         snap_mode=snap_mode,
         allowed_raga_notes=allowed_raga_notes,
-        snap_tolerance_cents=snap_tolerance_cents
+        snap_tolerance_cents=snap_tolerance_cents,
     )
     
     # 2. Inflection Points
@@ -389,7 +395,7 @@ def transcribe_to_notes(
         timestamps=timestamps,
         voicing_mask=voicing_mask,
         smoothing_sigma_ms=smoothing_sigma_ms,
-        frame_period_s=frame_period_s
+        frame_period_s=frame_period_s,
     )
     
     # 3. Filter Inflections

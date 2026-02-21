@@ -6,11 +6,22 @@ Provides:
 - load_config_from_cli: CLI argument parser
 """
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional, Sequence, List
 import argparse
 import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional, Sequence
+
+
+VALID_MODES = {"preprocess", "detect", "analyze"}
+
+
+def _clean_optional_str(value: Optional[str]) -> Optional[str]:
+    """Trim optional CLI strings and normalize empty strings to None."""
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
 
 
 @dataclass
@@ -54,7 +65,7 @@ class PipelineConfig:
 
     # Pitch range (MIDI notes)
     fmin_note: str = "G1"   # ~49 Hz (notebook default)
-    fmax_note: str = "C6"   # Increased to C5 to capture C#4, D4, E4 which are > C4 (261Hz)
+    fmax_note: str = "C6"   # Covers typical vocal/instrumental upper range
 
     # Histogram parameters
     histogram_bins_high: int = 100   # High-res: 100 bins
@@ -120,15 +131,15 @@ class PipelineConfig:
 
     def __post_init__(self):
         """Validate and normalize paths."""
-        if self.audio_path is not None:
-            self.audio_path = self.audio_path.strip()
-        if self.audio_dir is not None:
-            self.audio_dir = self.audio_dir.strip()
-        if self.filename_override is not None:
-            self.filename_override = self.filename_override.strip()
+        self.audio_path = _clean_optional_str(self.audio_path)
+        self.audio_dir = _clean_optional_str(self.audio_dir)
+        self.filename_override = _clean_optional_str(self.filename_override)
 
         self.output_dir = os.path.abspath(self.output_dir)
         os.makedirs(self.output_dir, exist_ok=True)
+
+        if self.mode not in VALID_MODES:
+            raise ValueError(f"Invalid mode '{self.mode}'. Expected one of: {sorted(VALID_MODES)}")
 
         if self.mode == "preprocess":
             if not self.yt_url:
@@ -355,7 +366,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         args.source_type = "vocal"
 
     # Determine effective mode (default to detect)
-    mode = args.command if args.command in ["preprocess", "detect", "analyze"] else "detect"
+    mode = args.command if args.command in VALID_MODES else "detect"
 
     return PipelineConfig(
         audio_path=getattr(args, 'audio', None),
@@ -394,7 +405,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         fmax_note=getattr(args, 'fmax_note', "C6"),
         prominence_high_factor=getattr(args, 'prominence_high', 0.01),
         prominence_low_factor=getattr(args, 'prominence_low', 0.03),
-        bias_rotation=getattr(args, 'bias_rotation', False),
+        bias_rotation=getattr(args, 'bias_rotation', True),
     )
 
 

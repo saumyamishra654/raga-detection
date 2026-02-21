@@ -8,7 +8,7 @@ Provides:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Set, Tuple, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Set
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.ndimage import gaussian_filter1d
@@ -213,7 +213,7 @@ def detect_peaks(
     # High-resolution peak detection
     # Notebook: prom_high = max(1.0, 0.03 * float(smoothed_H_100.max()))
     prom_high = max(1.0, prominence_high_factor * float(histogram.smoothed_high.max()))
-    high_peaks, high_props = find_peaks(
+    high_peaks, _ = find_peaks(
         histogram.smoothed_high, prominence=prom_high, distance=2
     )
     
@@ -232,7 +232,7 @@ def detect_peaks(
     # Low-resolution peak detection (on RAW histogram, per notebook)
     # Notebook: prom_low = max(0, 0.01 * float(H_mel_25.max()))
     prom_low = max(0.0, prominence_low_factor * float(histogram.low_res.max()))
-    low_peaks, low_props = find_peaks(
+    low_peaks, _ = find_peaks(
         histogram.low_res, prominence=prom_low, distance=1
     )
     

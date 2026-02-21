@@ -10,6 +10,8 @@ modes:
 
 import os
 import sys
+import shutil
+import importlib.util
 from pathlib import Path
 
 # add package to path if running directly
@@ -79,6 +81,77 @@ from raga_pipeline.output import (
 from raga_pipeline import transcription
 
 
+def _module_available(module_name: str) -> bool:
+    """Check module availability without importing it."""
+    return importlib.util.find_spec(module_name) is not None
+
+
+def _preflight_check(config: PipelineConfig) -> None:
+    """
+    Validate runtime dependencies early with actionable errors.
+
+    This is tailored for headless and scheduler-based environments where missing
+    binaries/modules should fail fast before long batch jobs start.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    def require_binary(binary: str, reason: str) -> None:
+        if shutil.which(binary) is None:
+            errors.append(f"Missing required binary '{binary}' ({reason}).")
+
+    def require_module(module_name: str, reason: str) -> None:
+        if not _module_available(module_name):
+            errors.append(f"Missing required Python module '{module_name}' ({reason}).")
+
+    if config.mode == "preprocess":
+        require_binary("ffmpeg", "YouTube extraction and trimming")
+        require_binary("ffprobe", "duration validation for trims")
+        require_module("yt_dlp", "YouTube ingest (--yt)")
+    else:
+        require_module("swift_f0", "pitch extraction")
+
+        if not config.raga_db_path:
+            errors.append(
+                "Raga DB path is unresolved. Pass --raga-db or place raga_list_final.csv in a default location."
+            )
+        elif not os.path.isfile(config.raga_db_path):
+            errors.append(f"Raga DB file not found: {config.raga_db_path}")
+
+        if config.mode == "detect":
+            require_binary("ffmpeg", "Demucs WAV->MP3 stem encoding and audio conversions")
+            if config.separator_engine == "demucs":
+                require_module("torch", "Demucs inference")
+                require_module("demucs", "stem separation")
+            elif config.separator_engine == "spleeter":
+                require_module("spleeter", "stem separation")
+
+    if (
+        config.mode == "detect"
+        and config.separator_engine == "demucs"
+        and os.environ.get("RAGA_PRELOAD_DEMUCS", "0") == "1"
+        and not errors
+    ):
+        try:
+            from demucs.pretrained import get_model  # type: ignore
+
+            _ = get_model(config.demucs_model)
+            print(f"[PREFLIGHT] Demucs model '{config.demucs_model}' is loadable.")
+        except Exception as exc:
+            errors.append(f"Demucs preload failed for model '{config.demucs_model}': {exc}")
+
+    if warnings:
+        print("[PREFLIGHT] Warnings:")
+        for warning in warnings:
+            print(f"  - {warning}")
+
+    if errors:
+        print("[PREFLIGHT] Failed with the following issues:")
+        for error in errors:
+            print(f"  - {error}")
+        raise RuntimeError("Preflight dependency checks failed.")
+
+
 def run_pipeline(
     config: PipelineConfig,
     run_histogram_analysis: bool = True,  # Legacy flag, kept for compatibility but effectively controlled by mode
@@ -102,6 +175,7 @@ def run_pipeline(
     outputs:
         AnalysisResults with computed data
     """
+    _preflight_check(config)
     results = AnalysisResults(config=config)
 
     if config.mode == "preprocess":

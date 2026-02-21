@@ -35,12 +35,13 @@ Recommended (uses the wrapper script):
 ./run_pipeline.sh <subcommand> [args...]
 ```
 
-`run_pipeline.sh` currently:
-- sources Conda from `/opt/miniconda3/etc/profile.d/conda.sh`
-- activates a Conda env named `raga`
-- runs `python driver.py ...`
+`run_pipeline.sh` supports configurable activation:
+- `RAGA_CONDA_SH`: explicit path to `conda.sh` (optional)
+- `RAGA_CONDA_ENV`: env name to activate (default: `raga`)
+- `RAGA_SKIP_ENV_ACTIVATE=1`: skip Conda activation
+- `RAGA_PYTHON_BIN`: Python executable to run (default: `python3`)
 
-If your Conda install/env name differs, activate your environment manually and run:
+You can always bypass the wrapper and run:
 ```bash
 python driver.py <subcommand> [args...]
 ```
@@ -194,7 +195,7 @@ Primary output:
 
 ## Batch Processing
 
-Batch mode processes a directory of audio files by shelling out to `run_pipeline.sh` per file.
+Batch mode processes a directory of audio files by invoking `driver.py` with the current Python interpreter per file.
 
 ```bash
 python -m raga_pipeline.batch /path/to/audio_dir --init-csv
@@ -210,6 +211,9 @@ Arguments:
 - `--mode` / `-m`: `auto` (default) or `detect`
   - `auto`: if a ground-truth row has both `raga` and `tonic`, runs `analyze`; otherwise runs `detect`
   - `detect`: always runs `detect` and ignores ground truth for mode selection
+- `--max-files`: process at most N pending files in this run (`0` means all pending)
+- `--progress-file`: optional checkpoint JSON path
+- `--exit-99-on-remaining`: exit `99` when files remain (useful for PBS auto-resubmission wrappers)
 - `--silent` / `-s`: suppress console output (logs are still written)
 
 Ground-truth CSV format:

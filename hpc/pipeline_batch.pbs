@@ -1,0 +1,51 @@
+#!/bin/bash
+#PBS -N raga_batch
+#PBS -q gpu
+#PBS -l select=1:ncpus=4:mem=24gb
+#PBS -l walltime=24:00:00
+#PBS -o logs/
+#PBS -e logs/
+
+# Example PBS wrapper for chunked + resumable batch runs.
+# It uses raga_pipeline.batch checkpointing and exits with 99 when work remains.
+
+PROJECT_ROOT="/storage/saumya.mishra_ug25/audio_project"
+REPO_DIR="/storage/saumya.mishra_ug25/audio_project/raga-detection"
+INPUT_DIR="${PROJECT_ROOT}/RagaDataset"
+OUTPUT_DIR="${PROJECT_ROOT}/batch_results"
+GROUND_TRUTH="${INPUT_DIR}/RagaDataset_gt.csv"
+MAX_FILES_PER_RUN=300
+PYTHON_ENV_ACTIVATE="/storage/saumya.mishra_ug25/audio_project/demucs_env/bin/activate"
+SELF_PBS_PATH="hpc/pipeline_batch.pbs"
+
+cd "$REPO_DIR" || exit 1
+source "$PYTHON_ENV_ACTIVATE"
+
+# Optional: if ffmpeg is not globally available on the cluster
+# export PATH="/storage/saumya.mishra_ug25/audio_project/ffmpeg_tools/bin:$PATH"
+
+mkdir -p logs
+echo "Job ID: $PBS_JOBID"
+echo "Node: $(hostname)"
+
+python3 -m raga_pipeline.batch \
+  "$INPUT_DIR" \
+  --ground-truth "$GROUND_TRUTH" \
+  --output "$OUTPUT_DIR" \
+  --mode auto \
+  --max-files "$MAX_FILES_PER_RUN" \
+  --exit-99-on-remaining
+
+EXIT_CODE=$?
+echo "Batch run exited with code: $EXIT_CODE"
+
+if [ $EXIT_CODE -eq 99 ]; then
+  echo "Work remains; resubmitting."
+  qsub "$SELF_PBS_PATH"
+elif [ $EXIT_CODE -eq 0 ]; then
+  echo "All files processed."
+else
+  echo "Batch run failed."
+fi
+
+exit $EXIT_CODE

@@ -42,9 +42,13 @@ A robust, pipeline-based system for automatic Hindustani raga identification and
 
 ## Usage
 
-The project is designed to be run via the `run_pipeline.sh` script, which handles environment activation and path setup. The pipeline supports three modes: **Preprocess**, **Detect**, and **Analyze**.
+The project is designed to be run via `run_pipeline.sh`, which can optionally activate Conda before launching `driver.py`. The pipeline supports three modes: **Preprocess**, **Detect**, and **Analyze**.
 
-Note: `run_pipeline.sh` assumes a Conda environment named `raga` and a Conda install at `/opt/miniconda3`. If that does not match your machine, activate your environment manually and run `python driver.py ...` with the same arguments.
+`run_pipeline.sh` environment controls:
+- `RAGA_CONDA_SH`: explicit path to `conda.sh` (optional)
+- `RAGA_CONDA_ENV`: env name to activate (default: `raga`)
+- `RAGA_SKIP_ENV_ACTIVATE=1`: skip Conda activation
+- `RAGA_PYTHON_BIN`: Python executable to run (default: `python3`)
 
 ### Local Parameter-Tuning App (macOS)
 
@@ -180,7 +184,7 @@ Important:
 
 ### Batch Processing
 
-Batch mode walks a directory of `.mp3`, `.wav`, `.flac`, or `.m4a` files and runs `run_pipeline.sh` on each one.
+Batch mode walks a directory of `.mp3`, `.wav`, `.flac`, or `.m4a` files and launches `driver.py` using the current Python interpreter.
 
 ```bash
 # 1) Create a blank ground-truth CSV inside the input directory:
@@ -199,6 +203,9 @@ python -m raga_pipeline.batch /path/to/audio_dir --mode detect
 Batch options:
 *   `--ground-truth` / `-g`: Ground truth CSV path (default: auto-detected as described above).
 *   `--output` / `-o`: Output directory (default: `<repo>/batch_results`).
+*   `--max-files`: Process at most N pending files in this run (`0` means all).
+*   `--progress-file`: Optional checkpoint JSON path.
+*   `--exit-99-on-remaining`: Exit with code `99` if files remain (for PBS resubmission loops).
 *   `--silent` / `-s`: Suppress console output; logs are still written.
 
 Outputs:

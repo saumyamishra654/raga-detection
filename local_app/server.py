@@ -5,6 +5,7 @@ import csv
 import os
 import re
 import shutil
+import threading
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -19,12 +20,17 @@ from local_app.jobs import JobManager, JobRecord
 from local_app.schemas import ArtifactInfo, BatchJobRequest, JobCreateRequest, JobLogsResponse, JobStatusResponse
 from raga_pipeline.cli_schema import get_mode_schema, list_modes
 from raga_pipeline.config import find_default_raga_db_path
+from raga_pipeline.audio import (
+    get_tonic_from_tanpura_key,
+    list_tanpura_tracks,
+    start_microphone_recording_session,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg"}
+ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".ogg", ".webm", ".weba"}
 DEFAULT_AUDIO_DIR_REL = "../audio_test_files"
 DEFAULT_OUTPUT_DIR_REL = "batch_results"
 DEFAULT_UI_MODE = "detect"
@@ -305,6 +311,8 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
     manager = job_manager or JobManager(repo_root=REPO_ROOT)
     app.state.job_manager = manager
     app.state.warnings = _health_checks()
+    app.state.preprocess_recording_session = None
+    app.state.preprocess_recording_lock = threading.Lock()
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -411,6 +419,23 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "default_directory": DEFAULT_AUDIO_DIR_REL,
         }
 
+    @app.get("/api/tanpura-tracks")
+    def api_tanpura_tracks() -> Dict[str, Any]:
+        tracks = []
+        for track in list_tanpura_tracks(require_exists=True):
+            track_path = Path(track["path"]).resolve()
+            track_url = _local_file_url(track_path)
+            tracks.append(
+                {
+                    "key": track["key"],
+                    "label": track["label"],
+                    "filename": track["filename"],
+                    "path": str(track_path),
+                    "url": track_url,
+                }
+            )
+        return {"tracks": tracks}
+
     @app.get("/api/audio-artifacts")
     def api_audio_artifacts(
         audio_path: str = Query(..., description="Selected audio file path"),
@@ -493,6 +518,88 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "filename": filename,
             "path": str(dest_path.resolve()),
         }
+
+    @app.post("/api/preprocess-record/start")
+    def api_preprocess_record_start(payload: Dict[str, Any]) -> Dict[str, Any]:
+        audio_dir = str(payload.get("audio_dir") or DEFAULT_AUDIO_DIR_REL).strip() or DEFAULT_AUDIO_DIR_REL
+        filename = str(payload.get("filename") or "").strip()
+        record_mode = str(payload.get("record_mode") or "song").strip() or "song"
+        tanpura_key_raw = str(payload.get("tanpura_key") or "").strip()
+        tanpura_key = tanpura_key_raw or None
+
+        if not filename:
+            raise HTTPException(status_code=400, detail="filename is required.")
+        if record_mode not in {"song", "tanpura_vocal"}:
+            raise HTTPException(status_code=400, detail="record_mode must be 'song' or 'tanpura_vocal'.")
+        if record_mode == "tanpura_vocal" and not tanpura_key:
+            raise HTTPException(status_code=400, detail="tanpura_key is required for tanpura_vocal mode.")
+        if record_mode != "tanpura_vocal":
+            tanpura_key = None
+
+        with app.state.preprocess_recording_lock:
+            if app.state.preprocess_recording_session is not None:
+                raise HTTPException(status_code=409, detail="A recording is already in progress.")
+
+            try:
+                session = start_microphone_recording_session(
+                    audio_dir=audio_dir,
+                    filename_base=filename,
+                    tanpura_key=tanpura_key,
+                )
+            except Exception as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+            app.state.preprocess_recording_session = session
+
+        tonic = get_tonic_from_tanpura_key(session.tanpura_key) if session.tanpura_key else None
+        return {
+            "status": "recording",
+            "path": session.target_mp3_path,
+            "filename": Path(session.target_mp3_path).name,
+            "tonic": tonic,
+            "audio_input_device": getattr(session, "audio_input_device", None),
+        }
+
+    @app.post("/api/preprocess-record/stop")
+    def api_preprocess_record_stop() -> Dict[str, Any]:
+        with app.state.preprocess_recording_lock:
+            session = app.state.preprocess_recording_session
+            if session is None:
+                raise HTTPException(status_code=409, detail="No active recording session.")
+            app.state.preprocess_recording_session = None
+
+        try:
+            output_path = Path(session.stop()).resolve()
+        except Exception as exc:
+            try:
+                session.cancel()
+            except Exception:
+                pass
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        tonic = get_tonic_from_tanpura_key(session.tanpura_key) if session.tanpura_key else None
+        return {
+            "status": "ready",
+            "path": str(output_path),
+            "filename": output_path.name,
+            "url": _local_file_url(output_path),
+            "tonic": tonic,
+        }
+
+    @app.post("/api/preprocess-record/cancel")
+    def api_preprocess_record_cancel() -> Dict[str, Any]:
+        with app.state.preprocess_recording_lock:
+            session = app.state.preprocess_recording_session
+            app.state.preprocess_recording_session = None
+
+        cancelled = False
+        if session is not None:
+            cancelled = True
+            try:
+                session.cancel()
+            except Exception:
+                pass
+        return {"cancelled": cancelled}
 
     @app.post("/api/jobs", response_model=JobStatusResponse)
     def api_create_job(payload: JobCreateRequest) -> JobStatusResponse:

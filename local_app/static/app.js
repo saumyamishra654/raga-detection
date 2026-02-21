@@ -21,10 +21,13 @@
     let selectedAudioPath = "";
     let selectedAudioDirectory = "";
     let pendingNextJobId = null;
+    let pendingNextSuggestion = null;
     const modeDrafts = new Map();
     let currentReportLinks = { detect: null, analyze: null };
     const ragaNameCacheBySource = new Map();
     const audioFileCacheBySource = new Map();
+    const tanpuraTrackCache = new Map();
+    let activeRecordingContext = null;
     const AUDIO_DIR_STORAGE_KEY = "ragaLocalApp.audioDirectory";
     const DEFAULT_AUDIO_DIR_REL = (document.body && document.body.dataset && document.body.dataset.defaultAudioDir)
         ? document.body.dataset.defaultAudioDir
@@ -36,7 +39,12 @@
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
         instrument_type: { field: "source_type", equals: "instrumental" },
-        skip_separation: { field: "source_type", equals: "instrumental" }
+        yt: { field: "ingest", equals: "youtube" },
+        start_time: { field: "ingest", equals: "youtube" },
+        end_time: { field: "ingest", equals: "youtube" },
+        record_mode: { field: "ingest", equals: "record" },
+        recorded_audio: { field: "ingest", equals: "record" },
+        tanpura_key: { field: "record_mode", equals: "tanpura_vocal" }
     };
     selectedAudioDirectory = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
 
@@ -89,6 +97,20 @@
         }
         const payload = await res.json();
         audioFileCacheBySource.set(sourceKey, payload);
+        return payload;
+    }
+
+    async function fetchTanpuraTracks(forceRefresh) {
+        const sourceKey = "__tanpura__";
+        if (!forceRefresh && tanpuraTrackCache.has(sourceKey)) {
+            return tanpuraTrackCache.get(sourceKey);
+        }
+        const res = await fetch("/api/tanpura-tracks");
+        if (!res.ok) {
+            throw new Error("Failed to load tanpura tracks");
+        }
+        const payload = await res.json();
+        tanpuraTrackCache.set(sourceKey, payload);
         return payload;
     }
 
@@ -177,6 +199,535 @@
         loadArtifactsForSelectedAudio().catch(function (err) {
             setStatus("Artifact lookup error: " + err.message);
         });
+    }
+
+    function getFieldInput(name) {
+        return document.getElementById(fieldInputId(name));
+    }
+
+    function getFieldValue(name) {
+        const input = getFieldInput(name);
+        if (!input) return "";
+        return String(input.value || "").trim();
+    }
+
+    function composePreprocessOutputAudioPath() {
+        const audioDir = getFieldValue("audio_dir") || getFieldDefault("audio_dir", DEFAULT_AUDIO_DIR_REL) || "";
+        const filename = getFieldValue("filename");
+        if (!filename) return "";
+
+        const normalizedDir = String(audioDir).trim().replace(/[\\/]+$/, "");
+        if (!normalizedDir) {
+            return filename + ".mp3";
+        }
+        return normalizedDir + "/" + filename + ".mp3";
+    }
+
+    function buildRecordDetectSuggestion() {
+        if (modeSelect.value !== "preprocess") return null;
+        const ingest = getFieldValue("ingest") || "youtube";
+        if (ingest !== "record") return null;
+
+        const recordedPath = getFieldValue("recorded_audio");
+        const outputAudioPath = recordedPath || composePreprocessOutputAudioPath();
+        if (!outputAudioPath) return null;
+
+        const paramsByFlag = {
+            "--audio": outputAudioPath,
+        };
+        const consumedFlags = ["--audio"];
+
+        const outputDir = getFieldValue("output") || getFieldDefault("output", "batch_results");
+        if (outputDir) {
+            paramsByFlag["--output"] = outputDir;
+            consumedFlags.push("--output");
+        }
+
+        const recordMode = getFieldValue("record_mode") || "song";
+        if (recordMode === "tanpura_vocal") {
+            const tanpuraKey = getFieldValue("tanpura_key");
+            if (tanpuraKey) {
+                paramsByFlag["--tonic"] = tanpuraKey;
+                consumedFlags.push("--tonic");
+            }
+            paramsByFlag["--skip-separation"] = true;
+            consumedFlags.push("--skip-separation");
+        }
+
+        return { mode: "detect", paramsByFlag: paramsByFlag, consumedFlags: consumedFlags };
+    }
+
+    function getRecordingStartValidationError(tanpuraSelect) {
+        if (modeSelect.value !== "preprocess") {
+            return "Recording controls are available only in preprocess mode.";
+        }
+
+        const ingest = getFieldValue("ingest");
+        if (ingest !== "record") {
+            return "Set --ingest to 'record' to use microphone recording.";
+        }
+
+        const filename = getFieldValue("filename");
+        if (!filename) {
+            return "Fill --filename before starting recording.";
+        }
+
+        const recordMode = getFieldValue("record_mode") || "song";
+        if (recordMode === "tanpura_vocal") {
+            const selectedTanpura = String(
+                (tanpuraSelect && tanpuraSelect.value) || getFieldValue("tanpura_key") || ""
+            ).trim();
+            if (!selectedTanpura) {
+                return "Select a tanpura key before starting recording.";
+            }
+        }
+        return "";
+    }
+
+    function validateClientSideSubmitOrThrow(mode, params) {
+        if (mode === "detect") {
+            const skipInput = getFieldInput("skip_separation");
+            const skipEnabled = Boolean(
+                params.skip_separation ||
+                (skipInput && skipInput.checked)
+            );
+            if (skipEnabled) {
+                const tonicRaw = String(params.tonic || getFieldValue("tonic") || "").trim();
+                if (!tonicRaw) {
+                    throw new Error("Missing required field: --tonic (required when --skip-separation is enabled).");
+                }
+
+                const melodyInput = getFieldInput("melody_source");
+                const currentMelodySource = String(
+                    params.melody_source ||
+                    (melodyInput ? melodyInput.value : "") ||
+                    "separated"
+                ).trim();
+                if (currentMelodySource !== "composite") {
+                    if (melodyInput) {
+                        melodyInput.value = "composite";
+                    }
+                    params.melody_source = "composite";
+                }
+            }
+        }
+
+        if (mode !== "preprocess") return;
+        const ingest = String(params.ingest || getFieldValue("ingest") || "youtube").trim();
+        if (ingest === "youtube") {
+            const ytUrl = String(params.yt || getFieldValue("yt") || "").trim();
+            if (!ytUrl) {
+                throw new Error("Missing required field: --yt (required when --ingest is youtube).");
+            }
+        }
+    }
+
+    function enforceDetectSkipSeparationRules() {
+        if (modeSelect.value !== "detect") return;
+        const skipInput = getFieldInput("skip_separation");
+        const melodyInput = getFieldInput("melody_source");
+        if (!skipInput || !melodyInput) return;
+        if (skipInput.checked && String(melodyInput.value || "").trim() !== "composite") {
+            melodyInput.value = "composite";
+        }
+    }
+
+    function isRecordingInProgress() {
+        return Boolean(activeRecordingContext && activeRecordingContext.backendRecording);
+    }
+
+    function stopActiveRecording(cancelUpload) {
+        if (!isRecordingInProgress()) return;
+        if (!cancelUpload) return;
+        if (!activeRecordingContext.cancelRequested) {
+            activeRecordingContext.cancelRequested = true;
+            fetch("/api/preprocess-record/cancel", { method: "POST" }).catch(function () {
+                // Ignore cleanup errors on fire-and-forget cancellation.
+            });
+        }
+        activeRecordingContext = null;
+    }
+
+    async function startBackendRecording(payload) {
+        const res = await fetch("/api/preprocess-record/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+            const body = await res.json().catch(function () { return {}; });
+            throw new Error(body.detail || "Failed to start recording");
+        }
+        return res.json();
+    }
+
+    async function stopBackendRecording() {
+        const res = await fetch("/api/preprocess-record/stop", { method: "POST" });
+        if (!res.ok) {
+            const body = await res.json().catch(function () { return {}; });
+            throw new Error(body.detail || "Failed to stop recording");
+        }
+        return res.json();
+    }
+
+    async function cancelBackendRecording() {
+        const res = await fetch("/api/preprocess-record/cancel", { method: "POST" });
+        if (!res.ok) {
+            const body = await res.json().catch(function () { return {}; });
+            throw new Error(body.detail || "Failed to cancel recording");
+        }
+        return res.json();
+    }
+
+    function attachPreprocessRecordingControls(row, recordedAudioInput) {
+        const helperWrap = document.createElement("div");
+        helperWrap.className = "hint preprocess-recording-wrap";
+
+        const controls = document.createElement("div");
+        controls.className = "preprocess-recording-controls";
+
+        const startBtn = document.createElement("button");
+        startBtn.type = "button";
+        startBtn.textContent = "Start Recording";
+
+        const stopBtn = document.createElement("button");
+        stopBtn.type = "button";
+        stopBtn.textContent = "Stop Recording";
+        stopBtn.disabled = true;
+
+        const clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.textContent = "Clear Recording";
+
+        controls.appendChild(startBtn);
+        controls.appendChild(stopBtn);
+        controls.appendChild(clearBtn);
+        helperWrap.appendChild(controls);
+
+        const tanpuraWrap = document.createElement("div");
+        tanpuraWrap.className = "preprocess-tanpura-wrap";
+
+        const tanpuraLabel = document.createElement("div");
+        tanpuraLabel.className = "hint";
+        tanpuraLabel.textContent = "Tanpura (for tanpura_vocal mode):";
+        tanpuraWrap.appendChild(tanpuraLabel);
+
+        const tanpuraControls = document.createElement("div");
+        tanpuraControls.className = "preprocess-tanpura-controls";
+
+        const tanpuraSelect = document.createElement("select");
+        tanpuraSelect.className = "preprocess-tanpura-select";
+
+        const tanpuraPlayBtn = document.createElement("button");
+        tanpuraPlayBtn.type = "button";
+        tanpuraPlayBtn.textContent = "Play Tanpura";
+
+        const tanpuraStopBtn = document.createElement("button");
+        tanpuraStopBtn.type = "button";
+        tanpuraStopBtn.textContent = "Stop Tanpura";
+        tanpuraStopBtn.disabled = true;
+
+        tanpuraControls.appendChild(tanpuraSelect);
+        tanpuraControls.appendChild(tanpuraPlayBtn);
+        tanpuraControls.appendChild(tanpuraStopBtn);
+        tanpuraWrap.appendChild(tanpuraControls);
+
+        helperWrap.appendChild(tanpuraWrap);
+
+        const preview = document.createElement("audio");
+        preview.controls = true;
+        preview.className = "preprocess-recording-preview";
+        preview.style.display = "none";
+        helperWrap.appendChild(preview);
+
+        const status = document.createElement("div");
+        status.className = "hint";
+        status.textContent = "Use ffmpeg microphone recording for preprocess ingest.";
+        helperWrap.appendChild(status);
+
+        const tanpuraFieldInput = getFieldInput("tanpura_key");
+        const tanpuraTrackByKey = new Map();
+        let tanpuraPreviewAudio = null;
+
+        function updateButtons(isRecording) {
+            startBtn.disabled = isRecording;
+            stopBtn.disabled = !isRecording;
+        }
+
+        function updateTanpuraPreviewButtons(isPlaying) {
+            tanpuraPlayBtn.disabled = isPlaying;
+            tanpuraStopBtn.disabled = !isPlaying;
+        }
+
+        function stopTanpuraPreview() {
+            if (!tanpuraPreviewAudio) {
+                updateTanpuraPreviewButtons(false);
+                return;
+            }
+            try {
+                tanpuraPreviewAudio.pause();
+                tanpuraPreviewAudio.currentTime = 0;
+            } catch (_err) {
+                // Ignore preview cleanup errors.
+            }
+            tanpuraPreviewAudio = null;
+            updateTanpuraPreviewButtons(false);
+        }
+
+        function syncTanpuraFieldFromSelect() {
+            if (!tanpuraFieldInput) return;
+            tanpuraFieldInput.value = String(tanpuraSelect.value || "").trim();
+        }
+
+        function syncTanpuraSelectFromField() {
+            if (!tanpuraFieldInput) return;
+            const key = String(tanpuraFieldInput.value || "").trim();
+            if (key && tanpuraTrackByKey.has(key)) {
+                tanpuraSelect.value = key;
+            }
+        }
+
+        function setTanpuraVisibility() {
+            const ingest = getFieldValue("ingest");
+            const recordMode = getFieldValue("record_mode") || "song";
+            const shouldShow = ingest === "record" && recordMode === "tanpura_vocal";
+            tanpuraWrap.style.display = shouldShow ? "grid" : "none";
+            if (!shouldShow) {
+                stopTanpuraPreview();
+            }
+        }
+
+        async function populateTanpuraSelect(forceRefresh) {
+            const payload = await fetchTanpuraTracks(forceRefresh);
+            const tracks = Array.isArray(payload.tracks) ? payload.tracks : [];
+            tanpuraSelect.innerHTML = "";
+            tanpuraTrackByKey.clear();
+
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Select tanpura track...";
+            tanpuraSelect.appendChild(placeholder);
+
+            tracks.forEach(function (track) {
+                if (!track || !track.key) return;
+                tanpuraTrackByKey.set(String(track.key), track);
+                const option = document.createElement("option");
+                option.value = String(track.key);
+                option.textContent = String(track.label || track.key);
+                tanpuraSelect.appendChild(option);
+            });
+
+            const preferredKey = (tanpuraFieldInput && tanpuraFieldInput.value)
+                ? String(tanpuraFieldInput.value).trim()
+                : "";
+            if (preferredKey && tanpuraTrackByKey.has(preferredKey)) {
+                tanpuraSelect.value = preferredKey;
+            }
+        }
+
+        async function resolveTanpuraUrlForCurrentSelection() {
+            const tanpuraKey = String(tanpuraSelect.value || getFieldValue("tanpura_key") || "").trim();
+            if (!tanpuraKey) {
+                throw new Error("Select a tanpura key before recording.");
+            }
+            if (tanpuraFieldInput) {
+                tanpuraFieldInput.value = tanpuraKey;
+            }
+
+            let track = tanpuraTrackByKey.get(tanpuraKey);
+            if (!track) {
+                const payload = await fetchTanpuraTracks(false);
+                const tracks = Array.isArray(payload.tracks) ? payload.tracks : [];
+                tracks.forEach(function (item) {
+                    if (!item || !item.key) return;
+                    tanpuraTrackByKey.set(String(item.key), item);
+                });
+                track = tanpuraTrackByKey.get(tanpuraKey);
+            }
+            if (!track || !track.url) {
+                throw new Error("Selected tanpura track is not available.");
+            }
+            return track.url;
+        }
+
+        tanpuraSelect.addEventListener("change", function () {
+            syncTanpuraFieldFromSelect();
+            stopTanpuraPreview();
+        });
+
+        tanpuraPlayBtn.addEventListener("click", async function () {
+            try {
+                const tanpuraUrl = await resolveTanpuraUrlForCurrentSelection();
+                stopTanpuraPreview();
+                tanpuraPreviewAudio = new Audio(tanpuraUrl);
+                tanpuraPreviewAudio.loop = true;
+                await tanpuraPreviewAudio.play();
+                updateTanpuraPreviewButtons(true);
+                status.textContent = "Tanpura preview playing.";
+            } catch (err) {
+                status.textContent = "Tanpura preview error: " + err.message;
+            }
+        });
+
+        tanpuraStopBtn.addEventListener("click", function () {
+            stopTanpuraPreview();
+            status.textContent = "Tanpura preview stopped.";
+        });
+
+        if (tanpuraFieldInput) {
+            tanpuraFieldInput.addEventListener("change", function () {
+                syncTanpuraSelectFromField();
+                setTanpuraVisibility();
+            });
+        }
+
+        ["ingest", "record_mode"].forEach(function (name) {
+            const input = getFieldInput(name);
+            if (!input) return;
+            input.addEventListener("change", function () {
+                setTanpuraVisibility();
+            });
+        });
+
+        populateTanpuraSelect(true).catch(function (err) {
+            status.textContent = "Tanpura list error: " + err.message;
+        });
+        syncTanpuraSelectFromField();
+        setTanpuraVisibility();
+
+        startBtn.addEventListener("click", async function () {
+            if (isRecordingInProgress()) {
+                status.textContent = "A recording is already in progress.";
+                return;
+            }
+
+            const recordingValidationError = getRecordingStartValidationError(tanpuraSelect);
+            if (recordingValidationError) {
+                status.textContent = recordingValidationError;
+                return;
+            }
+
+            const recordMode = getFieldValue("record_mode") || "song";
+            let tanpuraKey = null;
+            if (recordMode === "tanpura_vocal") {
+                tanpuraKey = String(tanpuraSelect.value || getFieldValue("tanpura_key") || "").trim() || null;
+            }
+            if (tanpuraFieldInput) {
+                tanpuraFieldInput.value = tanpuraKey || "";
+            }
+
+            stopTanpuraPreview();
+            clearPendingNextSuggestion();
+            updateNextButtonState();
+
+            try {
+                status.textContent = "Starting ffmpeg recording...";
+                const payload = await startBackendRecording({
+                    audio_dir: getFieldValue("audio_dir") || getFieldDefault("audio_dir", DEFAULT_AUDIO_DIR_REL),
+                    filename: getFieldValue("filename"),
+                    record_mode: recordMode,
+                    tanpura_key: tanpuraKey,
+                });
+                if (tanpuraFieldInput && payload && payload.tonic) {
+                    tanpuraFieldInput.value = String(payload.tonic);
+                    syncTanpuraSelectFromField();
+                }
+                activeRecordingContext = {
+                    backendRecording: true,
+                    cancelRequested: false,
+                };
+                updateButtons(true);
+                status.textContent = "Recording... click Stop Recording to finish.";
+                const deviceLabel = payload && payload.audio_input_device
+                    ? (" (input " + payload.audio_input_device + ")")
+                    : "";
+                setStatus("Recording started using ffmpeg microphone capture" + deviceLabel + ".");
+            } catch (err) {
+                activeRecordingContext = null;
+                updateButtons(false);
+                status.textContent = "Recording start error: " + err.message;
+                setStatus("Recording start error: " + err.message);
+            }
+        });
+
+        stopBtn.addEventListener("click", async function () {
+            if (!isRecordingInProgress()) return;
+            status.textContent = "Stopping recording...";
+            stopBtn.disabled = true;
+            try {
+                const payload = await stopBackendRecording();
+                activeRecordingContext = null;
+                updateButtons(false);
+
+                recordedAudioInput.value = payload.path || "";
+                if (recordedAudioInput.value) {
+                    recordedAudioInput.classList.add("audio-path-hidden");
+                    onAudioSelectionChanged(recordedAudioInput.value);
+                } else {
+                    recordedAudioInput.classList.remove("audio-path-hidden");
+                }
+
+                if (payload.url) {
+                    preview.src = payload.url;
+                    preview.style.display = "block";
+                }
+
+                if (tanpuraFieldInput && payload.tonic) {
+                    tanpuraFieldInput.value = String(payload.tonic);
+                    syncTanpuraSelectFromField();
+                }
+
+                status.textContent = "Recorded audio ready: " + (payload.filename || payload.path || "");
+                setStatus("Recorded audio saved and autofilled: " + (payload.filename || payload.path || ""));
+
+                const suggestion = buildRecordDetectSuggestion();
+                if (suggestion) {
+                    pendingNextSuggestion = suggestion;
+                    pendingNextJobId = null;
+                    updateNextButtonState();
+                    setStatus(
+                        "Recorded audio saved. Click Next to load detect with " +
+                        suggestion.paramsByFlag["--audio"] +
+                        (suggestion.paramsByFlag["--tonic"] ? (" and tonic " + suggestion.paramsByFlag["--tonic"]) : "") +
+                        "."
+                    );
+                }
+            } catch (err) {
+                activeRecordingContext = null;
+                updateButtons(false);
+                status.textContent = "Recording stop error: " + err.message;
+                setStatus("Recording stop error: " + err.message);
+            }
+        });
+
+        clearBtn.addEventListener("click", async function () {
+            if (isRecordingInProgress()) {
+                try {
+                    await cancelBackendRecording();
+                } catch (_err) {
+                    // Ignore cancellation errors during explicit clear.
+                }
+                activeRecordingContext = null;
+                updateButtons(false);
+            }
+            stopTanpuraPreview();
+            recordedAudioInput.value = "";
+            recordedAudioInput.classList.remove("audio-path-hidden");
+            preview.pause();
+            preview.removeAttribute("src");
+            preview.style.display = "none";
+            clearPendingNextSuggestion();
+            updateNextButtonState();
+            status.textContent = "Recorded audio cleared.";
+            setStatus("Cleared recorded audio path.");
+        });
+
+        if (recordedAudioInput.value) {
+            recordedAudioInput.classList.add("audio-path-hidden");
+            status.textContent = "Using uploaded recording: " + recordedAudioInput.value;
+        }
+
+        row.appendChild(helperWrap);
     }
 
     async function fetchRagaNames(ragaDbPath) {
@@ -578,7 +1129,7 @@
 
         input.id = id;
         input.dataset.fieldName = field.name;
-        if (field.name === "audio") {
+        if (field.name === "audio" || field.name === "recorded_audio") {
             input.classList.add("audio-path-input");
         }
         return input;
@@ -623,6 +1174,9 @@
                     attachAudioDirectoryPicker(row, input);
                     attachAudioDropzone(row, input);
                 }
+                if (field.name === "recorded_audio") {
+                    attachPreprocessRecordingControls(row, input);
+                }
                 if (field.name === "raga") {
                     attachRagaAutocomplete(row, input);
                 }
@@ -639,10 +1193,20 @@
     }
 
     function bindConditionalVisibilityHandlers() {
-        const sourceInput = document.getElementById(fieldInputId("source_type"));
-        if (!sourceInput) return;
-        sourceInput.addEventListener("change", function () {
-            updateConditionalVisibility();
+        ["source_type", "ingest", "record_mode"].forEach(function (name) {
+            const input = document.getElementById(fieldInputId(name));
+            if (!input) return;
+            input.addEventListener("change", function () {
+                updateConditionalVisibility();
+            });
+        });
+
+        ["skip_separation", "melody_source"].forEach(function (name) {
+            const input = document.getElementById(fieldInputId(name));
+            if (!input) return;
+            input.addEventListener("change", function () {
+                enforceDetectSkipSeparationRules();
+            });
         });
     }
 
@@ -670,6 +1234,10 @@
         const input = document.getElementById(fieldInputId(fieldName));
         if (!field || !input) return;
 
+        if (fieldName === "recorded_audio") {
+            stopActiveRecording(true);
+        }
+
         if (field.value_type === "bool") {
             if (field.action === "store_true") {
                 input.checked = false;
@@ -681,6 +1249,7 @@
             return;
         }
         input.value = "";
+        input.classList.remove("audio-path-hidden");
     }
 
     function updateConditionalVisibility() {
@@ -696,6 +1265,7 @@
                 resetHiddenField(targetField);
             }
         });
+        enforceDetectSkipSeparationRules();
     }
 
     function normalizeFieldValue(field, inputEl) {
@@ -794,12 +1364,14 @@
 
     function clearPendingNextSuggestion() {
         pendingNextJobId = null;
+        pendingNextSuggestion = null;
     }
 
     function updateNextButtonState() {
         if (!nextBtn) return;
         const modeAllowsNext = modeSelect.value === "preprocess" || modeSelect.value === "detect";
-        const canAdvance = Boolean(pendingNextJobId) && modeAllowsNext && !isBusy;
+        const hasSuggestion = Boolean(pendingNextSuggestion) || Boolean(pendingNextJobId);
+        const canAdvance = hasSuggestion && modeAllowsNext && !isBusy;
         nextBtn.disabled = !canAdvance;
         nextBtn.classList.toggle("ready", canAdvance);
     }
@@ -932,6 +1504,7 @@
     }
 
     async function loadSchema(mode, options) {
+        stopActiveRecording(true);
         const res = await fetch("/api/schema/" + mode);
         if (!res.ok) throw new Error("Failed to load schema for mode " + mode);
         currentSchema = await res.json();
@@ -991,7 +1564,8 @@
         });
     }
 
-    async function refreshJob(jobId) {
+    async function refreshJob(jobId, options) {
+        const opts = options || {};
         const [jobRes, logRes] = await Promise.all([
             fetch("/api/jobs/" + jobId),
             fetch("/api/jobs/" + jobId + "/logs"),
@@ -1008,15 +1582,19 @@
         progressEl.value = Number(job.progress || 0);
         logsEl.textContent = logLines.join("\n");
         jobArgvEl.textContent = job.argv && job.argv.length ? ("argv: " + job.argv.join(" ")) : "";
-        renderArtifacts(job.artifacts || []);
+        const isRunning = job.status === "queued" || job.status === "running";
+        const shouldRefreshArtifacts = Boolean(opts.refreshArtifacts) || !isRunning;
+        if (shouldRefreshArtifacts) {
+            renderArtifacts(job.artifacts || []);
 
-        const reportLinks = deriveReportLinksFromArtifacts(job.artifacts || []);
-        if (reportLinks.detectUrl || reportLinks.analyzeUrl) {
-            applyReportLinks(reportLinks.detectUrl, reportLinks.analyzeUrl);
-        } else if (selectedAudioPath) {
-            loadArtifactsForSelectedAudio().catch(function () {
-                // Keep silent; status line already reflects job updates.
-            });
+            const reportLinks = deriveReportLinksFromArtifacts(job.artifacts || []);
+            if (reportLinks.detectUrl || reportLinks.analyzeUrl) {
+                applyReportLinks(reportLinks.detectUrl, reportLinks.analyzeUrl);
+            } else if (selectedAudioPath) {
+                loadArtifactsForSelectedAudio().catch(function () {
+                    // Keep silent; status line already reflects job updates.
+                });
+            }
         }
 
         if (
@@ -1033,7 +1611,7 @@
             updateNextButtonState();
         }
 
-        if (job.status === "queued" || job.status === "running") {
+        if (isRunning) {
             setBusy(true);
             cancelBtn.disabled = false;
         } else {
@@ -1050,7 +1628,7 @@
     function startPolling(jobId) {
         if (pollHandle) clearInterval(pollHandle);
         pollHandle = setInterval(function () {
-            refreshJob(jobId).catch(function (err) {
+            refreshJob(jobId, { refreshArtifacts: false }).catch(function (err) {
                 setStatus("Polling error: " + err.message);
             });
         }, 1000);
@@ -1071,9 +1649,14 @@
 
     runBtn.addEventListener("click", async function () {
         try {
+            if (isRecordingInProgress()) {
+                throw new Error("Stop recording before submitting the preprocess job.");
+            }
             captureDraftForCurrentMode();
             const mode = modeSelect.value;
+            enforceDetectSkipSeparationRules();
             const params = collectParamsOrThrow();
+            validateClientSideSubmitOrThrow(mode, params);
             const payload = {
                 mode: mode,
                 params: params,
@@ -1089,7 +1672,7 @@
             artifactListEl.textContent = "";
             applyReportLinks(null, null);
             startPolling(job.job_id);
-            await refreshJob(job.job_id);
+            await refreshJob(job.job_id, { refreshArtifacts: false });
         } catch (err) {
             setStatus("Error: " + err.message);
         }
@@ -1097,15 +1680,19 @@
 
     if (nextBtn) {
         nextBtn.addEventListener("click", async function () {
-            if (!pendingNextJobId || isBusy) return;
+            if (isBusy) return;
             try {
                 captureDraftForCurrentMode();
-                const logRes = await fetch("/api/jobs/" + pendingNextJobId + "/logs");
-                if (!logRes.ok) {
-                    throw new Error("Failed to fetch logs for Next transition.");
+                let suggestion = pendingNextSuggestion;
+                if (!suggestion) {
+                    if (!pendingNextJobId) return;
+                    const logRes = await fetch("/api/jobs/" + pendingNextJobId + "/logs");
+                    if (!logRes.ok) {
+                        throw new Error("Failed to fetch logs for Next transition.");
+                    }
+                    const logsPayload = await logRes.json();
+                    suggestion = parseSuggestedCommand(logsPayload.logs || []);
                 }
-                const logsPayload = await logRes.json();
-                const suggestion = parseSuggestedCommand(logsPayload.logs || []);
                 if (!suggestion) {
                     setStatus("Next: no suggested command found yet. Wait for logs and retry.");
                     return;
@@ -1164,7 +1751,7 @@
                 artifactListEl.textContent = "";
                 applyReportLinks(null, null);
                 startPolling(job.job_id);
-                await refreshJob(job.job_id);
+                await refreshJob(job.job_id, { refreshArtifacts: false });
             } catch (err) {
                 setStatus("Batch error: " + err.message);
             }
@@ -1205,6 +1792,9 @@
     schemaForms.addEventListener("change", captureDraftForCurrentMode);
     extraArgsEl.addEventListener("input", captureDraftForCurrentMode);
     extraArgsEl.addEventListener("change", captureDraftForCurrentMode);
+    window.addEventListener("beforeunload", function () {
+        stopActiveRecording(true);
+    });
 
     loadSchema(modeSelect.value).catch(function (err) {
         setStatus("Schema load error: " + err.message);

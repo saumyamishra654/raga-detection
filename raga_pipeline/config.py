@@ -14,6 +14,9 @@ from typing import List, Optional, Sequence
 
 
 VALID_MODES = {"preprocess", "detect", "analyze"}
+VALID_PREPROCESS_INGESTS = {"youtube", "record"}
+VALID_PREPROCESS_RECORD_MODES = {"song", "tanpura_vocal"}
+TANPURA_KEYS = ["A", "Bb", "B", "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab"]
 
 
 def _clean_optional_str(value: Optional[str]) -> Optional[str]:
@@ -38,6 +41,10 @@ class PipelineConfig:
     filename_override: Optional[str] = None
     preprocess_start_time: Optional[str] = None
     preprocess_end_time: Optional[str] = None
+    preprocess_ingest: str = "youtube"  # "youtube" or "record"
+    preprocess_record_mode: str = "song"  # "song" or "tanpura_vocal"
+    preprocess_tanpura_key: Optional[str] = None
+    preprocess_recorded_audio: Optional[str] = None
 
     # separator settings
     separator_engine: str = "demucs"  # 'demucs' or 'spleeter'
@@ -55,9 +62,9 @@ class PipelineConfig:
     # instrument type - only used when source_type="instrumental" (affects tonic bias)
     instrument_type: str = "autodetect"  # "sitar", "sarod", "bansuri", "slide_guitar", "autodetect"
 
-    # skip stem separation - only effective when source_type="instrumental"
-    # when true, uses full audio as melody (for solo instrument recordings)
+    # skip stem separation (detect mode): use original audio directly for melody analysis
     skip_separation: bool = False
+    skip_separation_forced_composite: bool = False
 
     # pitch extraction confidence thresholds
     vocal_confidence: float = 0.98
@@ -132,8 +139,13 @@ class PipelineConfig:
     def __post_init__(self):
         """Validate and normalize paths."""
         self.audio_path = _clean_optional_str(self.audio_path)
+        self.yt_url = _clean_optional_str(self.yt_url)
         self.audio_dir = _clean_optional_str(self.audio_dir)
         self.filename_override = _clean_optional_str(self.filename_override)
+        self.preprocess_tanpura_key = _clean_optional_str(self.preprocess_tanpura_key)
+        self.preprocess_recorded_audio = _clean_optional_str(self.preprocess_recorded_audio)
+        self.tonic_override = _clean_optional_str(self.tonic_override)
+        self.raga_override = _clean_optional_str(self.raga_override)
 
         self.output_dir = os.path.abspath(self.output_dir)
         os.makedirs(self.output_dir, exist_ok=True)
@@ -142,16 +154,46 @@ class PipelineConfig:
             raise ValueError(f"Invalid mode '{self.mode}'. Expected one of: {sorted(VALID_MODES)}")
 
         if self.mode == "preprocess":
-            if not self.yt_url:
-                raise ValueError("Preprocess mode requires --yt")
             if not self.audio_dir:
                 raise ValueError("Preprocess mode requires --audio-dir")
             if not self.filename_override:
                 raise ValueError("Preprocess mode requires --filename")
+            if self.preprocess_ingest not in VALID_PREPROCESS_INGESTS:
+                raise ValueError(
+                    f"Invalid preprocess ingest '{self.preprocess_ingest}'. "
+                    f"Expected one of: {sorted(VALID_PREPROCESS_INGESTS)}"
+                )
+            if self.preprocess_record_mode not in VALID_PREPROCESS_RECORD_MODES:
+                raise ValueError(
+                    f"Invalid preprocess record mode '{self.preprocess_record_mode}'. "
+                    f"Expected one of: {sorted(VALID_PREPROCESS_RECORD_MODES)}"
+                )
 
             self.audio_dir = os.path.abspath(self.audio_dir)
             os.makedirs(self.audio_dir, exist_ok=True)
             self.audio_path = os.path.join(self.audio_dir, f"{self.filename_override}.mp3")
+
+            if self.preprocess_ingest == "youtube":
+                if not self.yt_url:
+                    raise ValueError("Preprocess mode with --ingest youtube requires --yt")
+            else:
+                if self.preprocess_start_time or self.preprocess_end_time:
+                    raise ValueError("--start-time and --end-time are only valid when --ingest youtube.")
+                if self.preprocess_record_mode == "tanpura_vocal" and not self.preprocess_tanpura_key:
+                    raise ValueError(
+                        "Preprocess mode with --record-mode tanpura_vocal requires --tanpura-key."
+                    )
+                if self.preprocess_tanpura_key and self.preprocess_tanpura_key not in TANPURA_KEYS:
+                    raise ValueError(
+                        f"Invalid --tanpura-key '{self.preprocess_tanpura_key}'. "
+                        f"Expected one of: {TANPURA_KEYS}"
+                    )
+                if self.preprocess_recorded_audio:
+                    self.preprocess_recorded_audio = os.path.abspath(self.preprocess_recorded_audio)
+                    if not os.path.isfile(self.preprocess_recorded_audio):
+                        raise FileNotFoundError(
+                            f"Recorded audio file not found: {self.preprocess_recorded_audio}"
+                        )
         else:
             if not self.audio_path:
                 raise ValueError(f"{self.mode.capitalize()} mode requires --audio/-a")
@@ -159,6 +201,18 @@ class PipelineConfig:
 
             if not os.path.isfile(self.audio_path):
                 raise FileNotFoundError(f"Audio file not found: {self.audio_path}")
+
+        if self.mode == "detect" and self.skip_separation:
+            tonic_tokens = [
+                token.strip()
+                for token in str(self.tonic_override or "").split(",")
+                if token.strip()
+            ]
+            if not tonic_tokens:
+                raise ValueError("Detect mode with --skip-separation requires --tonic.")
+            if self.melody_source != "composite":
+                self.melody_source = "composite"
+                self.skip_separation_forced_composite = True
 
         # auto-locate model and database if not specified
         if self.model_path is None:
@@ -268,7 +322,11 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
 
     # Miscellaneous
     parser.add_argument("--force", "-f", action="store_true", help="Force recompute pitch extraction (reuses existing stems if found)")
-    parser.add_argument("--skip-separation", action="store_true", help="Skip stem separation entirely (only valid for instrument-mode)")
+    parser.add_argument(
+        "--skip-separation",
+        action="store_true",
+        help="Detect mode only: skip stem separation (fast path). Uncheck this in UI to enable denoising via stem separation. Requires --tonic and forces --melody-source composite",
+    )
     parser.add_argument("--raga-db", help="Override path to raga database CSV")
 
 
@@ -330,14 +388,36 @@ def build_cli_parser() -> argparse.ArgumentParser:
     # --- Preprocess Mode ---
     preprocess_parser = subparsers.add_parser(
         "preprocess",
-        help="Download YouTube audio to a local MP3 and exit",
+        help="Ingest YouTube or recorded audio to a local MP3 and exit",
     )
-    preprocess_parser.add_argument("--yt", required=True, help="YouTube URL to download")
+    preprocess_parser.add_argument(
+        "--ingest",
+        choices=["youtube", "record"],
+        default="youtube",
+        help="Preprocess ingest path: download from YouTube or record/upload audio",
+    )
+    preprocess_parser.add_argument("--yt", help="YouTube URL to download (required when --ingest youtube)")
     preprocess_parser.add_argument("--audio-dir", default="../audio_test_files", help="Directory where downloaded MP3 should be saved")
     preprocess_parser.add_argument(
         "--filename",
         required=True,
         help="Output filename base (without extension); saved as <filename>.mp3",
+    )
+    preprocess_parser.add_argument(
+        "--record-mode",
+        choices=["song", "tanpura_vocal"],
+        default="song",
+        help="Recording mode for --ingest record",
+    )
+    preprocess_parser.add_argument(
+        "--tanpura-key",
+        choices=TANPURA_KEYS,
+        help="Tanpura key/tonic for tanpura_vocal recording mode",
+    )
+    preprocess_parser.add_argument(
+        "--recorded-audio",
+        help="Existing recorded audio path (used by local app uploads). "
+        "If omitted with --ingest record, CLI uses live microphone capture.",
     )
     preprocess_parser.add_argument("--start-time", help="Optional trim start time (SS, MM:SS, or HH:MM:SS)")
     preprocess_parser.add_argument("--end-time", help="Optional trim end time (SS, MM:SS, or HH:MM:SS)")
@@ -376,6 +456,10 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         filename_override=getattr(args, 'filename', None),
         preprocess_start_time=getattr(args, 'start_time', None),
         preprocess_end_time=getattr(args, 'end_time', None),
+        preprocess_ingest=getattr(args, 'ingest', 'youtube'),
+        preprocess_record_mode=getattr(args, 'record_mode', 'song'),
+        preprocess_tanpura_key=getattr(args, 'tanpura_key', None),
+        preprocess_recorded_audio=getattr(args, 'recorded_audio', None),
         separator_engine=getattr(args, 'separator', 'demucs'),
         demucs_model=getattr(args, 'demucs_model', 'htdemucs'),
         source_type=getattr(args, 'source_type', 'mixed'),

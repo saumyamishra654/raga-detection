@@ -151,6 +151,37 @@ main {
     display: none;
 }
 
+.preprocess-recording-wrap {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.preprocess-recording-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.preprocess-tanpura-wrap {
+    display: grid;
+    gap: 6px;
+}
+
+.preprocess-tanpura-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.preprocess-tanpura-select {
+    min-width: 220px;
+}
+
+.preprocess-recording-preview {
+    width: 100%;
+}
+
 input,
 select,
 textarea,

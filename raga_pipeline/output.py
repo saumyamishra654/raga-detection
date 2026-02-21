@@ -1287,42 +1287,51 @@ def _generate_ranking_section(candidates: pd.DataFrame) -> str:
 
 
 def _generate_audio_players_section(results: AnalysisResults) -> str:
-    """Generate audio players section with all 3 tracks."""
+    """Generate detection audio players section for available tracks only."""
     config = results.config
-    
-    # Get relative paths from stem_dir
-    vocals_rel = os.path.basename(config.vocals_path)
-    accomp_rel = os.path.basename(config.accompaniment_path)
+
     original_audio_path = _require_audio_path(config)
     original_rel = os.path.relpath(original_audio_path, config.stem_dir)
     original_local = os.path.basename(original_audio_path)
-    original_sources = _build_audio_source_tags(original_local, original_rel)
-    vocals_sources = _build_audio_source_tags(vocals_rel, vocals_rel)
-    accomp_sources = _build_audio_source_tags(accomp_rel, accomp_rel)
-    original_id = "detection-original-player"
-    vocals_id = "detection-vocals-player"
-    accomp_id = "detection-accomp-player"
-    
+
+    tracks: List[Tuple[str, str, str]] = [
+        ("Original", "detection-original-player", _build_audio_source_tags(original_local, original_rel))
+    ]
+
+    vocals_path = config.vocals_path
+    if os.path.isfile(vocals_path):
+        vocals_rel = os.path.basename(vocals_path)
+        tracks.append(
+            ("Vocals", "detection-vocals-player", _build_audio_source_tags(vocals_rel, vocals_rel))
+        )
+
+    accompaniment_path = config.accompaniment_path
+    if os.path.isfile(accompaniment_path):
+        accomp_rel = os.path.basename(accompaniment_path)
+        tracks.append(
+            ("Accompaniment", "detection-accomp-player", _build_audio_source_tags(accomp_rel, accomp_rel))
+        )
+
+    track_cards = "".join(
+        f'''
+            <div>
+                <p><strong>{escape(label)}</strong></p>
+                <audio id="{audio_id}" controls style="width:100%">{sources}</audio>
+            </div>
+        '''
+        for label, audio_id, sources in tracks
+    )
+    audio_ids = [audio_id for _, audio_id, _ in tracks]
+
     return f'''
     <section id="audio-tracks">
         <h2>Audio Tracks</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
-            <div>
-                <p><strong>Original</strong></p>
-                <audio id="{original_id}" controls style="width:100%">{original_sources}</audio>
-            </div>
-            <div>
-                <p><strong>Vocals</strong></p>
-                <audio id="{vocals_id}" controls style="width:100%">{vocals_sources}</audio>
-            </div>
-            <div>
-                <p><strong>Accompaniment</strong></p>
-                <audio id="{accomp_id}" controls style="width:100%">{accomp_sources}</audio>
-            </div>
+            {track_cards}
         </div>
         <script>
             (function() {{
-                var audioIds = {json.dumps([original_id, vocals_id, accomp_id])};
+                var audioIds = {json.dumps(audio_ids)};
                 audioIds.forEach(function(activeId) {{
                     var activeEl = document.getElementById(activeId);
                     if (!activeEl) return;
@@ -2071,6 +2080,7 @@ def plot_pitch_wide_to_base64_with_legend(
     transcription_smoothing_ms: float = 70.0,
     transcription_min_duration: float = 0.04,
     transcription_derivative_threshold: float = 2.0,
+    transcription_energy_threshold: float = 0.0,
     figsize_width: int = 80, 
     figsize_height: int = 7, 
     dpi: int = 100, 
@@ -2213,6 +2223,8 @@ def plot_pitch_wide_to_base64_with_legend(
         timestamps=timestamps,
         voicing_mask=voiced_mask, # Note: voiced_mask is boolean array same length as pitch_hz
         tonic=tonic_midi_base,
+        energy=pitch_data.energy,
+        energy_threshold=transcription_energy_threshold,
         snap_mode='chromatic', # Default to chromatic for now
         smoothing_sigma_ms=transcription_smoothing_ms,
         derivative_threshold=transcription_derivative_threshold,
@@ -2375,6 +2387,7 @@ def create_scrollable_pitch_plot_html(
     transcription_smoothing_ms: float = 70.0,
     transcription_min_duration: float = 0.04,
     transcription_derivative_threshold: float = 2.0,
+    transcription_energy_threshold: float = 0.0,
     show_rms_overlay: bool = True,
     overlay_energy: Optional[np.ndarray] = None,
     overlay_timestamps: Optional[np.ndarray] = None,
@@ -2389,6 +2402,7 @@ def create_scrollable_pitch_plot_html(
         transcription_smoothing_ms=transcription_smoothing_ms,
         transcription_min_duration=transcription_min_duration,
         transcription_derivative_threshold=transcription_derivative_threshold,
+        transcription_energy_threshold=transcription_energy_threshold,
         show_rms_overlay=show_rms_overlay,
         overlay_energy=overlay_energy,
         overlay_timestamps=overlay_timestamps,
@@ -3237,6 +3251,7 @@ def generate_analysis_report(
                         transcription_smoothing_ms=results.config.transcription_smoothing_ms,
                         transcription_min_duration=results.config.transcription_min_duration,
                         transcription_derivative_threshold=results.config.transcription_derivative_threshold,
+                        transcription_energy_threshold=results.config.energy_threshold,
                         show_rms_overlay=getattr(results.config, 'show_rms_overlay', True),
                         overlay_energy=e_pitch.energy,
                         overlay_timestamps=e_pitch.timestamps,
@@ -3251,7 +3266,7 @@ def generate_analysis_report(
                 overlay_parts.append(f'''
                 <div class="energy-overlay-panel" id="overlay-panel-{key}-{e_key}" data-track-key="{key}" data-energy-key="{e_key}" style="display: {'block' if overlay_visible else 'none'};">
                     <h3>Pitch: {label} | Amplitude Overlay: {e_label}</h3>
-                    <p style="font-size: 0.9em; color: #8b949e;">Pitch stays on <strong>{label}</strong>. Energy overlay is from <strong>{e_label}</strong>. Phrase spans are highlighted in yellow.</p>
+                    <p style="font-size: 0.9em; color: #8b949e;">Pitch track uses <strong>{label}</strong>; amplitude overlay uses <strong>{e_label}</strong>. Stationary transcription overlays are orange, inflections are red, and phrase spans are highlighted in yellow.</p>
                     {scroll_plot_html}
                 </div>
                 ''')

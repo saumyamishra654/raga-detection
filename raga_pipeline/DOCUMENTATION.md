@@ -3,7 +3,7 @@
 User-facing documentation for running the raga detection pipeline.
 
 This repository is driven by `driver.py` and a thin wrapper script `run_pipeline.sh`. The CLI is organized around three subcommands:
-- `preprocess`: download YouTube audio to an MP3
+- `preprocess`: ingest YouTube or recorded audio to an MP3
 - `detect`: Phase 1 detection (raga/tonic candidates + summary report)
 - `analyze`: Phase 2 analysis (requires tonic+raga; generates the final report)
 
@@ -24,7 +24,8 @@ System dependencies:
 Optional dependencies:
 - Demucs (for `--separator demucs`, default)
 - Spleeter (for `--separator spleeter`)
-- `yt-dlp` (Python package; required for `preprocess --yt`)
+- `yt-dlp` (Python package; required for `preprocess --ingest youtube --yt`)
+- `ffplay` (required for CLI tanpura playback in `preprocess --ingest record --record-mode tanpura_vocal`)
 
 ---
 
@@ -66,6 +67,8 @@ Design notes:
 - Parses printed "next step" commands from logs and auto-loads suggested params into the next mode form (`preprocess -> detect`, `detect -> analyze`).
 - Optional fields can be left blank to fall back to parser defaults; dependent fields are conditionally shown based on related selections.
 - Detect/analyze `--audio` input supports drag-and-drop uploads; uploaded files are saved in local app storage and the resulting absolute path is used by pipeline runs.
+- Preprocess supports backend `ffmpeg` microphone recording and writes saved recording paths to `--recorded-audio`.
+- Tanpura catalog API (`/api/tanpura-tracks`) powers in-app tanpura playback during preprocess tanpura-vocal recording.
 - Detect/analyze `--audio` also includes a directory-driven file picker: default source directory is `../audio_test_files`, you can override it, and files are listed as dropdown options.
 - The chosen audio directory is saved in browser local storage for future local app sessions.
 - When an audio file is selected, local app auto-discovers matching artifacts by filename stem in output folders and loads them.
@@ -79,27 +82,53 @@ Design notes:
 
 ### Preprocess (`preprocess`)
 
-Downloads audio from a YouTube URL and saves an MP3 to `--audio-dir`.
+Preprocess supports two ingest paths:
+- `--ingest youtube` (default): download from YouTube.
+- `--ingest record`: ingest an existing recorded file (`--recorded-audio`) or use live CLI microphone capture.
+
+Both paths save `<audio-dir>/<filename>.mp3`.
 
 ```bash
+# YouTube ingest
 ./run_pipeline.sh preprocess \
+  --ingest youtube \
   --yt "https://www.youtube.com/watch?v=..." \
   --filename "my_song_name" \
   --audio-dir "../audio_test_files" \
   --start-time "0:30" \
   --end-time "2:00"
+
+# Record ingest from existing recorded file
+./run_pipeline.sh preprocess \
+  --ingest record \
+  --record-mode song \
+  --recorded-audio "/absolute/path/to/recording.webm" \
+  --filename "my_recording"
+
+# Tanpura-assisted vocal recording ingest
+./run_pipeline.sh preprocess \
+  --ingest record \
+  --record-mode tanpura_vocal \
+  --tanpura-key "A" \
+  --recorded-audio "/absolute/path/to/recording.webm" \
+  --filename "a_tanpura_take"
 ```
 
 Arguments:
-- `--yt` (required): YouTube URL
+- `--ingest` (`youtube` or `record`, default: `youtube`)
+- `--yt` (required when `--ingest youtube`): YouTube URL
 - `--filename` (required): output base name (saved as `<filename>.mp3`)
 - `--audio-dir` (default: `../audio_test_files`): output directory
-- `--start-time`, `--end-time` (optional): trim range; supports `SS`, `MM:SS`, `HH:MM:SS`
+- `--record-mode` (`song` or `tanpura_vocal`, default: `song`; used for `--ingest record`)
+- `--tanpura-key` (`A,Bb,B,C,Db,D,Eb,E,F,Gb,G,Ab`; required when `--record-mode tanpura_vocal`)
+- `--recorded-audio` (optional): existing recorded audio path. If omitted with `--ingest record`, CLI records from microphone interactively (macOS-first).
+- `--start-time`, `--end-time` (optional): trim range; valid only for `--ingest youtube`; supports `SS`, `MM:SS`, `HH:MM:SS`
 - `--output` / `-o` (default: `batch_results`): only used as the suggested `--output` in the printed next-step `detect` command
 
 Behavior notes:
 - Fails if the target MP3 already exists.
-- Validates trim times against the downloaded track duration.
+- Validates trim times against downloaded track duration for YouTube ingest.
+- For `tanpura_vocal`, printed detect command includes `--tonic "<tanpura-key>"`.
 - Prints a copyable `detect` command for the next step.
 
 ### Detect (`detect`)
@@ -139,7 +168,9 @@ Common arguments (detect + analyze):
 - `--bias-rotation`: disables histogram bias rotation (bias rotation is enabled by default)
 - `--force` / `-f`: force pitch recomputation (stems are reused if present)
 - `--raga-db`: override the raga database CSV path
-- `--skip-separation`: currently parsed but not used by `driver.py` (stem separation still runs)
+- `--skip-separation`: detect-only fast path that skips stem separation and uses original audio directly for melody analysis
+  - Requires `--tonic`
+  - Auto-forces `--melody-source composite`
 
 Detect-only arguments:
 - `--tonic`: force tonic constraint (comma-separated allowed, e.g. `C,D#`)
@@ -154,7 +185,7 @@ Outputs (written into the stem directory):
   - `composite_pitch_data.csv` (always computed in detect)
   - `melody_pitch_data.csv` (or `vocals_pitch_data.csv` when `--source-type vocal`)
   - `accompaniment_pitch_data.csv` (when accompaniment stem exists)
-- stems:
+- stems (when separation is enabled):
   - `vocals.mp3`, `accompaniment.mp3`
 
 At the end of `detect`, the pipeline prints a copyable `analyze` command using the top candidate.
@@ -186,6 +217,7 @@ Analyze-specific arguments:
 
 Prerequisite:
 - `analyze` expects cached pitch data in the stem directory. Run `detect` first with matching `--audio`, `--output`, `--separator`, and `--demucs-model`.
+- For skip-separation detect runs, analyze falls back to `composite_pitch_data.csv` when `melody_pitch_data.csv`/`vocals_pitch_data.csv` is absent.
 
 Primary output:
 - `analysis_report.html` in the stem directory

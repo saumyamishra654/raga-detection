@@ -414,17 +414,20 @@ def transcribe_to_notes(
     
     # Add Stationary Notes
     for evt in events:
+        snapped_pitch = float(evt.snapped_midi)
         n = Note(
             start=evt.start,
             end=evt.end,
-            pitch_midi=evt.pitch_midi,
-            pitch_hz=float(librosa.midi_to_hz(evt.pitch_midi)),
+            # Use snapped pitch as canonical note pitch so downstream correction
+            # and phrase logic operate on the same values shown in overlays.
+            pitch_midi=snapped_pitch,
+            pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
             confidence=1.0, 
             sargam=evt.sargam, # Pre-calculated
             energy=evt.energy
         )
         # Keep pitch class handy for downstream analysis.
-        n.pitch_class = int(round(evt.snapped_midi)) % 12
+        n.pitch_class = int(round(snapped_pitch)) % 12
         final_notes.append(n)
         
     # Add Inflection Notes
@@ -441,15 +444,16 @@ def transcribe_to_notes(
         )
         if not keep_note or snapped is None:
             continue
+        snapped_pitch = float(snapped)
         
         n = Note(
             start=t,
             end=t + point_duration,
-            pitch_midi=p,
-            pitch_hz=float(librosa.midi_to_hz(p)),
+            pitch_midi=snapped_pitch,
+            pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
             confidence=0.8, # Lower confidence for transient points
             sargam=sargam,
-            pitch_class=int(round(snapped)) % 12
+            pitch_class=int(round(snapped_pitch)) % 12
         )
         final_notes.append(n)
         

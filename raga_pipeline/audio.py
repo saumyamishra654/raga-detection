@@ -10,18 +10,55 @@ Note: torch and demucs are imported lazily to avoid import errors if not install
 """
 
 from dataclasses import dataclass, field
+import inspect
 from pathlib import Path
-from typing import Any, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 import glob
 import os
 import re
 import shutil
 import subprocess
+import sys
 import numpy as np
 import pandas as pd
 import librosa
 
 from .config import PipelineConfig
+
+TANPURA_TRACKS: Dict[str, str] = {
+    "A": "A.mp3",
+    "Bb": "Bb.mp3",
+    "B": "B.mp3",
+    "C": "C.mp3",
+    "Db": "Db.mp3",
+    "D": "D.mp3",
+    "Eb": "Eb.mp3",
+    "E": "E.mp3",
+    "F": "F.mp3",
+    "Gb": "Gb.mp3",
+    "G": "G.mp3",
+    "Ab": "Ab.mp3",
+}
+
+_TANPURA_KEY_ALIASES: Dict[str, str] = {
+    "a": "A",
+    "a#": "Bb",
+    "bb": "Bb",
+    "b": "B",
+    "c": "C",
+    "c#": "Db",
+    "db": "Db",
+    "d": "D",
+    "d#": "Eb",
+    "eb": "Eb",
+    "e": "E",
+    "f": "F",
+    "f#": "Gb",
+    "gb": "Gb",
+    "g": "G",
+    "g#": "Ab",
+    "ab": "Ab",
+}
 
 
 @dataclass
@@ -345,6 +382,483 @@ def download_youtube_audio(
     return target_mp3_path
 
 
+def get_tanpura_tracks_dir() -> Path:
+    """Return the absolute tanpura asset directory."""
+    return (Path(__file__).resolve().parent.parent / "tanpura").resolve()
+
+
+def normalize_tanpura_key(tanpura_key: str) -> str:
+    """Normalize tanpura key aliases to the canonical key names."""
+    key = tanpura_key.strip().replace("♭", "b").replace("♯", "#").lower()
+    if key in _TANPURA_KEY_ALIASES:
+        return _TANPURA_KEY_ALIASES[key]
+    raise ValueError(
+        f"Invalid tanpura key '{tanpura_key}'. "
+        f"Expected one of: {', '.join(TANPURA_TRACKS.keys())}"
+    )
+
+
+def resolve_tanpura_track_path(tanpura_key: str, require_exists: bool = True) -> str:
+    """Resolve tanpura key to track path."""
+    canonical_key = normalize_tanpura_key(tanpura_key)
+    filename = TANPURA_TRACKS[canonical_key]
+    path = get_tanpura_tracks_dir() / filename
+    if require_exists and not path.is_file():
+        raise FileNotFoundError(f"Tanpura track not found for key {canonical_key}: {path}")
+    return str(path.resolve())
+
+
+def get_tonic_from_tanpura_key(tanpura_key: str) -> str:
+    """Return canonical tonic token from tanpura selection."""
+    return normalize_tanpura_key(tanpura_key)
+
+
+def list_tanpura_tracks(require_exists: bool = True) -> List[Dict[str, str]]:
+    """List tanpura track metadata in canonical key order."""
+    tracks: List[Dict[str, str]] = []
+    for key in TANPURA_TRACKS.keys():
+        path = get_tanpura_tracks_dir() / TANPURA_TRACKS[key]
+        if require_exists and not path.is_file():
+            continue
+        tracks.append(
+            {
+                "key": key,
+                "label": f"{key} Tanpura",
+                "path": str(path.resolve()),
+                "filename": path.name,
+            }
+        )
+    return tracks
+
+
+def _build_preprocess_target_mp3_path(audio_dir: str, filename_base: str) -> str:
+    """Build preprocess output MP3 path and validate filename/audio_dir."""
+    if not audio_dir:
+        raise ValueError("Audio directory is required.")
+    if not filename_base:
+        raise ValueError("Filename is required.")
+
+    target_dir = os.path.abspath(audio_dir)
+    os.makedirs(target_dir, exist_ok=True)
+    safe_base = _sanitize_filename_base(filename_base)
+    return os.path.join(target_dir, f"{safe_base}.mp3")
+
+
+def _encode_audio_to_mp3(input_path: str, output_mp3_path: str) -> None:
+    """Encode an audio file to MP3 using ffmpeg."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError("ffmpeg is required for audio conversion but was not found in PATH.")
+
+    subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            input_path,
+            "-codec:a",
+            "libmp3lame",
+            "-q:a",
+            "2",
+            output_mp3_path,
+        ],
+        check=True,
+    )
+
+
+def _list_avfoundation_audio_devices() -> List[Tuple[str, str]]:
+    """Return available macOS avfoundation audio input devices as (index, name)."""
+    if sys.platform != "darwin":
+        return []
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return []
+
+    proc = subprocess.run(
+        [
+            ffmpeg,
+            "-f",
+            "avfoundation",
+            "-list_devices",
+            "true",
+            "-i",
+            "",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    merged_output = "\n".join([proc.stdout or "", proc.stderr or ""])
+
+    devices: List[Tuple[str, str]] = []
+    in_audio_section = False
+    for raw_line in merged_output.splitlines():
+        line = raw_line.strip()
+        lower = line.lower()
+        if "avfoundation audio devices" in lower:
+            in_audio_section = True
+            continue
+        if "avfoundation video devices" in lower:
+            in_audio_section = False
+            continue
+        if not in_audio_section:
+            continue
+
+        matches = re.findall(r"\[(\d+)\]\s+(.+)$", line)
+        if not matches:
+            continue
+        index, name = matches[-1]
+        name = name.strip()
+        if not name:
+            continue
+        devices.append((index, name))
+
+    deduped: List[Tuple[str, str]] = []
+    seen: set[Tuple[str, str]] = set()
+    for item in devices:
+        if item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
+def _auto_select_avfoundation_audio_device() -> str:
+    """Choose a likely microphone input index, with env override support."""
+    env_override = os.environ.get("RAGA_AVFOUNDATION_AUDIO_DEVICE")
+    if env_override is not None:
+        cleaned = env_override.strip()
+        if cleaned:
+            return cleaned
+
+    devices = _list_avfoundation_audio_devices()
+    if not devices:
+        return "0"
+
+    def _score(item: Tuple[str, str]) -> Tuple[int, int]:
+        idx_txt, name = item
+        lname = name.lower()
+        score = 0
+
+        if any(tok in lname for tok in ["microphone", "mic", "input", "airpods", "headset", "built-in", "macbook"]):
+            score += 40
+        if any(tok in lname for tok in ["blackhole", "loopback", "aggregate", "soundflower"]):
+            score -= 80
+        if any(tok in lname for tok in ["speaker", "output", "monitor"]):
+            score -= 30
+
+        try:
+            idx_num = int(idx_txt)
+        except ValueError:
+            idx_num = 9999
+
+        return (score, -idx_num)
+
+    best = max(devices, key=_score)
+    return best[0]
+
+
+def ingest_recorded_audio_file(
+    recorded_audio_path: str,
+    audio_dir: str,
+    filename_base: str,
+) -> str:
+    """
+    Copy/convert an existing recorded audio file into preprocess output MP3.
+    """
+    if not recorded_audio_path:
+        raise ValueError("Recorded audio path is required.")
+
+    source_path = os.path.abspath(recorded_audio_path)
+    if not os.path.isfile(source_path):
+        raise FileNotFoundError(f"Recorded audio file not found: {source_path}")
+
+    target_mp3_path = _build_preprocess_target_mp3_path(audio_dir, filename_base)
+    source_realpath = os.path.realpath(source_path)
+    target_realpath = os.path.realpath(target_mp3_path)
+    if source_realpath == target_realpath:
+        if source_path.lower().endswith(".mp3"):
+            return target_mp3_path
+        raise ValueError(
+            "Recorded audio source equals target path but is not MP3. "
+            "Use a different --filename or provide a different --recorded-audio path."
+        )
+
+    if os.path.exists(target_mp3_path):
+        raise FileExistsError(
+            f"Target audio already exists: {target_mp3_path}. "
+            "Choose a different --filename or remove the existing file."
+        )
+
+    if source_path.lower().endswith(".mp3"):
+        shutil.copy2(source_path, target_mp3_path)
+    else:
+        _encode_audio_to_mp3(source_path, target_mp3_path)
+
+    return target_mp3_path
+
+
+def play_tanpura_loop(tanpura_key: str) -> subprocess.Popen[str]:
+    """Start looping tanpura playback and return the process handle."""
+    ffplay = shutil.which("ffplay")
+    if not ffplay:
+        raise RuntimeError("ffplay is required for tanpura playback but was not found in PATH.")
+
+    tanpura_path = resolve_tanpura_track_path(tanpura_key, require_exists=True)
+    return subprocess.Popen(
+        [
+            ffplay,
+            "-nodisp",
+            "-loglevel",
+            "error",
+            "-autoexit",
+            "-loop",
+            "0",
+            tanpura_path,
+        ],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+
+
+def _stop_process(proc: Optional[subprocess.Popen[str]], timeout_s: float = 5.0) -> None:
+    """Stop a subprocess gracefully."""
+    if proc is None or proc.poll() is not None:
+        return
+
+    try:
+        proc.terminate()
+        proc.wait(timeout=timeout_s)
+    except Exception:
+        try:
+            proc.kill()
+            proc.wait(timeout=2.0)
+        except Exception:
+            pass
+
+
+def _stop_ffmpeg_recording(proc: subprocess.Popen[str], timeout_s: float = 8.0) -> str:
+    """Request graceful ffmpeg stop and return stderr output."""
+    if proc.poll() is not None:
+        return ""
+
+    stderr_output = ""
+    try:
+        if proc.stdin is not None:
+            proc.stdin.write("q\n")
+            proc.stdin.flush()
+        proc.wait(timeout=timeout_s)
+    except Exception:
+        _stop_process(proc, timeout_s=2.0)
+
+    try:
+        if proc.stderr is not None:
+            stderr_output = proc.stderr.read().strip()
+    except Exception:
+        stderr_output = ""
+    return stderr_output
+
+
+@dataclass
+class MicrophoneRecordingSession:
+    """Handle for an active ffmpeg microphone recording session."""
+
+    target_mp3_path: str
+    temp_wav_path: str
+    record_proc: subprocess.Popen[str]
+    tanpura_proc: Optional[subprocess.Popen[str]] = None
+    tanpura_key: Optional[str] = None
+    audio_input_device: Optional[str] = None
+    record_stderr: str = ""
+    _stopped: bool = False
+
+    def stop(self) -> str:
+        """Stop recording, encode to MP3, and return final output path."""
+        if self._stopped:
+            return self.target_mp3_path
+
+        if self.record_proc.poll() is None:
+            self.record_stderr = _stop_ffmpeg_recording(self.record_proc)
+        _stop_process(self.tanpura_proc, timeout_s=2.0)
+
+        if self.record_proc.returncode not in (0, None):
+            detail = self.record_stderr or "unknown ffmpeg recording error"
+            self.cancel()
+            raise RuntimeError(
+                "Microphone recording failed. Check microphone permissions/device availability. "
+                f"ffmpeg said: {detail}"
+            )
+        if not os.path.exists(self.temp_wav_path) or os.path.getsize(self.temp_wav_path) == 0:
+            self.cancel()
+            raise RuntimeError(
+                "Recording did not produce audio data. Check microphone permissions and input device."
+            )
+
+        try:
+            _encode_audio_to_mp3(self.temp_wav_path, self.target_mp3_path)
+        finally:
+            if os.path.exists(self.temp_wav_path):
+                os.remove(self.temp_wav_path)
+
+        self._stopped = True
+        return self.target_mp3_path
+
+    def cancel(self) -> None:
+        """Cancel recording and cleanup temporary artifacts."""
+        if self.record_proc and self.record_proc.poll() is None:
+            try:
+                self.record_stderr = _stop_ffmpeg_recording(self.record_proc)
+            except Exception:
+                pass
+        _stop_process(self.tanpura_proc, timeout_s=2.0)
+        if os.path.exists(self.temp_wav_path):
+            try:
+                os.remove(self.temp_wav_path)
+            except Exception:
+                pass
+        self._stopped = True
+
+
+def start_microphone_recording_session(
+    audio_dir: str,
+    filename_base: str,
+    tanpura_key: Optional[str] = None,
+) -> MicrophoneRecordingSession:
+    """Start ffmpeg-based microphone recording and return an active session handle."""
+    if sys.platform != "darwin":
+        raise RuntimeError(
+            "Live microphone recording is currently supported only on macOS (Darwin). "
+            "Use --recorded-audio to ingest a pre-recorded file on this platform."
+        )
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError("ffmpeg is required for microphone recording but was not found in PATH.")
+
+    target_mp3_path = _build_preprocess_target_mp3_path(audio_dir, filename_base)
+    if os.path.exists(target_mp3_path):
+        raise FileExistsError(
+            f"Target audio already exists: {target_mp3_path}. "
+            "Choose a different --filename or remove the existing file."
+        )
+
+    canonical_tanpura: Optional[str] = None
+    if tanpura_key:
+        # Validate early for actionable errors.
+        canonical_tanpura = normalize_tanpura_key(tanpura_key)
+        resolve_tanpura_track_path(canonical_tanpura, require_exists=True)
+
+    temp_wav_path = f"{target_mp3_path}.record.tmp.wav"
+    tanpura_proc: Optional[subprocess.Popen[str]] = None
+    record_proc: Optional[subprocess.Popen[str]] = None
+
+    avfoundation_audio_input = _auto_select_avfoundation_audio_device()
+
+    try:
+        if canonical_tanpura:
+            tanpura_proc = play_tanpura_loop(canonical_tanpura)
+
+        record_proc = subprocess.Popen(
+            [
+                ffmpeg,
+                "-y",
+                "-loglevel",
+                "error",
+                "-f",
+                "avfoundation",
+                "-i",
+                f":{avfoundation_audio_input}",
+                "-ac",
+                "1",
+                "-ar",
+                "44100",
+                temp_wav_path,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        if record_proc.poll() is not None:
+            stderr_output = ""
+            try:
+                if record_proc.stderr is not None:
+                    stderr_output = record_proc.stderr.read().strip()
+            except Exception:
+                stderr_output = ""
+            raise RuntimeError(
+                "Microphone recorder failed to start. "
+                + (f"ffmpeg said: {stderr_output}" if stderr_output else "")
+            )
+    except Exception:
+        if record_proc and record_proc.poll() is None:
+            _stop_ffmpeg_recording(record_proc)
+        _stop_process(tanpura_proc, timeout_s=2.0)
+        if os.path.exists(temp_wav_path):
+            try:
+                os.remove(temp_wav_path)
+            except Exception:
+                pass
+        raise
+
+    if record_proc is None:
+        _stop_process(tanpura_proc, timeout_s=2.0)
+        raise RuntimeError("Microphone recorder failed to start.")
+
+    return MicrophoneRecordingSession(
+        target_mp3_path=target_mp3_path,
+        temp_wav_path=temp_wav_path,
+        record_proc=record_proc,
+        tanpura_proc=tanpura_proc,
+        tanpura_key=canonical_tanpura,
+        audio_input_device=avfoundation_audio_input,
+    )
+
+
+def record_microphone_audio_interactive(
+    audio_dir: str,
+    filename_base: str,
+    tanpura_key: Optional[str] = None,
+) -> str:
+    """
+    Record microphone audio in CLI mode (macOS-only in current iteration).
+    """
+    session: Optional[MicrophoneRecordingSession] = None
+
+    try:
+        print("[PREPROCESS] CLI recording mode (macOS).")
+        print("[PREPROCESS] Press Enter to start microphone recording.")
+        input()
+
+        session = start_microphone_recording_session(
+            audio_dir=audio_dir,
+            filename_base=filename_base,
+            tanpura_key=tanpura_key,
+        )
+        if session.audio_input_device:
+            print(f"[PREPROCESS] Using microphone input device: {session.audio_input_device}")
+        if session.tanpura_key:
+            print(f"[PREPROCESS] Starting tanpura playback: {session.tanpura_key}")
+
+        print("[PREPROCESS] Recording... Press Enter to stop.")
+        input()
+        return session.stop()
+    except KeyboardInterrupt as exc:
+        if session:
+            session.cancel()
+        raise RuntimeError("Recording cancelled by user.") from exc
+    except Exception:
+        if session:
+            session.cancel()
+        raise
+
+
 # =============================================================================
 # STEM SEPARATION
 # =============================================================================
@@ -418,7 +932,15 @@ def _separate_demucs(
     import scipy.io.wavfile as wavfile
 
     if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            # MPS kernels are still incomplete for some ops; allow transparent CPU fallback.
+            os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+            device = "mps"
+        else:
+            device = "cpu"
+    print(f"[DEMUCS] Using device: {device}")
 
     print(f"[DEMUCS] Loading model: {model_name}...")
     model = get_model(model_name)
@@ -628,6 +1150,96 @@ def _fit_array_to_length(values: np.ndarray, target_len: int, fill_value: float 
 # PITCH EXTRACTION
 # =============================================================================
 
+def _preferred_swiftf0_device() -> str | None:
+    """
+    Pick a preferred accelerator for SwiftF0 when its API supports device control.
+    Priority:
+      1) RAGA_SWIFTF0_DEVICE env override
+      2) CUDA
+      3) Apple Metal (MPS)
+      4) CPU
+    """
+    env_override = os.environ.get("RAGA_SWIFTF0_DEVICE")
+    if env_override:
+        cleaned = env_override.strip()
+        if cleaned:
+            return cleaned
+
+    try:
+        import torch
+    except Exception:
+        return None
+
+    if torch.cuda.is_available():
+        return "cuda"
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        # Keep parity with Demucs behavior: allow incomplete MPS kernels to fall back.
+        os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+        return "mps"
+    return "cpu"
+
+
+def _build_swiftf0_detector(fmin: float, fmax: float, confidence_threshold: float):
+    """Instantiate SwiftF0, opting into an accelerator if the installed API supports it."""
+    from swift_f0 import SwiftF0
+
+    base_kwargs: Dict[str, Any] = {
+        "fmin": fmin,
+        "fmax": fmax,
+        "confidence_threshold": confidence_threshold,
+    }
+    detector_kwargs: Dict[str, Any] = dict(base_kwargs)
+
+    preferred_device = _preferred_swiftf0_device()
+    injected_device_arg = False
+
+    if preferred_device:
+        try:
+            init_sig = inspect.signature(SwiftF0.__init__)
+            params = init_sig.parameters
+        except Exception:
+            params = {}
+
+        if "device" in params:
+            detector_kwargs["device"] = preferred_device
+            injected_device_arg = True
+        elif "torch_device" in params:
+            detector_kwargs["torch_device"] = preferred_device
+            injected_device_arg = True
+        elif "use_mps" in params:
+            detector_kwargs["use_mps"] = preferred_device == "mps"
+            injected_device_arg = True
+        elif "use_gpu" in params:
+            detector_kwargs["use_gpu"] = preferred_device in {"cuda", "mps"}
+            injected_device_arg = True
+        else:
+            accepts_kwargs = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
+            )
+            if accepts_kwargs:
+                detector_kwargs["device"] = preferred_device
+                injected_device_arg = True
+
+    if injected_device_arg:
+        try:
+            detector = SwiftF0(**detector_kwargs)
+            print(f"[SWIFTF0] Using device hint: {preferred_device}")
+            return detector
+        except TypeError:
+            print(
+                "[SWIFTF0] Installed swift_f0 does not accept this device setting; "
+                "falling back to default backend."
+            )
+
+    elif preferred_device:
+        print(
+            "[SWIFTF0] Device selection is not exposed by this swift_f0 build; "
+            "using library default backend."
+        )
+
+    return SwiftF0(**base_kwargs)
+
+
 def extract_pitch(
     audio_path: str,
     output_dir: str,
@@ -671,9 +1283,13 @@ def extract_pitch(
     # Run SwiftF0
     print(f"[SWIFTF0] Extracting pitch from: {os.path.basename(audio_path)}")
 
-    from swift_f0 import SwiftF0, export_to_csv
+    from swift_f0 import export_to_csv
 
-    detector = SwiftF0(fmin=fmin, fmax=fmax, confidence_threshold=confidence_threshold)
+    detector = _build_swiftf0_detector(
+        fmin=fmin,
+        fmax=fmax,
+        confidence_threshold=confidence_threshold,
+    )
     result = detector.detect_from_file(audio_path)
 
     # Calculate Energy

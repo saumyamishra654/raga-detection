@@ -3,7 +3,7 @@
 driver file for raga detection pipeline - do not run directly, run using run_pipeline.sh
 
 modes:
-    preprocess - download YouTube audio to local MP3 and exit
+    preprocess - ingest YouTube/recorded audio to local MP3 and exit
     detect  - run phase 1 of analysis (histogram-based raga filtering/ranking)
     analyze - run phase 2 of analysis (note sequence analysis given tonic/raga)
 """
@@ -11,6 +11,7 @@ modes:
 import os
 import sys
 from pathlib import Path
+from time import perf_counter
 
 # add package to path if running directly
 if __name__ == "__main__":
@@ -27,6 +28,9 @@ from raga_pipeline.audio import (
     extract_pitch_from_config,
     load_audio_direct,
     download_youtube_audio,
+    ingest_recorded_audio_file,
+    record_microphone_audio_interactive,
+    get_tonic_from_tanpura_key,
 )
 from raga_pipeline.analysis import (
     compute_cent_histograms, 
@@ -79,6 +83,42 @@ from raga_pipeline.output import (
 from raga_pipeline import transcription
 
 
+def _format_seconds(seconds: float) -> str:
+    """Format seconds for compact logging."""
+    return f"{max(0.0, float(seconds)):.2f}s"
+
+
+def _safe_get_audio_duration_seconds(audio_path: str | None) -> float | None:
+    """Best-effort audio duration lookup for timing speedup metrics."""
+    if not audio_path:
+        return None
+    try:
+        duration = float(librosa.get_duration(path=audio_path))
+    except Exception as exc:
+        print(f"[TIMER] Could not read audio duration for speed metrics: {exc}")
+        return None
+    if duration <= 0 or not duration == duration:
+        return None
+    return duration
+
+
+def _print_timing(label: str, elapsed_s: float, audio_duration_s: float | None) -> None:
+    """Print elapsed time and song-relative realtime factor."""
+    if audio_duration_s is None or audio_duration_s <= 0:
+        print(f"[TIMER] {label}: {_format_seconds(elapsed_s)}")
+        return
+
+    ratio = elapsed_s / audio_duration_s
+    if elapsed_s <= 1e-9:
+        speedup_txt = "infx"
+    else:
+        speedup_txt = f"{(audio_duration_s / elapsed_s):.2f}x"
+    print(
+        f"[TIMER] {label}: {_format_seconds(elapsed_s)} | "
+        f"{ratio:.3f}x song length | {speedup_txt} realtime"
+    )
+
+
 def run_pipeline(
     config: PipelineConfig,
     run_histogram_analysis: bool = True,  # Legacy flag, kept for compatibility but effectively controlled by mode
@@ -87,14 +127,18 @@ def run_pipeline(
     """
     run the raga detection pipeline in the configured mode
 
-    - preprocess: Download YouTube audio to local MP3 and exit.
+    - preprocess: Ingest YouTube/recorded audio to local MP3 and exit.
     - detect: Run up to raga candidate scoring, generate summary report.
     - analyze: Load cached pitch, run sequence/phrase analysis using provided tonic/raga.
     
     Source Types:
     - mixed: uses stem separation (default)
-    - instrumental: skips stem separation if --skip-separation is set, otherwise uses stem separation
-    - vocal: uses stem separation (vocal isolation) + gender-specific tonic bias
+    - instrumental: uses stem separation + instrument-specific tonic bias
+    - vocal: uses stem separation + gender-specific tonic bias
+
+    Detect skip mode:
+    - --skip-separation: bypass stem separation and use original audio as the melody source
+      (requires --tonic, and melody_source is forced to composite).
     
     args:
         config: pipeline configuration
@@ -109,37 +153,77 @@ def run_pipeline(
         print("RAGA DETECTION PIPELINE")
         print("MODE: PREPROCESS")
         print("=" * 60)
-        print(f"YouTube URL: {config.yt_url}")
+        print(f"Ingest: {config.preprocess_ingest}")
         print(f"Audio Dir: {config.audio_dir}")
         print(f"Filename: {config.filename_override}.mp3")
-        print(f"Start Time: {config.preprocess_start_time or '0:00'}")
-        print(f"End Time: {config.preprocess_end_time or 'track end'}")
+        if config.preprocess_ingest == "youtube":
+            print(f"YouTube URL: {config.yt_url}")
+            print(f"Start Time: {config.preprocess_start_time or '0:00'}")
+            print(f"End Time: {config.preprocess_end_time or 'track end'}")
+        else:
+            print(f"Record Mode: {config.preprocess_record_mode}")
+            if config.preprocess_record_mode == "tanpura_vocal":
+                print(f"Tanpura Key: {config.preprocess_tanpura_key}")
+            print(
+                "Recorded Source: "
+                f"{config.preprocess_recorded_audio or 'live microphone capture'}"
+            )
         print()
 
+        preprocess_tonic: str | None = None
         try:
-            downloaded_audio_path = download_youtube_audio(
-                yt_url=config.yt_url or "",
-                audio_dir=config.audio_dir or "",
-                filename_base=config.filename_override or "",
-                start_time=config.preprocess_start_time,
-                end_time=config.preprocess_end_time,
-            )
+            if config.preprocess_ingest == "youtube":
+                downloaded_audio_path = download_youtube_audio(
+                    yt_url=config.yt_url or "",
+                    audio_dir=config.audio_dir or "",
+                    filename_base=config.filename_override or "",
+                    start_time=config.preprocess_start_time,
+                    end_time=config.preprocess_end_time,
+                )
+            else:
+                tanpura_key = (
+                    config.preprocess_tanpura_key
+                    if config.preprocess_record_mode == "tanpura_vocal"
+                    else None
+                )
+                if config.preprocess_recorded_audio:
+                    downloaded_audio_path = ingest_recorded_audio_file(
+                        recorded_audio_path=config.preprocess_recorded_audio,
+                        audio_dir=config.audio_dir or "",
+                        filename_base=config.filename_override or "",
+                    )
+                else:
+                    downloaded_audio_path = record_microphone_audio_interactive(
+                        audio_dir=config.audio_dir or "",
+                        filename_base=config.filename_override or "",
+                        tanpura_key=tanpura_key,
+                    )
+                if tanpura_key:
+                    preprocess_tonic = get_tonic_from_tanpura_key(tanpura_key)
         except Exception as exc:
             print(f"[PREPROCESS] ERROR: {exc}")
-            print("[PREPROCESS] Tip: try updating yt-dlp and retrying with a different/public video URL.")
+            if config.preprocess_ingest == "youtube":
+                print("[PREPROCESS] Tip: try updating yt-dlp and retrying with a different/public video URL.")
+            else:
+                print("[PREPROCESS] Tip: check microphone permissions, ffmpeg/ffplay availability, and tanpura key selection.")
             raise SystemExit(1)
 
         config.audio_path = downloaded_audio_path
 
-        print("[PREPROCESS] Download complete")
+        print("[PREPROCESS] Ingest complete")
         print(f"  Saved: {downloaded_audio_path}")
 
         print("\n" + "=" * 60)
-        print("Next: Run detect mode with downloaded audio:")
+        print("Next: Run detect mode with ingested audio:")
         print("=" * 60)
         print(f"./run_pipeline.sh detect \\")
         print(f'  --audio "{downloaded_audio_path}" \\')
-        print(f'  --output "{config.output_dir}"')
+        if preprocess_tonic:
+            print(f'  --output "{config.output_dir}" \\')
+            print(f'  --tonic "{preprocess_tonic}" \\')
+            print(f"  --skip-separation")
+        else:
+            print(f'  --output "{config.output_dir}"')
         print("=" * 60)
 
         return results
@@ -150,6 +234,10 @@ def run_pipeline(
     print("=" * 60)
     print(f"Audio: {config.filename}")
     print(f"Output: {config.output_dir}")
+    pipeline_start = perf_counter()
+    audio_duration_s = _safe_get_audio_duration_seconds(config.audio_path)
+    if audio_duration_s is not None:
+        print(f"[TIMER] Track duration: {_format_seconds(audio_duration_s)}")
     print()
     
     # check ragaDB path early
@@ -192,6 +280,7 @@ def run_pipeline(
     # PHASE 1: DETECTION (or load cache)
     # =========================================================================
     
+    step1_start = perf_counter()
     if config.mode == "analyze":
         # ANALYZE MODE: skip detection, load cache
         print("[PHASE 1] Skipping detection (Analyze Mode)")
@@ -213,13 +302,20 @@ def run_pipeline(
                 melody_pitch_csv = candidate_csv
                 break
 
-        if melody_prefix is None:
-            melody_prefix = preferred_prefix
-            melody_pitch_csv = os.path.join(config.stem_dir, f"{melody_prefix}_pitch_data.csv")
         accomp_pitch_csv = os.path.join(config.stem_dir, "accompaniment_pitch_data.csv")
         composite_pitch_csv = os.path.join(config.stem_dir, "composite_pitch_data.csv")
+        if melody_prefix is None and os.path.exists(composite_pitch_csv):
+            melody_prefix = "composite"
+            melody_pitch_csv = composite_pitch_csv
+            print("  [CACHE] Missing melody/vocals pitch cache; falling back to composite_pitch_data.csv")
+            if config.melody_source != "composite":
+                config.melody_source = "composite"
+                print("  [CACHE] Forcing melody_source=composite due to cache fallback")
+        elif melody_prefix is None:
+            melody_prefix = preferred_prefix
+            melody_pitch_csv = os.path.join(config.stem_dir, f"{melody_prefix}_pitch_data.csv")
         assert melody_pitch_csv is not None
-        
+
         if not os.path.exists(melody_pitch_csv):
             raise FileNotFoundError(
                 f"Cached melody pitch data not found at {melody_pitch_csv}. Run 'detect' phase first."
@@ -230,8 +326,9 @@ def run_pipeline(
         fmax = float(librosa.note_to_hz(config.fmax_note))
         
         # Load Primary Melody Stem
+        melody_audio_path = config.audio_path if melody_prefix == "composite" else config.vocals_path
         pitch_data_stems = extract_pitch(
-            audio_path=config.vocals_path, # Path reference for metadata
+            audio_path=melody_audio_path, # Path reference for metadata
             output_dir=config.stem_dir,
             prefix=melody_prefix,
             fmin=fmin,
@@ -241,9 +338,11 @@ def run_pipeline(
             energy_metric=config.energy_metric,
         )
         results.pitch_data_stem = pitch_data_stems
+        if melody_prefix == "composite":
+            results.pitch_data_composite = pitch_data_stems
         
         # Load Composite if exists
-        if os.path.exists(composite_pitch_csv):
+        if os.path.exists(composite_pitch_csv) and results.pitch_data_composite is None:
             results.pitch_data_composite = extract_pitch(
                 audio_path=config.audio_path,
                 output_dir=config.stem_dir,
@@ -287,25 +386,35 @@ def run_pipeline(
         
         print(f"  Using Force Tonic: {config.tonic_override} -> {results.detected_tonic}")
         print(f"  Using Force Raga: {config.raga_override}")
+        _print_timing("Step 1/7 cache load", perf_counter() - step1_start, audio_duration_s)
 
     else:
         # DETECT or FULL MODE: run detection pipeline
         
-        # STEP 1: Stems
-        print("[STEP 1/7] Audio preprocessing...")
-        
-        # Always run stem separation for all modes (mixed, vocal, instrumental)
-        # unless specifically skipped for debugging (but we remove the skip-separation flag logic for instrumental)
-        print(f"  Source type: {config.source_type} - Running stem separation")
-        melody_path, accompaniment_path = separate_stems(
-            audio_path=config.audio_path,
-            output_dir=config.output_dir,
-            engine=config.separator_engine,
-            model=config.demucs_model,
-        )
         stem_dir = config.stem_dir
+        os.makedirs(stem_dir, exist_ok=True)
+
+        # STEP 1: Stems
+        step1_start = perf_counter()
+        if config.skip_separation:
+            print("[STEP 1/7] Skipping stem separation (--skip-separation)")
+            if getattr(config, "skip_separation_forced_composite", False):
+                print("[CONFIG] Forcing melody_source=composite because --skip-separation is enabled")
+            melody_path = config.audio_path
+            accompaniment_path = None
+        else:
+            print("[STEP 1/7] Audio preprocessing...")
+            print(f"  Source type: {config.source_type} - Running stem separation")
+            melody_path, accompaniment_path = separate_stems(
+                audio_path=config.audio_path,
+                output_dir=config.output_dir,
+                engine=config.separator_engine,
+                model=config.demucs_model,
+            )
+        _print_timing("Step 1/7 stem preparation", perf_counter() - step1_start, audio_duration_s)
         
         # STEP 2: Pitch
+        step2_start = perf_counter()
         print("\n[STEP 2/7] Extracting pitch...")
         fmin = float(librosa.note_to_hz(config.fmin_note))
         fmax = float(librosa.note_to_hz(config.fmax_note))
@@ -323,18 +432,23 @@ def run_pipeline(
             energy_metric=config.energy_metric,
         )
         
-        # 2b. Stem Pitch (Vocals/Melody) - Always computed for reference/fallback
-        print("  - Separated Melody Stem...")
-        pitch_data_stems = extract_pitch(
-            audio_path=melody_path,
-            output_dir=stem_dir,
-            prefix="vocals" if config.source_type == "vocal" else "melody",
-            fmin=fmin,
-            fmax=fmax,
-            confidence_threshold=config.vocal_confidence,
-            force_recompute=config.force_recompute,
-            energy_metric=config.energy_metric,
-        )
+        # 2b. Stem Pitch (Vocals/Melody)
+        if config.skip_separation:
+            print("  - Melody from Composite (--skip-separation)...")
+            pitch_data_stems = results.pitch_data_composite
+        else:
+            print("  - Separated Melody Stem...")
+            pitch_data_stems = extract_pitch(
+                audio_path=melody_path,
+                output_dir=stem_dir,
+                prefix="vocals" if config.source_type == "vocal" else "melody",
+                fmin=fmin,
+                fmax=fmax,
+                confidence_threshold=config.vocal_confidence,
+                force_recompute=config.force_recompute,
+                energy_metric=config.energy_metric,
+            )
+        assert pitch_data_stems is not None
         results.pitch_data_stem = pitch_data_stems
         
         # 2c. Accompaniment Pitch
@@ -360,7 +474,9 @@ def run_pipeline(
         else:
             print(f"  [CONFIG] Using SEPARATED STEM pitch for melody analysis")
             results.pitch_data_vocals = pitch_data_stems
+        _print_timing("Step 2/7 pitch extraction", perf_counter() - step2_start, audio_duration_s)
         
+        step3_start = perf_counter()
         print("\n[STEP 3/7] Computing histograms and detecting peaks...")
         results.histogram_vocals = compute_cent_histograms_from_config(results.pitch_data_vocals, config)
         if results.pitch_data_accomp is not None:
@@ -408,7 +524,9 @@ def run_pipeline(
             )
             results.plot_paths["histogram_accomp"] = hist_accomp_path
             print(f"  Saved: {hist_accomp_path}")
+        _print_timing("Step 3/7 histogram + peaks", perf_counter() - step3_start, audio_duration_s)
 
+        step35_start = perf_counter()
         print("\n[STEP 3.5/7] Building duration-weighted octave-wrapped stationary-note histogram from vocal SwiftF0...")
         stationary_frame_period = 0.01
         if len(results.pitch_data_stem.timestamps) > 1:
@@ -446,8 +564,10 @@ def run_pipeline(
         print(f"  Stationary events: {len(stationary_events)}")
         print(f"  Saved: {stationary_weighted_hist_path}")
         print(f"  Saved: {stationary_weighted_csv_path}")
+        _print_timing("Step 3.5/7 stationary-note histogram", perf_counter() - step35_start, audio_duration_s)
         
         # STEP 4 & 5: Raga Matching
+        step45_start = perf_counter()
         print("\n[STEP 4/7] Loading raga database...")
         # Already loaded raga_db at start if available
         if raga_db:
@@ -507,9 +627,11 @@ def run_pipeline(
 
         else:
             print("  [WARN] Raga database not found, skipping matching")
+        _print_timing("Step 4-5/7 raga matching", perf_counter() - step45_start, audio_duration_s)
 
         # --- DETECT MODE EXIT POINT ---
         if config.mode == "detect":
+            step7_start = perf_counter()
             print("\n[STEP 7/7] Generating detection summary...")
             from raga_pipeline.output import generate_detection_report
             report_path = os.path.join(stem_dir, "detection_report.html")
@@ -535,6 +657,8 @@ def run_pipeline(
                 print("=" * 60)
             else:
                 print(f"Run 'analyze' mode with --tonic and --raga to continue.")
+            _print_timing("Step 7/7 detection report", perf_counter() - step7_start, audio_duration_s)
+            _print_timing("Total detect pipeline", perf_counter() - pipeline_start, audio_duration_s)
             
             return results
 
@@ -542,6 +666,7 @@ def run_pipeline(
     # PHASE 2: SEQUENCE ANALYSIS (Analyze & Full Mode)
     # =========================================================================
     
+    step6_start = perf_counter()
     print("\n[STEP 6/7] Detecting notes and phrases...")
     
     stats_obj = None
@@ -746,6 +871,7 @@ def run_pipeline(
             transition_matrix_path=tm_path,
             pitch_plot_path=pp_path
         )
+    _print_timing("Step 6/7 note + phrase analysis", perf_counter() - step6_start, audio_duration_s)
 
     # =========================================================================
     # STEP 6.5: GMM Analysis
@@ -755,6 +881,7 @@ def run_pipeline(
          results.histogram_vocals = compute_cent_histograms_from_config(results.pitch_data_vocals, config)
          results.peaks_vocals = detect_peaks_from_config(results.histogram_vocals, config)
 
+    step65_start = perf_counter()
     if results.peaks_vocals is not None and results.histogram_vocals is not None:
         print("\n[STEP 6.5/7] GMM microtonal analysis...")
         results.gmm_results = fit_gmm_to_peaks(
@@ -779,10 +906,14 @@ def run_pipeline(
             )
             results.plot_paths["gmm_overlay"] = gmm_path
             print(f"  Saved: {gmm_path}")
+        _print_timing("Step 6.5/7 GMM analysis", perf_counter() - step65_start, audio_duration_s)
+    else:
+        print("[TIMER] Step 6.5/7 GMM analysis: skipped")
 
     # =========================================================================
     # STEP 7: HTML Report (Analysis/Full)
     # =========================================================================
+    step7_start = perf_counter()
     print("\n[STEP 7/7] Generating full analysis report...")
     
     if config.mode == "analyze" and stats_obj:
@@ -799,6 +930,7 @@ def run_pipeline(
     results.plot_paths["report"] = report_path
     
     print(f"  Saved: {report_path}")
+    _print_timing("Step 7/7 analysis report", perf_counter() - step7_start, audio_duration_s)
     
     # =========================================================================
     # SUMMARY
@@ -808,6 +940,7 @@ def run_pipeline(
     print("=" * 60)
     print(f"Detected Raga: {results.detected_raga}")
     print(f"Detected Tonic: {_tonic_name(results.detected_tonic)}")
+    _print_timing("Total analysis pipeline", perf_counter() - pipeline_start, audio_duration_s)
     
     return results
 

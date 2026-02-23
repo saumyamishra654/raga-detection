@@ -692,13 +692,15 @@ def run_pipeline(
             transcription_min_duration=config.transcription_min_duration
         )
         print(f"  Detected {len(raw_notes)} raw notes")
-        
-        # Energy Filtering
+
+        stationary_count = sum(1 for n in raw_notes if n.confidence >= 0.99)
+        inflection_count = len(raw_notes) - stationary_count
+        print(f"  Note breakdown: Stationary={stationary_count}, Inflection={inflection_count}")
         if config.energy_threshold > 0:
-            original_count = len(raw_notes)
-            raw_notes = [n for n in raw_notes if n.energy >= config.energy_threshold]
-            filtered_count = len(raw_notes)
-            print(f"  Energy Filter ({config.energy_threshold}): Kept {filtered_count}/{original_count} notes")
+            print(
+                f"  Energy gating handled in transcription "
+                f"(threshold={config.energy_threshold})"
+            )
             
         # Apply Raga Correction
         correction_summary = {}

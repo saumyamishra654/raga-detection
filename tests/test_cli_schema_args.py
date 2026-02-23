@@ -104,6 +104,30 @@ class ConfigSchemaTests(unittest.TestCase):
         self.assertIn("A", argv)
         self.assertIn("--recorded-audio", argv)
 
+    def test_analyze_phrase_defaults_updated(self) -> None:
+        schema = get_mode_schema("analyze")
+        by_name = {field["name"]: field for field in schema["fields"]}
+        self.assertEqual(by_name["phrase_min_duration"]["default"], 0.2)
+        self.assertEqual(by_name["phrase_min_notes"]["default"], 1)
+
+    def test_parse_config_analyze_uses_new_phrase_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "demo.wav"
+            audio_path.write_bytes(b"RIFF")
+            config = parse_config_from_argv(
+                [
+                    "analyze",
+                    "--audio",
+                    str(audio_path),
+                    "--tonic",
+                    "C",
+                    "--raga",
+                    "Bhairavi",
+                ]
+            )
+            self.assertEqual(config.phrase_min_duration, 0.2)
+            self.assertEqual(config.phrase_min_length, 1)
+
     def test_preprocess_youtube_requires_yt(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with self.assertRaisesRegex(ValueError, "requires --yt"):

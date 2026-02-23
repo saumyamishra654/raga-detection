@@ -263,6 +263,40 @@ def _smooth_pitch_contour(
     return smoothed
 
 
+def _sample_energy_at_time(
+    time_s: float,
+    energy_values: Optional[np.ndarray],
+    energy_times: Optional[np.ndarray],
+) -> float:
+    """
+    Sample the nearest frame energy for a timestamp.
+
+    energy_values and energy_times should already be length-aligned.
+    """
+    if (
+        energy_values is None
+        or energy_times is None
+        or energy_values.size == 0
+        or energy_times.size == 0
+        or not np.isfinite(time_s)
+    ):
+        return 0.0
+
+    idx = int(np.searchsorted(energy_times, time_s))
+    if idx <= 0:
+        nearest_idx = 0
+    elif idx >= energy_times.size:
+        nearest_idx = int(energy_times.size - 1)
+    else:
+        prev_idx = idx - 1
+        nearest_idx = idx if abs(energy_times[idx] - time_s) < abs(energy_times[prev_idx] - time_s) else prev_idx
+
+    sampled = float(energy_values[nearest_idx])
+    if not np.isfinite(sampled):
+        return 0.0
+    return sampled
+
+
 def _snap_pitch(
     pitch: float,
     tonic_midi: float,
@@ -371,6 +405,13 @@ def transcribe_to_notes(
     """
     if transcription_min_duration > 0:
         min_event_duration = transcription_min_duration
+
+    aligned_energy_values: Optional[np.ndarray] = None
+    aligned_energy_times: Optional[np.ndarray] = None
+    if energy is not None and len(energy) > 0 and len(timestamps) > 0:
+        aligned_len = min(len(energy), len(timestamps))
+        aligned_energy_values = np.asarray(energy[:aligned_len], dtype=float)
+        aligned_energy_times = np.asarray(timestamps[:aligned_len], dtype=float)
     
     # 1. Stationary Events
     events = detect_stationary_events(
@@ -438,6 +479,14 @@ def transcribe_to_notes(
     tonic_midi_val = _resolve_tonic(tonic)
     
     for t, p in zip(inf_times, inf_pitches):
+        sampled_energy = _sample_energy_at_time(
+            float(t),
+            aligned_energy_values,
+            aligned_energy_times,
+        )
+        if energy is not None and energy_threshold > 0 and sampled_energy < energy_threshold:
+            continue
+
         # Still snap inflection points so they can show sargam labels.
         snapped, _, sargam, keep_note = _snap_pitch(
             p, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
@@ -452,6 +501,7 @@ def transcribe_to_notes(
             pitch_midi=snapped_pitch,
             pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
             confidence=0.8, # Lower confidence for transient points
+            energy=sampled_energy,
             sargam=sargam,
             pitch_class=int(round(snapped_pitch)) % 12
         )

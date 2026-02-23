@@ -197,11 +197,11 @@ Important:
 *   `--transcription-min-duration`: Minimum duration (s) for a transcribed note (default: `0.02`).
 *   `--transcription-stability-threshold`: Max pitch change (semitones/sec) to be considered stable (default: `4.0`).
 *   `--energy-metric`: `rms` (peak-normalized, default) or `log_amp` (dBFS with percentile normalization).
-*   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes. Default: 0.0.
+*   `--energy-threshold`: Per-track normalized energy gate (0-1) for transcription note gating. This is relative to the selected melody track (not absolute loudness). Typical RMS tuning range: `0.03-0.12`. Default: `0.0`.
 *   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10 (set `0` to disable).
 *   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases. Default: 0.25.
-*   `--phrase-min-duration`: Exclude phrases shorter than this duration (seconds). Default: 1.0.
-*   `--phrase-min-notes`: Exclude phrases with fewer notes than this count. Default: 0 (disabled).
+*   `--phrase-min-duration`: Exclude phrases shorter than this duration (seconds). Default: `0.2`.
+*   `--phrase-min-notes`: Exclude phrases with fewer notes than this count. Default: `1`.
 *   `--no-rms-overlay`: Disable the energy overlay on pitch plots in the HTML report.
 *   `--no-smoothing`: Force transcription smoothing off (equivalent to `--transcription-smoothing-ms 0`).
 *   Snapping behavior: Transcription uses chromatic snapping internally; raga correction then removes or keeps non-raga notes depending on `--keep-impure-notes`.

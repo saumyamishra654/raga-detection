@@ -1189,7 +1189,6 @@
 
         bindConditionalVisibilityHandlers();
         updateConditionalVisibility();
-        bindArtifactContextHandlers();
     }
 
     function bindConditionalVisibilityHandlers() {
@@ -1577,12 +1576,17 @@
         const job = await jobRes.json();
         const logs = await logRes.json();
         const logLines = logs.logs || [];
+        const isRunning = job.status === "queued" || job.status === "running";
 
         setStatus(job.status + " - " + (job.message || ""));
-        progressEl.value = Number(job.progress || 0);
+        if (!isRunning) {
+            progressEl.value = Number(job.progress || 0);
+        } else if (Number(progressEl.value || 0) <= 0) {
+            // Set once on run start; avoid live snapping on every progress update.
+            progressEl.value = Number(job.progress || 0);
+        }
         logsEl.textContent = logLines.join("\n");
         jobArgvEl.textContent = job.argv && job.argv.length ? ("argv: " + job.argv.join(" ")) : "";
-        const isRunning = job.status === "queued" || job.status === "running";
         const shouldRefreshArtifacts = Boolean(opts.refreshArtifacts) || !isRunning;
         if (shouldRefreshArtifacts) {
             renderArtifacts(job.artifacts || []);
@@ -1590,10 +1594,6 @@
             const reportLinks = deriveReportLinksFromArtifacts(job.artifacts || []);
             if (reportLinks.detectUrl || reportLinks.analyzeUrl) {
                 applyReportLinks(reportLinks.detectUrl, reportLinks.analyzeUrl);
-            } else if (selectedAudioPath) {
-                loadArtifactsForSelectedAudio().catch(function () {
-                    // Keep silent; status line already reflects job updates.
-                });
             }
         }
 
@@ -1668,6 +1668,7 @@
             activeJobId = job.job_id;
             setBusy(true);
             setStatus("Submitted: " + job.job_id);
+            progressEl.value = 0;
             logsEl.textContent = "";
             artifactListEl.textContent = "";
             applyReportLinks(null, null);
@@ -1747,6 +1748,7 @@
                 activeJobId = job.job_id;
                 setBusy(true);
                 setStatus("Batch submitted: " + job.job_id);
+                progressEl.value = 0;
                 logsEl.textContent = "";
                 artifactListEl.textContent = "";
                 applyReportLinks(null, null);

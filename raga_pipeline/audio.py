@@ -10,7 +10,6 @@ Note: torch and demucs are imported lazily to avoid import errors if not install
 """
 
 from dataclasses import dataclass, field
-import inspect
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 import glob
@@ -1150,37 +1149,8 @@ def _fit_array_to_length(values: np.ndarray, target_len: int, fill_value: float 
 # PITCH EXTRACTION
 # =============================================================================
 
-def _preferred_swiftf0_device() -> str | None:
-    """
-    Pick a preferred accelerator for SwiftF0 when its API supports device control.
-    Priority:
-      1) RAGA_SWIFTF0_DEVICE env override
-      2) CUDA
-      3) Apple Metal (MPS)
-      4) CPU
-    """
-    env_override = os.environ.get("RAGA_SWIFTF0_DEVICE")
-    if env_override:
-        cleaned = env_override.strip()
-        if cleaned:
-            return cleaned
-
-    try:
-        import torch
-    except Exception:
-        return None
-
-    if torch.cuda.is_available():
-        return "cuda"
-    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        # Keep parity with Demucs behavior: allow incomplete MPS kernels to fall back.
-        os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
-        return "mps"
-    return "cpu"
-
-
 def _build_swiftf0_detector(fmin: float, fmax: float, confidence_threshold: float):
-    """Instantiate SwiftF0, opting into an accelerator if the installed API supports it."""
+    """Instantiate SwiftF0 with standard constructor args only."""
     from swift_f0 import SwiftF0
 
     base_kwargs: Dict[str, Any] = {
@@ -1188,55 +1158,6 @@ def _build_swiftf0_detector(fmin: float, fmax: float, confidence_threshold: floa
         "fmax": fmax,
         "confidence_threshold": confidence_threshold,
     }
-    detector_kwargs: Dict[str, Any] = dict(base_kwargs)
-
-    preferred_device = _preferred_swiftf0_device()
-    injected_device_arg = False
-
-    if preferred_device:
-        try:
-            init_sig = inspect.signature(SwiftF0.__init__)
-            params = init_sig.parameters
-        except Exception:
-            params = {}
-
-        if "device" in params:
-            detector_kwargs["device"] = preferred_device
-            injected_device_arg = True
-        elif "torch_device" in params:
-            detector_kwargs["torch_device"] = preferred_device
-            injected_device_arg = True
-        elif "use_mps" in params:
-            detector_kwargs["use_mps"] = preferred_device == "mps"
-            injected_device_arg = True
-        elif "use_gpu" in params:
-            detector_kwargs["use_gpu"] = preferred_device in {"cuda", "mps"}
-            injected_device_arg = True
-        else:
-            accepts_kwargs = any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
-            )
-            if accepts_kwargs:
-                detector_kwargs["device"] = preferred_device
-                injected_device_arg = True
-
-    if injected_device_arg:
-        try:
-            detector = SwiftF0(**detector_kwargs)
-            print(f"[SWIFTF0] Using device hint: {preferred_device}")
-            return detector
-        except TypeError:
-            print(
-                "[SWIFTF0] Installed swift_f0 does not accept this device setting; "
-                "falling back to default backend."
-            )
-
-    elif preferred_device:
-        print(
-            "[SWIFTF0] Device selection is not exposed by this swift_f0 build; "
-            "using library default backend."
-        )
-
     return SwiftF0(**base_kwargs)
 
 

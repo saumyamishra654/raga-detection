@@ -18,7 +18,7 @@ import re
 import numpy as np
 import pandas as pd
 import librosa
-from .sequence import Note
+from .sequence import Note, midi_to_sargam
 
 from .config import PipelineConfig
 from .audio import PitchData
@@ -862,6 +862,23 @@ def apply_raga_correction_to_notes(
         'discarded': 0,
         'valid_pcs': valid_pcs
     }
+
+    def _note_with_pitch(note: Note, pitch_midi: float) -> Note:
+        pitch_class = int(round(pitch_midi)) % 12
+        try:
+            sargam = midi_to_sargam(pitch_midi, tonic)
+        except Exception:
+            sargam = note.sargam
+        return Note(
+            start=note.start,
+            end=note.end,
+            pitch_midi=pitch_midi,
+            pitch_hz=float(librosa.midi_to_hz(pitch_midi)),
+            confidence=note.confidence,
+            energy=note.energy,
+            sargam=sargam,
+            pitch_class=pitch_class,
+        )
     
     for note in note_sequence:
         midi_val = note.pitch_midi
@@ -886,25 +903,26 @@ def apply_raga_correction_to_notes(
         if action == 'discarded':
             stats['discarded'] += 1
             continue
-            
-        elif action == 'unchanged' or action == 'unchanged_far':
+
+        if action in ('unchanged', 'unchanged_far'):
             stats['unchanged'] += 1
-            corrected_sequence.append(note)
-             
         elif action == 'corrected':
-            new_pitch = float(info['corrected_midi'])
             stats['corrected'] += 1
-            new_note = Note(
-                start=note.start,
-                end=note.end,
-                pitch_midi=new_pitch,
-                pitch_hz=float(librosa.midi_to_hz(new_pitch)),
-                confidence=note.confidence,
-                energy=note.energy,
-                sargam=note.sargam,
-                pitch_class=int(round(new_pitch)) % 12,
-            )
-            corrected_sequence.append(new_note)
+        else:
+            stats['unchanged'] += 1
+
+        corrected_pitch = float(info.get('corrected_midi', midi_val))
+
+        # Always keep the snapped/rounded pitch for accepted notes so
+        # microtonal values do not leak past raga correction.
+        if (
+            not np.isclose(corrected_pitch, float(midi_val), atol=1e-9)
+            or note.pitch_class != int(round(corrected_pitch)) % 12
+            or not note.sargam
+        ):
+            corrected_sequence.append(_note_with_pitch(note, corrected_pitch))
+        else:
+            corrected_sequence.append(note)
                  
     stats['remaining'] = len(corrected_sequence)
     return corrected_sequence, stats, all_corrections

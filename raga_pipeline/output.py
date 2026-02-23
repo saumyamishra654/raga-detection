@@ -2393,6 +2393,7 @@ def create_scrollable_pitch_plot_html(
     overlay_timestamps: Optional[np.ndarray] = None,
     overlay_label: str = "RMS Energy",
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
+    transcription_notes: Optional[List[Note]] = None,
 ) -> str:
     """
     Create HTML component for scrollable pitch plot with audio sync.
@@ -2412,9 +2413,43 @@ def create_scrollable_pitch_plot_html(
     
     if not plot_b64:
         return "<p>No pitch data for validation plot.</p>"
-        
+
     unique_id = f"sp_{uuid.uuid4().hex[:6]}"
     duration = x_axis_end - x_axis_start
+
+    def _safe_json_float(value: Any) -> Optional[float]:
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not np.isfinite(numeric):
+            return None
+        return numeric
+
+    overlay_energy_payload: List[Optional[float]] = []
+    if overlay_energy is not None:
+        overlay_energy_payload = [_safe_json_float(v) for v in np.asarray(overlay_energy)]
+
+    overlay_timestamps_payload: List[Optional[float]] = []
+    if overlay_timestamps is not None:
+        overlay_timestamps_payload = [_safe_json_float(v) for v in np.asarray(overlay_timestamps)]
+
+    note_payload: List[Dict[str, Any]] = []
+    for note in (transcription_notes or []):
+        start = _safe_json_float(note.start)
+        end = _safe_json_float(note.end)
+        if start is None or end is None:
+            continue
+        note_payload.append(
+            {
+                "start": start,
+                "end": end,
+                "sargam": str(getattr(note, "sargam", "") or ""),
+                "pitch_midi": _safe_json_float(getattr(note, "pitch_midi", None)),
+                "energy": _safe_json_float(getattr(note, "energy", None)),
+                "confidence": _safe_json_float(getattr(note, "confidence", None)),
+            }
+        )
     
     html = f"""
     <div class="scroll-plot-wrapper" id="{unique_id}-wrapper" style="border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin: 20px 0; background: #0d1117;">
@@ -2426,8 +2461,11 @@ def create_scrollable_pitch_plot_html(
             
             <!-- Scrollable Content -->
             <div id="{unique_id}-container" style="flex: 1; overflow-x: auto; position: relative; background: #0d1117;">
-                <div style="width: {px_width}px; height: 100%; position: relative;">
-                    <img src="data:image/png;base64,{plot_b64}" style="width: 100%; height: 100%; display: block;">
+                <div id="{unique_id}-plot-layer" style="width: {px_width}px; height: 100%; position: relative; user-select: none;">
+                    <img id="{unique_id}-plot-image" src="data:image/png;base64,{plot_b64}" draggable="false" style="width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none;">
+                    <!-- Inspector markers -->
+                    <div id="{unique_id}-range-band" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0; display: none; background: rgba(56,139,253,0.18); border: 1px solid rgba(56,139,253,0.7); pointer-events: none; z-index: 4;"></div>
+                    <div id="{unique_id}-point-marker" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e3b341; display: none; pointer-events: none; z-index: 6;"></div>
                     <!-- Cursor Line -->
                     <div id="{unique_id}-cursor" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e94560; box-shadow: 0 0 5px #e94560; pointer-events: none; z-index: 5;"></div>
                 </div>
@@ -2437,31 +2475,120 @@ def create_scrollable_pitch_plot_html(
              <span>Total Duration: {duration:.2f}s</span>
              <span id="{unique_id}-status">Synced to Audio</span>
         </div>
+        <div id="{unique_id}-inspector" style="padding: 10px; background: #11161d; border-top: 1px solid #30363d; color: #c9d1d9; font-size: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                <span><strong>Selection:</strong> <span id="{unique_id}-selection-type">None</span></span>
+                <button type="button" id="{unique_id}-clear-selection" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer;">Clear selection</button>
+            </div>
+            <div id="{unique_id}-selection-time" style="margin-top: 6px; color: #8b949e;">Click for point query or drag for range query.</div>
+            <div id="{unique_id}-selection-energy" style="margin-top: 4px; color: #8b949e;">Energy ({escape(overlay_label)}): unavailable</div>
+            <div id="{unique_id}-selection-notes" style="margin-top: 8px; color: #c9d1d9;">No selection.</div>
+        </div>
     </div>
     
     <script>
     document.addEventListener("DOMContentLoaded", function() {{
         const trackIds = {json.dumps(audio_element_ids)};
+        const overlayEnergyValues = {json.dumps(overlay_energy_payload)};
+        const overlayEnergyTimestamps = {json.dumps(overlay_timestamps_payload)};
+        const transcriptionNotesRaw = {json.dumps(note_payload)};
+        const overlayLabel = {json.dumps(overlay_label)};
+        const clearSelectionEventName = "raga-scroll-selection-clear";
         const container = document.getElementById("{unique_id}-container");
+        const plotLayer = document.getElementById("{unique_id}-plot-layer");
+        const plotImage = document.getElementById("{unique_id}-plot-image");
         const cursor = document.getElementById("{unique_id}-cursor");
+        const pointMarker = document.getElementById("{unique_id}-point-marker");
+        const rangeBand = document.getElementById("{unique_id}-range-band");
+        const selectionTypeEl = document.getElementById("{unique_id}-selection-type");
+        const selectionTimeEl = document.getElementById("{unique_id}-selection-time");
+        const selectionEnergyEl = document.getElementById("{unique_id}-selection-energy");
+        const selectionNotesEl = document.getElementById("{unique_id}-selection-notes");
+        const clearSelectionBtn = document.getElementById("{unique_id}-clear-selection");
         const xStart = {x_axis_start};
         const xEnd = {x_axis_end};
         const totalDuration = xEnd - xStart;
         const pixelWidth = {px_width};
-        
-        if (container && cursor) {{
-            console.log("Initializing sync for {unique_id}");
+
+        if (
+            container &&
+            cursor &&
+            pointMarker &&
+            rangeBand &&
+            selectionTypeEl &&
+            selectionTimeEl &&
+            selectionEnergyEl &&
+            selectionNotesEl &&
+            clearSelectionBtn
+        ) {{
+            console.log("Initializing sync + inspector for {unique_id}");
             
             // Plot margins (matches python subplots_adjust)
             const marginL = 0.005;
             const marginR = 0.995;
             const plotStartPx = marginL * pixelWidth;
             const plotEndPx = marginR * pixelWidth;
+            const dragThresholdPx = 8;
+            const pointToleranceSec = 0.02;
+            const inspectorRowsVisible = 5;
+            const inspectorRowHeightPx = 24;
             let seekSnapUntil = 0;
             let activeAudio = null;
+            let isPointerDown = false;
+            let pointerStartX = 0;
+            let pointerCurrentX = 0;
+
+            const energyFrames = [];
+            const frameCount = Math.min(overlayEnergyValues.length, overlayEnergyTimestamps.length);
+            for (let i = 0; i < frameCount; i += 1) {{
+                const ts = Number(overlayEnergyTimestamps[i]);
+                const e = Number(overlayEnergyValues[i]);
+                if (isFinite(ts) && isFinite(e)) {{
+                    energyFrames.push({{ t: ts, e: e }});
+                }}
+            }}
+
+            const transcriptionNotes = transcriptionNotesRaw
+                .map(function(note) {{
+                    const start = Number(note.start);
+                    const end = Number(note.end);
+                    return {{
+                        start: start,
+                        end: end,
+                        sargam: (note.sargam || "").toString(),
+                        pitch_midi: Number(note.pitch_midi),
+                        energy: Number(note.energy),
+                        confidence: Number(note.confidence),
+                    }};
+                }})
+                .filter(function(note) {{
+                    return isFinite(note.start) && isFinite(note.end) && (note.end >= note.start);
+                }})
+                .sort(function(a, b) {{
+                    if (a.start !== b.start) return a.start - b.start;
+                    return a.end - b.end;
+                }});
 
             function clamp(v, lo, hi) {{
                 return Math.max(lo, Math.min(hi, v));
+            }}
+
+            function formatSeconds(v) {{
+                return isFinite(v) ? v.toFixed(3) : "n/a";
+            }}
+
+            function formatMaybe(v, digits) {{
+                if (!isFinite(v)) return "n/a";
+                return v.toFixed(digits);
+            }}
+
+            function escapeHtml(raw) {{
+                return String(raw)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
             }}
 
             function timeToX(t) {{
@@ -2474,6 +2601,12 @@ def create_scrollable_pitch_plot_html(
                 const safeX = clamp(x, plotStartPx, plotEndPx);
                 const pct = (safeX - plotStartPx) / Math.max(plotEndPx - plotStartPx, 1e-6);
                 return xStart + (pct * totalDuration);
+            }}
+
+            function xFromEvent(evt) {{
+                const rect = container.getBoundingClientRect();
+                const rawX = evt.clientX - rect.left + container.scrollLeft;
+                return clamp(rawX, plotStartPx, plotEndPx);
             }}
 
             function seekAllTracks(targetTime) {{
@@ -2539,7 +2672,258 @@ def create_scrollable_pitch_plot_html(
                     container.scrollLeft = container.scrollLeft * 0.85 + targetScroll * 0.15;
                 }}
             }}
-            
+
+            function setDefaultInspector() {{
+                selectionTypeEl.textContent = "None";
+                selectionTimeEl.textContent = "Click for point query or drag for range query.";
+                selectionEnergyEl.textContent = "Energy (" + overlayLabel + "): unavailable";
+                selectionNotesEl.textContent = "No selection.";
+            }}
+
+            function clearSelection() {{
+                pointMarker.style.display = "none";
+                rangeBand.style.display = "none";
+                setDefaultInspector();
+            }}
+
+            function nearestEnergySample(t) {{
+                if (!energyFrames.length) {{
+                    return null;
+                }}
+
+                let lo = 0;
+                let hi = energyFrames.length - 1;
+                while (lo < hi) {{
+                    const mid = Math.floor((lo + hi) / 2);
+                    if (energyFrames[mid].t < t) {{
+                        lo = mid + 1;
+                    }} else {{
+                        hi = mid;
+                    }}
+                }}
+
+                let idx = lo;
+                if (
+                    idx > 0 &&
+                    Math.abs(energyFrames[idx - 1].t - t) <= Math.abs(energyFrames[idx].t - t)
+                ) {{
+                    idx = idx - 1;
+                }}
+                return energyFrames[idx];
+            }}
+
+            function computeRangeEnergy(t0, t1) {{
+                if (!energyFrames.length) {{
+                    return null;
+                }}
+                const lo = Math.min(t0, t1);
+                const hi = Math.max(t0, t1);
+                let count = 0;
+                let sum = 0;
+                let minVal = Number.POSITIVE_INFINITY;
+                let maxVal = Number.NEGATIVE_INFINITY;
+
+                energyFrames.forEach(function(frame) {{
+                    if (frame.t < lo || frame.t > hi) {{
+                        return;
+                    }}
+                    count += 1;
+                    sum += frame.e;
+                    if (frame.e < minVal) minVal = frame.e;
+                    if (frame.e > maxVal) maxVal = frame.e;
+                }});
+
+                if (!count) {{
+                    return null;
+                }}
+                return {{
+                    min: minVal,
+                    mean: sum / count,
+                    max: maxVal,
+                    count: count,
+                }};
+            }}
+
+            function noteDistanceToTime(note, t) {{
+                if (t < note.start) return note.start - t;
+                if (t > note.end) return t - note.end;
+                return 0;
+            }}
+
+            function normalizeSargamLabel(raw) {{
+                return String(raw || "").replace(/[·'`’]+/g, "").trim();
+            }}
+
+            function formatNoteSymbol(note) {{
+                const label = normalizeSargamLabel(note.sargam);
+                if (label) {{
+                    return label;
+                }}
+                if (isFinite(note.pitch_midi)) {{
+                    return note.pitch_midi.toFixed(2);
+                }}
+                return "?";
+            }}
+
+            function noteBreakdownTableHtml(notes) {{
+                const rows = notes.map(function(note) {{
+                    const duration = Math.max(0, note.end - note.start);
+                    return (
+                        "<tr>" +
+                        "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + escapeHtml(formatNoteSymbol(note)) + "</td>" +
+                        "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + formatSeconds(duration) + "s</td>" +
+                        "<td style='padding:4px 6px; border-top:1px solid #30363d;'>midi " + formatMaybe(note.pitch_midi, 2) + "</td>" +
+                        "</tr>"
+                    );
+                }}).join("");
+                const maxHeight = (inspectorRowsVisible * inspectorRowHeightPx) + 30;
+                return (
+                    "<div style='margin-top:6px; max-height:" + maxHeight + "px; overflow-y:auto; border:1px solid #30363d; border-radius:6px;'>" +
+                    "<table style='width:100%; border-collapse:collapse; font-size:12px;'>" +
+                    "<thead>" +
+                    "<tr>" +
+                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Note</th>" +
+                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Duration</th>" +
+                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>MIDI</th>" +
+                    "</tr>" +
+                    "</thead>" +
+                    "<tbody>" + rows + "</tbody>" +
+                    "</table>" +
+                    "</div>"
+                );
+            }}
+
+            function renderPointSelection(t, energySample, notes, usedNearest) {{
+                selectionTypeEl.textContent = "Point";
+                selectionTimeEl.textContent = "Time: t = " + formatSeconds(t) + "s";
+                if (energySample) {{
+                    selectionEnergyEl.textContent =
+                        "Energy (" +
+                        overlayLabel +
+                        "): " +
+                        energySample.e.toFixed(4) +
+                        " @ " +
+                        formatSeconds(energySample.t) +
+                        "s";
+                }} else {{
+                    selectionEnergyEl.textContent = "Energy (" + overlayLabel + "): unavailable";
+                }}
+
+                if (!notes.length) {{
+                    selectionNotesEl.innerHTML = "<strong>Transcription:</strong> No transcription notes available.";
+                    return;
+                }}
+
+                const header = usedNearest ? "Nearest transcription note" : "Active transcription note(s)";
+                const summary = notes.map(function(note) {{ return formatNoteSymbol(note); }}).join(" ");
+                selectionNotesEl.innerHTML =
+                    "<strong>" + escapeHtml(header) + ":</strong> " +
+                    escapeHtml(summary) +
+                    noteBreakdownTableHtml(notes);
+            }}
+
+            function renderRangeSelection(t0, t1, energyStats, notes) {{
+                const lo = Math.min(t0, t1);
+                const hi = Math.max(t0, t1);
+                selectionTypeEl.textContent = "Range";
+                selectionTimeEl.textContent =
+                    "Range: " + formatSeconds(lo) + "s - " + formatSeconds(hi) +
+                    "s (duration " + formatSeconds(hi - lo) + "s)";
+
+                if (energyStats) {{
+                    selectionEnergyEl.textContent =
+                        "Energy (" + overlayLabel + "): min " +
+                        energyStats.min.toFixed(4) +
+                        ", mean " +
+                        energyStats.mean.toFixed(4) +
+                        ", max " +
+                        energyStats.max.toFixed(4) +
+                        " (" + energyStats.count + " frames)";
+                }} else {{
+                    selectionEnergyEl.textContent =
+                        "Energy (" + overlayLabel + "): unavailable in selected range";
+                }}
+
+                if (!notes.length) {{
+                    selectionNotesEl.innerHTML = "<strong>Transcription:</strong> No overlapping transcription notes.";
+                    return;
+                }}
+
+                const summary = notes.map(function(note) {{ return formatNoteSymbol(note); }}).join(" ");
+                selectionNotesEl.innerHTML =
+                    "<strong>Transcription summary:</strong> " +
+                    escapeHtml(summary) +
+                    noteBreakdownTableHtml(notes);
+            }}
+
+            function runPointQuery(plotX, shouldSeek) {{
+                const x = clamp(plotX, plotStartPx, plotEndPx);
+                const t = xToTime(x);
+                const energySample = nearestEnergySample(t);
+                let overlapping = transcriptionNotes.filter(function(note) {{
+                    return (note.start - pointToleranceSec) <= t && t <= (note.end + pointToleranceSec);
+                }});
+                let usedNearest = false;
+
+                if (!overlapping.length && transcriptionNotes.length) {{
+                    let nearest = transcriptionNotes[0];
+                    let bestDistance = noteDistanceToTime(nearest, t);
+                    for (let i = 1; i < transcriptionNotes.length; i += 1) {{
+                        const candidate = transcriptionNotes[i];
+                        const distance = noteDistanceToTime(candidate, t);
+                        if (distance < bestDistance) {{
+                            nearest = candidate;
+                            bestDistance = distance;
+                        }}
+                    }}
+                    overlapping = [nearest];
+                    usedNearest = true;
+                }}
+
+                pointMarker.style.display = "block";
+                pointMarker.style.left = x + "px";
+                rangeBand.style.display = "none";
+                renderPointSelection(t, energySample, overlapping, usedNearest);
+
+                if (shouldSeek && isFinite(t)) {{
+                    const sourceBeforeSeek = getPlayingAudio() || activeAudio;
+                    seekAllTracks(t);
+                    activeAudio = resolveActiveAudio(sourceBeforeSeek || undefined);
+                    const syncedT = (activeAudio ? activeAudio.currentTime : t) || t;
+                    renderAtTime(syncedT, true);
+                    seekSnapUntil = performance.now() + 300;
+                }}
+            }}
+
+            function runRangeQuery(x0, x1) {{
+                const left = clamp(Math.min(x0, x1), plotStartPx, plotEndPx);
+                const right = clamp(Math.max(x0, x1), plotStartPx, plotEndPx);
+                const width = Math.max(1, right - left);
+                const t0 = xToTime(left);
+                const t1 = xToTime(right);
+                const lo = Math.min(t0, t1);
+                const hi = Math.max(t0, t1);
+                const notes = transcriptionNotes.filter(function(note) {{
+                    return note.end >= lo && note.start <= hi;
+                }});
+                const energyStats = computeRangeEnergy(lo, hi);
+
+                rangeBand.style.display = "block";
+                rangeBand.style.left = left + "px";
+                rangeBand.style.width = width + "px";
+                pointMarker.style.display = "none";
+                renderRangeSelection(lo, hi, energyStats, notes);
+            }}
+
+            function updateDragPreview(startX, currentX) {{
+                const left = Math.min(startX, currentX);
+                const width = Math.max(1, Math.abs(currentX - startX));
+                rangeBand.style.display = "block";
+                rangeBand.style.left = left + "px";
+                rangeBand.style.width = width + "px";
+                pointMarker.style.display = "none";
+            }}
+
             // Sync Loop
             function updateSync() {{
                 const src = resolveActiveAudio();
@@ -2551,23 +2935,63 @@ def create_scrollable_pitch_plot_html(
                 requestAnimationFrame(updateSync);
             }}
             updateSync();
-            
-            // Allow click to seek
-            container.addEventListener('click', function(e) {{
-                const rect = container.getBoundingClientRect();
-                const clickX = e.clientX - rect.left + container.scrollLeft;
-                const seekT = xToTime(clickX);
 
-                if (isFinite(seekT) && seekT >= xStart && seekT <= xEnd) {{
-                    console.log("Seeking to:", seekT);
-                    const sourceBeforeSeek = getPlayingAudio() || activeAudio;
-                    // Seek ALL tracks to keep them in sync if swapped
-                    seekAllTracks(seekT);
-                    activeAudio = resolveActiveAudio(sourceBeforeSeek || undefined);
-                    const t = (activeAudio ? activeAudio.currentTime : seekT) || seekT;
-                    renderAtTime(t, true);
-                    seekSnapUntil = performance.now() + 300;
+            setDefaultInspector();
+
+            [container, plotLayer, plotImage].forEach(function(target) {{
+                if (!target) return;
+                target.addEventListener("dragstart", function(e) {{
+                    e.preventDefault();
+                }});
+            }});
+
+            container.addEventListener("mousedown", function(e) {{
+                if (e.button !== 0) {{
+                    return;
                 }}
+                e.preventDefault();
+                isPointerDown = true;
+                pointerStartX = xFromEvent(e);
+                pointerCurrentX = pointerStartX;
+            }});
+
+            document.addEventListener("mousemove", function(e) {{
+                if (!isPointerDown) {{
+                    return;
+                }}
+                pointerCurrentX = xFromEvent(e);
+                if (Math.abs(pointerCurrentX - pointerStartX) >= dragThresholdPx) {{
+                    updateDragPreview(pointerStartX, pointerCurrentX);
+                }}
+            }});
+
+            document.addEventListener("mouseup", function(e) {{
+                if (!isPointerDown) {{
+                    return;
+                }}
+                pointerCurrentX = xFromEvent(e);
+                const movedPx = Math.abs(pointerCurrentX - pointerStartX);
+                isPointerDown = false;
+
+                if (movedPx >= dragThresholdPx) {{
+                    runRangeQuery(pointerStartX, pointerCurrentX);
+                }} else {{
+                    runPointQuery(pointerCurrentX, true);
+                }}
+            }});
+
+            clearSelectionBtn.addEventListener("click", function() {{
+                clearSelection();
+            }});
+
+            document.addEventListener("keydown", function(e) {{
+                if (e.key === "Escape") {{
+                    clearSelection();
+                }}
+            }});
+
+            document.addEventListener(clearSelectionEventName, function() {{
+                clearSelection();
             }});
 
             // Keep cursor/timeline aligned immediately after native seek events too.
@@ -3257,6 +3681,7 @@ def generate_analysis_report(
                         overlay_timestamps=e_pitch.timestamps,
                         overlay_label=f"{e_label} RMS",
                         phrase_ranges=phrase_ranges,
+                        transcription_notes=results.notes,
                     )
                 except Exception as e:
                     scroll_plot_html = (
@@ -3349,6 +3774,11 @@ def generate_analysis_report(
                 }});
                 currentEnergy = resolvedEnergy;
                 setActiveEnergyButton(currentEnergy);
+                document.dispatchEvent(
+                    new CustomEvent("raga-scroll-selection-clear", {{
+                        detail: {{ trackKey: trackKey, energyKey: currentEnergy }}
+                    }})
+                );
             }}
 
             function showTrackPanel(trackKey) {{

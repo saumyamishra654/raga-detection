@@ -720,24 +720,15 @@ def run_pipeline(
             results.notes = raw_notes
             print("  [WARN] Raga DB or name missing, skipping correction.")
         
-        # Merge consecutive notes to fix fragmentation
-        results.notes = merge_consecutive_notes(results.notes, max_gap=0.1, pitch_tolerance=0.7)
-        print(f"  Merged {len(results.notes)} notes (joined consecutive identical notes)")
-
-        # Note duration histogram (analyze mode)
-        note_duration_hist_path = os.path.join(config.stem_dir, "note_duration_histogram.png")
-        plot_note_duration_histogram(
+        # First-pass merge for small-gap fragmentation.
+        results.notes = merge_consecutive_notes(
             results.notes,
-            note_duration_hist_path,
-            title="Transcribed Note Duration Distribution",
+            max_gap=0.1,
+            pitch_tolerance=0.7,
+            max_dropout_gap=0.18,
+            dropout_fragment_duration=0.12,
         )
-        results.plot_paths["note_duration_histogram"] = note_duration_hist_path
-        print(f"  Saved: {note_duration_hist_path}")
-        
-        # Save transcription to CSV
-        csv_path = os.path.join(config.stem_dir, "transcribed_notes.csv")
-        save_notes_to_csv(results.notes, csv_path)
-        print(f"  Saved notes: {csv_path}")
+        print(f"  Initial note merge: {len(results.notes)} notes")
 
         # Phrase detection (using corrected notes)
         results.phrases = detect_phrases(
@@ -767,6 +758,42 @@ def run_pipeline(
             print(f"  Silence split ({silence_thresh:.2f} thresh, "
                   f"{config.silence_min_duration:.2f}s min): "
                   f"{pre_count} -> {len(results.phrases)} phrases")
+
+        # Collapse repeated consecutive note segments within each phrase so
+        # sustained notes are represented once per phrase.
+        if results.phrases:
+            pre_collapse_notes = sum(len(phrase.notes) for phrase in results.phrases)
+            collapsed_phrases = []
+            for phrase in results.phrases:
+                collapsed_notes = merge_consecutive_notes(
+                    phrase.notes,
+                    max_gap=config.phrase_max_gap,
+                    pitch_tolerance=0.7,
+                    max_dropout_gap=config.phrase_max_gap,
+                    dropout_fragment_duration=config.phrase_max_gap,
+                )
+                collapsed_phrases.append(phrase.__class__(notes=collapsed_notes))
+            results.phrases = collapsed_phrases
+            results.notes = [note for phrase in results.phrases for note in phrase.notes]
+            post_collapse_notes = len(results.notes)
+            print(
+                f"  Phrase-level collapse: {pre_collapse_notes} -> "
+                f"{post_collapse_notes} note segments"
+            )
+
+        # Note duration histogram + CSV use the phrase-collapsed note list.
+        note_duration_hist_path = os.path.join(config.stem_dir, "note_duration_histogram.png")
+        plot_note_duration_histogram(
+            results.notes,
+            note_duration_hist_path,
+            title="Transcribed Note Duration Distribution",
+        )
+        results.plot_paths["note_duration_histogram"] = note_duration_hist_path
+        print(f"  Saved: {note_duration_hist_path}")
+        
+        csv_path = os.path.join(config.stem_dir, "transcribed_notes.csv")
+        save_notes_to_csv(results.notes, csv_path)
+        print(f"  Saved notes: {csv_path}")
 
         # Final phrase exclusion pass after optional silence re-splitting.
         pre_filter_count = len(results.phrases)

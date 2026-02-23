@@ -44,3 +44,64 @@ class JobStatusResponse(BaseModel):
 class JobLogsResponse(BaseModel):
     job_id: str
     logs: List[str]
+
+
+class EditableNote(BaseModel):
+    id: str
+    start: float
+    end: float
+    pitch_midi: float
+    pitch_hz: Optional[float] = None
+    raw_pitch_midi: Optional[float] = None
+    snapped_pitch_midi: Optional[float] = None
+    corrected_pitch_midi: Optional[float] = None
+    rendered_pitch_midi: Optional[float] = None
+    confidence: float = 0.8
+    energy: float = 0.0
+    sargam: str = ""
+    pitch_class: Optional[int] = None
+
+
+class EditablePhrase(BaseModel):
+    id: str
+    start: float = 0.0
+    end: float = 0.0
+    note_ids: List[str] = Field(default_factory=list)
+
+
+class TranscriptionEditPayload(BaseModel):
+    notes: List[EditableNote] = Field(default_factory=list)
+    phrases: List[EditablePhrase] = Field(default_factory=list)
+
+
+class TranscriptionEditVersionInfo(BaseModel):
+    version_id: str
+    created_at: str
+    note_count: int
+    phrase_count: int
+    json_url: Optional[str] = None
+    csv_url: Optional[str] = None
+    report_url: Optional[str] = None
+    source_report_url: Optional[str] = None
+
+
+class TranscriptionEditVersionsResponse(BaseModel):
+    versions: List[TranscriptionEditVersionInfo] = Field(default_factory=list)
+    latest_version_id: Optional[str] = None
+    default_selection: str = "original"
+    default_report_url: Optional[str] = None
+
+
+class TranscriptionEditVersionResponse(BaseModel):
+    has_version: bool
+    version: Optional[TranscriptionEditVersionInfo] = None
+    payload: Optional[TranscriptionEditPayload] = None
+
+
+class TranscriptionEditSaveResponse(BaseModel):
+    save_mode: str = "created"
+    version: TranscriptionEditVersionInfo
+    versions: List[TranscriptionEditVersionInfo] = Field(default_factory=list)
+    default_selection: str = "original"
+    default_report_url: Optional[str] = None
+    payload: TranscriptionEditPayload

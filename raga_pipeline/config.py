@@ -7,6 +7,7 @@ Provides:
 """
 
 import argparse
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -135,6 +136,8 @@ class PipelineConfig:
     tonic_override: Optional[str] = None
     raga_override: Optional[str] = None
     keep_impure_notes: bool = False
+    strict_raga_35c_filter: bool = False
+    strict_raga_max_cents: float = 35.0
 
     def __post_init__(self):
         """Validate and normalize paths."""
@@ -213,6 +216,9 @@ class PipelineConfig:
             if self.melody_source != "composite":
                 self.melody_source = "composite"
                 self.skip_separation_forced_composite = True
+
+        if not math.isfinite(float(self.strict_raga_max_cents)) or float(self.strict_raga_max_cents) < 0.0:
+            raise ValueError("--strict-raga-max-cents must be a finite non-negative value.")
 
         # auto-locate model and database if not specified
         if self.model_path is None:
@@ -353,6 +359,23 @@ def build_cli_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--raga", required=True, help="Raga name")
     analyze_parser.add_argument("--keep-impure-notes", action="store_true", help="Keep notes not in raga (default: remove)")
     analyze_parser.add_argument(
+        "--strict-raga-35c-filter",
+        action="store_true",
+        help=(
+            "Discard notes farther than 35 cents from the nearest valid raga note "
+            "(disables impure-note keeping while enabled)."
+        ),
+    )
+    analyze_parser.add_argument(
+        "--strict-raga-max-cents",
+        type=float,
+        default=35.0,
+        help=(
+            "Maximum allowed distance in cents from nearest valid raga note when "
+            "--strict-raga-35c-filter is enabled."
+        ),
+    )
+    analyze_parser.add_argument(
         "--transcription-smoothing-ms",
         type=float,
         default=0.0,
@@ -483,6 +506,8 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),
         keep_impure_notes=getattr(args, 'keep_impure_notes', False),
+        strict_raga_35c_filter=getattr(args, 'strict_raga_35c_filter', False),
+        strict_raga_max_cents=getattr(args, 'strict_raga_max_cents', 35.0),
         transcription_smoothing_ms=0.0 if getattr(args, 'no_smoothing', False) else getattr(args, 'transcription_smoothing_ms', 0.0),
         transcription_min_duration=getattr(args, 'transcription_min_duration', 0.02),
         transcription_derivative_threshold=getattr(args, 'transcription_stability_threshold', 4.0),

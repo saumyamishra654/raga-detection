@@ -127,6 +127,29 @@ class ConfigSchemaTests(unittest.TestCase):
             )
             self.assertEqual(config.phrase_min_duration, 0.2)
             self.assertEqual(config.phrase_min_length, 1)
+            self.assertFalse(config.strict_raga_35c_filter)
+            self.assertEqual(config.strict_raga_max_cents, 35.0)
+
+    def test_parse_config_analyze_strict_raga_35c_filter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "demo.wav"
+            audio_path.write_bytes(b"RIFF")
+            config = parse_config_from_argv(
+                [
+                    "analyze",
+                    "--audio",
+                    str(audio_path),
+                    "--tonic",
+                    "C",
+                    "--raga",
+                    "Bhairavi",
+                    "--strict-raga-35c-filter",
+                    "--strict-raga-max-cents",
+                    "42",
+                ]
+            )
+            self.assertTrue(config.strict_raga_35c_filter)
+            self.assertEqual(config.strict_raga_max_cents, 42.0)
 
     def test_preprocess_youtube_requires_yt(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

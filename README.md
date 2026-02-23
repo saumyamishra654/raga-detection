@@ -193,6 +193,8 @@ Important:
 
 **Analyze Options:**
 *   `--keep-impure-notes`: Keep notes not in the raga (default behavior is to discard them during correction).
+*   `--strict-raga-35c-filter`: Enable strict raga filtering by nearest-note distance (when enabled, `--keep-impure-notes` is ignored).
+*   `--strict-raga-max-cents`: Maximum allowed nearest-note distance in cents for strict filtering (default: `35`).
 *   `--transcription-smoothing-ms`: Transcription smoothing sigma (ms). Use `0` to disable.
 *   `--transcription-min-duration`: Minimum duration (s) for a transcribed note (default: `0.02`).
 *   `--transcription-stability-threshold`: Max pitch change (semitones/sec) to be considered stable (default: `4.0`).

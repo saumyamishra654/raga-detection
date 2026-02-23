@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import base64
 import csv
+import json
 import os
 import re
 import shutil
 import threading
 import uuid
+from datetime import datetime, timezone
+from html import unescape
+from math import isfinite
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
@@ -17,11 +22,25 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from local_app.jobs import JobManager, JobRecord
-from local_app.schemas import ArtifactInfo, BatchJobRequest, JobCreateRequest, JobLogsResponse, JobStatusResponse
+from local_app.schemas import (
+    ArtifactInfo,
+    BatchJobRequest,
+    EditableNote,
+    EditablePhrase,
+    JobCreateRequest,
+    JobLogsResponse,
+    JobStatusResponse,
+    TranscriptionEditPayload,
+    TranscriptionEditSaveResponse,
+    TranscriptionEditVersionInfo,
+    TranscriptionEditVersionResponse,
+    TranscriptionEditVersionsResponse,
+)
 from raga_pipeline.cli_schema import get_mode_schema, list_modes
 from raga_pipeline.config import find_default_raga_db_path
 from raga_pipeline.audio import (
     get_tonic_from_tanpura_key,
+    load_pitch_from_csv,
     list_tanpura_tracks,
     start_microphone_recording_session,
 )
@@ -46,6 +65,9 @@ KNOWN_ARTIFACT_FILES = [
     "pitch_sargam.png",
 ]
 ASSET_ATTR_RE = re.compile(r'(\b(?:src|href)\s*=\s*)(["\'])([^"\']+)(\2)', re.IGNORECASE)
+TRANSCRIPTION_EDIT_DIRNAME = "transcription_edits"
+TRANSCRIPTION_EDIT_MANIFEST = "manifest.json"
+TRANSCRIPTION_EDIT_SCHEMA_VERSION = 1
 
 
 def _health_checks() -> List[str]:
@@ -306,6 +328,905 @@ def _artifact_to_dict(item: ArtifactInfo) -> Dict[str, Any]:
     return item.dict()  # type: ignore[no-any-return]
 
 
+def _model_dump(model: Any) -> Dict[str, Any]:
+    if hasattr(model, "model_dump"):
+        return model.model_dump()  # type: ignore[no-any-return]
+    return model.dict()  # type: ignore[no-any-return]
+
+
+def _model_validate(model_cls: Any, payload: Dict[str, Any]) -> Any:
+    if hasattr(model_cls, "model_validate"):
+        return model_cls.model_validate(payload)
+    return model_cls.parse_obj(payload)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _report_metadata_path(report_path: Path) -> Path:
+    return report_path.with_suffix(".meta.json")
+
+
+def _edit_root_for_report(report_path: Path) -> Path:
+    return report_path.parent / TRANSCRIPTION_EDIT_DIRNAME
+
+
+def _manifest_path_for_report(report_path: Path) -> Path:
+    return _edit_root_for_report(report_path) / TRANSCRIPTION_EDIT_MANIFEST
+
+
+def _default_edit_manifest(report_path: Path) -> Dict[str, Any]:
+    return {
+        "schema_version": TRANSCRIPTION_EDIT_SCHEMA_VERSION,
+        "source_report": report_path.name,
+        "default_selection": "original",
+        "versions": [],
+    }
+
+
+def _load_edit_manifest(report_path: Path) -> Dict[str, Any]:
+    manifest_path = _manifest_path_for_report(report_path)
+    if not manifest_path.exists():
+        return _default_edit_manifest(report_path)
+
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        return _default_edit_manifest(report_path)
+
+    if not isinstance(data, dict):
+        return _default_edit_manifest(report_path)
+    versions = data.get("versions")
+    if not isinstance(versions, list):
+        data["versions"] = []
+    data.setdefault("source_report", report_path.name)
+    data.setdefault("schema_version", TRANSCRIPTION_EDIT_SCHEMA_VERSION)
+    data.setdefault("default_selection", "original")
+    return data
+
+
+def _save_edit_manifest(report_path: Path, manifest: Dict[str, Any]) -> None:
+    edit_root = _edit_root_for_report(report_path)
+    edit_root.mkdir(parents=True, exist_ok=True)
+    manifest_path = _manifest_path_for_report(report_path)
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+
+def _effective_default_selection(manifest: Dict[str, Any]) -> str:
+    raw = str(manifest.get("default_selection", "original") or "").strip()
+    if not raw or raw == "original":
+        return "original"
+    if _find_version_entry(manifest, raw) is None:
+        return "original"
+    return raw
+
+
+def _default_report_path(report_path: Path, manifest: Dict[str, Any]) -> Path:
+    selection = _effective_default_selection(manifest)
+    if selection == "original":
+        return report_path
+
+    entry = _find_version_entry(manifest, selection)
+    if entry is None:
+        return report_path
+    report_file = str(entry.get("report_file", "")).strip()
+    if not report_file:
+        return report_path
+    candidate = (report_path.parent / report_file).resolve()
+    parent = report_path.parent.resolve()
+    if not _is_relative_to(candidate, parent):
+        return report_path
+    if not candidate.exists() or not candidate.is_file():
+        return report_path
+    try:
+        # If a fresh source report was regenerated after this edited file,
+        # serve source by default to avoid stale visualizations.
+        if report_path.exists() and report_path.stat().st_mtime > candidate.stat().st_mtime:
+            return report_path
+    except OSError:
+        pass
+    return candidate
+
+
+def _parse_version_number(version_id: str) -> int:
+    raw = str(version_id or "").strip().lower()
+    if raw.startswith("v"):
+        raw = raw[1:]
+    if raw.isdigit():
+        return int(raw)
+    return -1
+
+
+def _next_version_id(manifest: Dict[str, Any]) -> str:
+    versions = manifest.get("versions", [])
+    max_num = 0
+    for item in versions:
+        if not isinstance(item, dict):
+            continue
+        max_num = max(max_num, _parse_version_number(str(item.get("version_id", ""))))
+    return f"v{max_num + 1:04d}"
+
+
+def _find_version_entry(manifest: Dict[str, Any], version_id: str) -> Optional[Dict[str, Any]]:
+    versions_raw = manifest.get("versions", [])
+    if not isinstance(versions_raw, list):
+        return None
+    for item in versions_raw:
+        if isinstance(item, dict) and str(item.get("version_id", "")).strip() == version_id:
+            return item
+    return None
+
+
+def _version_file_path(report_path: Path, filename: Any) -> Optional[Path]:
+    if filename is None:
+        return None
+    text = str(filename).strip()
+    if not text:
+        return None
+    if text.lower() in {"none", "null"}:
+        return None
+    return (_edit_root_for_report(report_path) / text).resolve()
+
+
+def _resolve_report_relative_path(base_dir: Path, report_name: str) -> Path:
+    decoded_name = unquote(str(report_name or "")).strip()
+    if not decoded_name:
+        raise HTTPException(status_code=400, detail="report_name is required.")
+    target = (base_dir / decoded_name).resolve()
+    if not _is_relative_to(target, base_dir):
+        raise HTTPException(status_code=403, detail="Path traversal blocked.")
+    return target
+
+
+def _coerce_float(value: Any, fallback: float = 0.0) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    if not isfinite(parsed):
+        return fallback
+    return parsed
+
+
+def _coerce_optional_float(value: Any) -> Optional[float]:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not isfinite(parsed):
+        return None
+    return parsed
+
+
+def _midi_to_hz(midi: float) -> float:
+    return float(440.0 * (2.0 ** ((midi - 69.0) / 12.0)))
+
+
+def _normalize_edit_payload(payload: TranscriptionEditPayload) -> TranscriptionEditPayload:
+    note_items: List[EditableNote] = []
+    note_lookup: Dict[str, EditableNote] = {}
+    for idx, note in enumerate(payload.notes):
+        note_id = str(note.id or "").strip() or f"n{idx + 1}"
+        if note_id in note_lookup:
+            continue
+
+        start = _coerce_float(note.start, 0.0)
+        end = _coerce_float(note.end, start)
+        if end < start:
+            start, end = end, start
+        if end <= start:
+            end = start + 1e-3
+
+        pitch_midi = _coerce_float(note.pitch_midi, 60.0)
+        pitch_hz = _coerce_float(note.pitch_hz, _midi_to_hz(pitch_midi))
+        if pitch_hz <= 0:
+            pitch_hz = _midi_to_hz(pitch_midi)
+        raw_pitch_midi = _coerce_optional_float(note.raw_pitch_midi)
+        snapped_pitch_midi = _coerce_optional_float(note.snapped_pitch_midi)
+        corrected_pitch_midi = _coerce_optional_float(note.corrected_pitch_midi)
+        rendered_pitch_midi = _coerce_optional_float(note.rendered_pitch_midi)
+
+        confidence = _coerce_float(note.confidence, 0.8)
+        energy = _coerce_float(note.energy, 0.0)
+        sargam = str(note.sargam or "").strip()
+
+        pitch_class_raw = note.pitch_class
+        if pitch_class_raw is None:
+            pitch_class = int(round(pitch_midi)) % 12
+        else:
+            try:
+                pitch_class = int(pitch_class_raw) % 12
+            except Exception:
+                pitch_class = int(round(pitch_midi)) % 12
+
+        normalized_note = EditableNote(
+            id=note_id,
+            start=start,
+            end=end,
+            pitch_midi=pitch_midi,
+            pitch_hz=pitch_hz,
+            raw_pitch_midi=raw_pitch_midi,
+            snapped_pitch_midi=snapped_pitch_midi,
+            corrected_pitch_midi=corrected_pitch_midi,
+            rendered_pitch_midi=rendered_pitch_midi,
+            confidence=confidence,
+            energy=energy,
+            sargam=sargam,
+            pitch_class=pitch_class,
+        )
+        note_lookup[note_id] = normalized_note
+        note_items.append(normalized_note)
+
+    note_items.sort(key=lambda n: (n.start, n.end, n.pitch_midi, n.id))
+    note_lookup = {note.id: note for note in note_items}
+
+    phrase_items: List[EditablePhrase] = []
+    seen_phrase_ids: set[str] = set()
+    assigned_note_ids: set[str] = set()
+    auto_phrase_idx = 1
+    for idx, phrase in enumerate(payload.phrases):
+        phrase_id = str(phrase.id or "").strip() or f"p{idx + 1}"
+        if phrase_id in seen_phrase_ids:
+            continue
+        seen_phrase_ids.add(phrase_id)
+
+        local_seen: set[str] = set()
+        phrase_note_ids: List[str] = []
+        for raw_note_id in phrase.note_ids:
+            note_id = str(raw_note_id or "").strip()
+            if not note_id or note_id not in note_lookup:
+                continue
+            if note_id in local_seen:
+                continue
+            if note_id in assigned_note_ids:
+                continue
+            local_seen.add(note_id)
+            assigned_note_ids.add(note_id)
+            phrase_note_ids.append(note_id)
+
+        if not phrase_note_ids:
+            continue
+
+        phrase_notes = [note_lookup[nid] for nid in phrase_note_ids]
+        phrase_notes.sort(key=lambda n: (n.start, n.end))
+        phrase_note_ids = [n.id for n in phrase_notes]
+        phrase_start = min(n.start for n in phrase_notes)
+        phrase_end = max(n.end for n in phrase_notes)
+        phrase_items.append(
+            EditablePhrase(
+                id=phrase_id,
+                start=phrase_start,
+                end=phrase_end,
+                note_ids=phrase_note_ids,
+            )
+        )
+
+    for note in note_items:
+        if note.id in assigned_note_ids:
+            continue
+        phrase_id = f"auto_p{auto_phrase_idx:04d}"
+        auto_phrase_idx += 1
+        phrase_items.append(
+            EditablePhrase(
+                id=phrase_id,
+                start=note.start,
+                end=note.end,
+                note_ids=[note.id],
+            )
+        )
+
+    phrase_items.sort(key=lambda p: (p.start, p.end, p.id))
+    return TranscriptionEditPayload(notes=note_items, phrases=phrase_items)
+
+
+def _editable_note_to_sequence_note(note: EditableNote) -> Any:
+    from raga_pipeline.sequence import Note
+
+    pitch_class = note.pitch_class if note.pitch_class is not None else int(round(note.pitch_midi)) % 12
+    pitch_hz = note.pitch_hz if note.pitch_hz is not None else _midi_to_hz(note.pitch_midi)
+    seq_note = Note(
+        start=float(note.start),
+        end=float(note.end),
+        pitch_midi=float(note.pitch_midi),
+        pitch_hz=float(pitch_hz),
+        confidence=float(note.confidence),
+        energy=float(note.energy),
+        sargam=str(note.sargam or ""),
+        pitch_class=int(pitch_class) % 12,
+    )
+    raw_pitch = _coerce_optional_float(note.raw_pitch_midi)
+    if raw_pitch is not None:
+        seq_note.raw_pitch_midi = raw_pitch
+        seq_note.raw_pitch_hz = _midi_to_hz(raw_pitch)
+    snapped_pitch = _coerce_optional_float(note.snapped_pitch_midi)
+    if snapped_pitch is not None:
+        seq_note.snapped_pitch_midi = snapped_pitch
+    corrected_pitch = _coerce_optional_float(note.corrected_pitch_midi)
+    if corrected_pitch is not None:
+        seq_note.corrected_pitch_midi = corrected_pitch
+    rendered_pitch = _coerce_optional_float(note.rendered_pitch_midi)
+    if rendered_pitch is not None:
+        seq_note.rendered_pitch_midi = rendered_pitch
+    return seq_note
+
+
+def _payload_to_phrase_objects(payload: TranscriptionEditPayload) -> tuple[List[Any], List[Any]]:
+    from raga_pipeline.sequence import Phrase
+
+    note_lookup = {note.id: _editable_note_to_sequence_note(note) for note in payload.notes}
+    phrases: List[Any] = []
+
+    for phrase in payload.phrases:
+        phrase_notes = [note_lookup[nid] for nid in phrase.note_ids if nid in note_lookup]
+        if not phrase_notes:
+            continue
+        phrase_notes.sort(key=lambda n: (n.start, n.end))
+        phrases.append(Phrase(notes=phrase_notes))
+
+    phrases.sort(key=lambda p: (p.start, p.end))
+    flat_notes = [note for phrase in phrases for note in phrase.notes]
+    return phrases, flat_notes
+
+
+def _write_transcription_csv(notes: List[Any], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "start",
+        "end",
+        "duration",
+        "pitch_midi",
+        "pitch_hz",
+        "confidence",
+        "pitch_class",
+        "sargam",
+        "energy",
+    ]
+    with output_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for note in notes:
+            duration = max(0.0, float(getattr(note, "end", 0.0)) - float(getattr(note, "start", 0.0)))
+            writer.writerow(
+                {
+                    "start": f"{float(getattr(note, 'start', 0.0)):.3f}",
+                    "end": f"{float(getattr(note, 'end', 0.0)):.3f}",
+                    "duration": f"{duration:.3f}",
+                    "pitch_midi": f"{float(getattr(note, 'pitch_midi', 0.0)):.2f}",
+                    "pitch_hz": f"{float(getattr(note, 'pitch_hz', 0.0)):.1f}",
+                    "confidence": f"{float(getattr(note, 'confidence', 0.0)):.2f}",
+                    "pitch_class": int(getattr(note, "pitch_class", 0)),
+                    "sargam": str(getattr(note, "sargam", "")),
+                    "energy": f"{float(getattr(note, 'energy', 0.0)):.4f}",
+                }
+            )
+
+
+def _resolve_context_path(base_dir: Path, raw_path: Any) -> Optional[Path]:
+    if raw_path is None:
+        return None
+    path_text = str(raw_path).strip()
+    if not path_text:
+        return None
+    path = Path(path_text).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (base_dir / path).resolve()
+
+
+def _resolve_media_path(
+    base_dir: Path,
+    raw_path: Any,
+    fallbacks: List[Path],
+) -> Path:
+    """
+    Resolve report media paths robustly.
+
+    Metadata may contain absolute paths, stem-dir-relative paths, or repo/cwd-relative paths.
+    Prefer an existing file among those interpretations, then fall back to known stem assets.
+    """
+    candidates: List[Path] = []
+    resolved = _resolve_context_path(base_dir, raw_path)
+    if resolved is not None:
+        candidates.append(resolved)
+
+    raw_text = str(raw_path or "").strip()
+    if raw_text:
+        raw_candidate = Path(raw_text).expanduser()
+        if raw_candidate.is_absolute():
+            candidates.append(raw_candidate.resolve())
+        else:
+            candidates.append((REPO_ROOT / raw_candidate).resolve())
+            candidates.append((Path.cwd() / raw_candidate).resolve())
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.exists() and candidate.is_file():
+            return candidate.resolve()
+
+    for fallback in fallbacks:
+        try:
+            candidate = fallback.resolve()
+        except Exception:
+            candidate = fallback
+        if candidate.exists() and candidate.is_file():
+            return candidate.resolve()
+
+    if resolved is not None:
+        return resolved
+    if fallbacks:
+        return fallbacks[0].resolve()
+    return base_dir
+
+
+def _parse_tonic_pitch_class(tonic_label: str) -> Optional[int]:
+    text = str(tonic_label or "").strip().replace("♯", "#").replace("♭", "b")
+    if not text:
+        return None
+    normalized = text.replace(" ", "")
+    lookup = {
+        "C": 0,
+        "B#": 0,
+        "C#": 1,
+        "DB": 1,
+        "D": 2,
+        "D#": 3,
+        "EB": 3,
+        "E": 4,
+        "FB": 4,
+        "F": 5,
+        "E#": 5,
+        "F#": 6,
+        "GB": 6,
+        "G": 7,
+        "G#": 8,
+        "AB": 8,
+        "A": 9,
+        "A#": 10,
+        "BB": 10,
+        "B": 11,
+        "CB": 11,
+    }
+    return lookup.get(normalized.upper())
+
+
+def _extract_report_subtitle_context(report_html: str) -> tuple[Optional[str], Optional[str], Optional[int]]:
+    raga_name: Optional[str] = None
+    tonic_label: Optional[str] = None
+
+    subtitle_match = re.search(
+        r"<p[^>]*class=[\"'][^\"']*subtitle[^\"']*[\"'][^>]*>(.*?)</p>",
+        report_html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if subtitle_match:
+        subtitle_text = unescape(re.sub(r"<[^>]+>", "", subtitle_match.group(1))).strip()
+        subtitle_parts = re.match(r"(.+?)\s*\(Tonic:\s*([^)]+)\)\s*$", subtitle_text)
+        if subtitle_parts:
+            candidate_raga = subtitle_parts.group(1).strip()
+            candidate_tonic = subtitle_parts.group(2).strip()
+            if candidate_raga:
+                raga_name = candidate_raga
+            if candidate_tonic:
+                tonic_label = candidate_tonic
+
+    if not raga_name:
+        title_match = re.search(
+            r"<title>\s*Raga Analysis Report:\s*([^<]+)\s*</title>",
+            report_html,
+            flags=re.IGNORECASE,
+        )
+        if title_match:
+            candidate_raga = unescape(title_match.group(1)).strip()
+            if candidate_raga:
+                raga_name = candidate_raga
+
+    if not tonic_label:
+        tonic_match = re.search(r"\(Tonic:\s*([^)]+)\)", report_html, flags=re.IGNORECASE)
+        if tonic_match:
+            candidate_tonic = unescape(tonic_match.group(1)).strip()
+            if candidate_tonic:
+                tonic_label = candidate_tonic
+
+    tonic_pc = _parse_tonic_pitch_class(tonic_label or "") if tonic_label else None
+    return raga_name, tonic_label, tonic_pc
+
+
+def _extract_audio_candidates_from_report(
+    report_path: Path,
+    report_html: str,
+    audio_id: str,
+) -> List[Path]:
+    block_match = re.search(
+        rf"<audio[^>]*id=[\"']{re.escape(audio_id)}[\"'][^>]*>(.*?)</audio>",
+        report_html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not block_match:
+        return []
+
+    candidates: List[Path] = []
+    source_block = block_match.group(1)
+    source_matches = re.findall(
+        r"<source[^>]*src=[\"']([^\"']+)[\"'][^>]*>",
+        source_block,
+        flags=re.IGNORECASE,
+    )
+    for source in source_matches:
+        raw = unquote(str(source or "").strip())
+        if not raw:
+            continue
+        lower = raw.lower()
+        if lower.startswith(("http://", "https://", "data:", "javascript:", "mailto:")):
+            continue
+        if raw.startswith("#"):
+            continue
+        path_obj = Path(raw).expanduser()
+        if path_obj.is_absolute():
+            candidates.append(path_obj.resolve())
+        else:
+            candidates.append((report_path.parent / path_obj).resolve())
+    return candidates
+
+
+def _is_unknown_text(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text in {"", "unknown", "n/a", "none", "null"}
+
+
+def _enrich_context_from_report_html(report_path: Path, context: Dict[str, Any]) -> Dict[str, Any]:
+    if not report_path.exists() or not report_path.is_file():
+        return context
+
+    try:
+        report_html = report_path.read_text(encoding="utf-8")
+    except Exception:
+        return context
+
+    cfg = context.get("config")
+    if not isinstance(cfg, dict):
+        cfg = {}
+    context["config"] = cfg
+
+    detected = context.get("detected")
+    if not isinstance(detected, dict):
+        detected = {}
+    context["detected"] = detected
+
+    stats = context.get("stats")
+    if not isinstance(stats, dict):
+        stats = {}
+    context["stats"] = stats
+
+    base_dir = report_path.parent.resolve()
+
+    audio_specs: List[tuple[str, str]] = [
+        ("audio_path", "original-player"),
+        ("vocals_path", "vocals-player"),
+        ("accompaniment_path", "accomp-player"),
+    ]
+    for config_key, audio_id in audio_specs:
+        existing_raw = cfg.get(config_key)
+        has_existing = False
+        if existing_raw:
+            existing_path = _resolve_media_path(base_dir, existing_raw, [])
+            has_existing = existing_path.exists() and existing_path.is_file()
+        if has_existing:
+            continue
+
+        for candidate in _extract_audio_candidates_from_report(report_path, report_html, audio_id):
+            if candidate.exists() and candidate.is_file():
+                cfg[config_key] = str(candidate)
+                break
+
+    raga_name, tonic_label, tonic_pc = _extract_report_subtitle_context(report_html)
+    if raga_name:
+        if _is_unknown_text(detected.get("raga")):
+            detected["raga"] = raga_name
+        if _is_unknown_text(stats.get("raga_name")):
+            stats["raga_name"] = raga_name
+
+    if tonic_label and _is_unknown_text(stats.get("tonic")):
+        stats["tonic"] = tonic_label
+    if tonic_pc is not None and detected.get("tonic") is None:
+        detected["tonic"] = tonic_pc
+
+    return context
+
+
+def _fallback_report_context(report_path: Path) -> Dict[str, Any]:
+    stem_dir = report_path.parent
+    stem_name = stem_dir.name
+
+    def _first_existing(candidates: List[Path], fallback: Path) -> str:
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate.resolve())
+        return str(fallback.resolve())
+
+    original_audio_fallback = stem_dir / f"{stem_name}.mp3"
+    original_audio = _first_existing(
+        [stem_dir / f"{stem_name}.mp3", stem_dir / f"{stem_name}.wav"],
+        original_audio_fallback,
+    )
+    vocals_audio = _first_existing(
+        [stem_dir / "vocals.mp3", stem_dir / "vocals.wav"],
+        stem_dir / "vocals.mp3",
+    )
+    accomp_audio = _first_existing(
+        [stem_dir / "accompaniment.mp3", stem_dir / "accompaniment.wav"],
+        stem_dir / "accompaniment.mp3",
+    )
+
+    plot_paths: Dict[str, str] = {}
+    note_duration_path = stem_dir / "note_duration_histogram.png"
+    gmm_path = stem_dir / "gmm_overlay.png"
+    if note_duration_path.exists():
+        plot_paths["note_duration_histogram"] = note_duration_path.name
+    if gmm_path.exists():
+        plot_paths["gmm_overlay"] = gmm_path.name
+
+    context = {
+        "schema_version": 1,
+        "config": {
+            "audio_path": original_audio,
+            "vocals_path": vocals_audio,
+            "accompaniment_path": accomp_audio,
+            "melody_source": "separated",
+            "transcription_smoothing_ms": 70.0,
+            "transcription_min_duration": 0.04,
+            "transcription_derivative_threshold": 2.0,
+            "energy_threshold": 0.0,
+            "show_rms_overlay": True,
+        },
+        "detected": {"tonic": None, "raga": "Unknown"},
+        "stats": {
+            "correction_summary": {},
+            "pattern_analysis": {},
+            "raga_name": "Unknown",
+            "tonic": "Unknown",
+            "transition_matrix_path": "transition_matrix.png",
+            "pitch_plot_path": "pitch_sargam.png",
+        },
+        "plot_paths": plot_paths,
+        "pitch_csv_paths": {
+            "original": ["composite_pitch_data.csv"],
+            "vocals": ["melody_pitch_data.csv", "vocals_pitch_data.csv"],
+            "accompaniment": ["accompaniment_pitch_data.csv"],
+        },
+    }
+    return _enrich_context_from_report_html(report_path, context)
+
+
+def _load_report_context(report_path: Path) -> Dict[str, Any]:
+    meta_path = _report_metadata_path(report_path)
+    if meta_path.exists():
+        try:
+            loaded = json.loads(meta_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                return _enrich_context_from_report_html(report_path, loaded)
+        except Exception:
+            pass
+    return _fallback_report_context(report_path)
+
+
+def _load_pitch_from_context(base_dir: Path, context: Dict[str, Any], key: str) -> Any:
+    candidate_map = context.get("pitch_csv_paths", {})
+    if not isinstance(candidate_map, dict):
+        candidate_map = {}
+    defaults: Dict[str, List[str]] = {
+        "original": ["composite_pitch_data.csv"],
+        "vocals": ["melody_pitch_data.csv", "vocals_pitch_data.csv"],
+        "accompaniment": ["accompaniment_pitch_data.csv"],
+    }
+    candidates_raw = candidate_map.get(key, defaults.get(key, []))
+    if not isinstance(candidates_raw, list):
+        candidates_raw = defaults.get(key, [])
+
+    for candidate in candidates_raw:
+        resolved = _resolve_context_path(base_dir, candidate)
+        if resolved is None or not resolved.exists() or not resolved.is_file():
+            continue
+        try:
+            return load_pitch_from_csv(str(resolved))
+        except Exception:
+            continue
+    return None
+
+
+def _resolve_plot_path(base_dir: Path, raw_path: Any, fallback_name: str) -> str:
+    resolved = _resolve_context_path(base_dir, raw_path)
+    if resolved is None:
+        return str((base_dir / fallback_name).resolve())
+    return str(resolved)
+
+
+def _render_edited_report(
+    report_path: Path,
+    context: Dict[str, Any],
+    payload: TranscriptionEditPayload,
+    edited_report_filename: str,
+) -> Path:
+    from raga_pipeline.output import AnalysisResults, AnalysisStats, generate_analysis_report
+
+    base_dir = report_path.parent.resolve()
+    cfg = context.get("config", {})
+    if not isinstance(cfg, dict):
+        cfg = {}
+    detected = context.get("detected", {})
+    if not isinstance(detected, dict):
+        detected = {}
+    stats_blob = context.get("stats", {})
+    if not isinstance(stats_blob, dict):
+        stats_blob = {}
+
+    audio_path = _resolve_media_path(
+        base_dir,
+        cfg.get("audio_path"),
+        [
+            base_dir / f"{base_dir.name}.mp3",
+            base_dir / f"{base_dir.name}.wav",
+        ],
+    )
+    vocals_path = _resolve_media_path(
+        base_dir,
+        cfg.get("vocals_path"),
+        [
+            base_dir / "vocals.mp3",
+            base_dir / "vocals.wav",
+        ],
+    )
+    accomp_path = _resolve_media_path(
+        base_dir,
+        cfg.get("accompaniment_path"),
+        [
+            base_dir / "accompaniment.mp3",
+            base_dir / "accompaniment.wav",
+        ],
+    )
+
+    config_obj = SimpleNamespace(
+        audio_path=str(audio_path),
+        vocals_path=str(vocals_path),
+        accompaniment_path=str(accomp_path),
+        melody_source=str(cfg.get("melody_source", "separated")),
+        transcription_smoothing_ms=_coerce_float(cfg.get("transcription_smoothing_ms"), 70.0),
+        transcription_min_duration=_coerce_float(cfg.get("transcription_min_duration"), 0.04),
+        transcription_derivative_threshold=_coerce_float(cfg.get("transcription_derivative_threshold"), 2.0),
+        energy_threshold=_coerce_float(cfg.get("energy_threshold"), 0.0),
+        show_rms_overlay=bool(cfg.get("show_rms_overlay", True)),
+    )
+
+    phrases, flat_notes = _payload_to_phrase_objects(payload)
+    results = AnalysisResults(config=config_obj)
+    results.notes = flat_notes
+    results.phrases = phrases
+
+    tonic_value = detected.get("tonic")
+    try:
+        results.detected_tonic = int(tonic_value) if tonic_value is not None else None
+    except Exception:
+        results.detected_tonic = None
+
+    raga_value = detected.get("raga")
+    results.detected_raga = str(raga_value) if raga_value else None
+
+    results.pitch_data_composite = _load_pitch_from_context(base_dir, context, "original")
+    results.pitch_data_stem = _load_pitch_from_context(base_dir, context, "vocals")
+    results.pitch_data_vocals = results.pitch_data_stem
+    results.pitch_data_accomp = _load_pitch_from_context(base_dir, context, "accompaniment")
+
+    plot_paths_blob = context.get("plot_paths", {})
+    plot_paths: Dict[str, str] = {}
+    if isinstance(plot_paths_blob, dict):
+        for key, value in plot_paths_blob.items():
+            resolved = _resolve_context_path(base_dir, value)
+            if resolved is not None:
+                plot_paths[str(key)] = str(resolved)
+    results.plot_paths = plot_paths
+
+    stats_obj = AnalysisStats(
+        correction_summary=stats_blob.get("correction_summary", {}),
+        pattern_analysis=stats_blob.get("pattern_analysis", {}),
+        raga_name=str(stats_blob.get("raga_name", results.detected_raga or "Unknown")),
+        tonic=str(stats_blob.get("tonic", "Unknown")),
+        transition_matrix_path=_resolve_plot_path(base_dir, stats_blob.get("transition_matrix_path"), "transition_matrix.png"),
+        pitch_plot_path=_resolve_plot_path(base_dir, stats_blob.get("pitch_plot_path"), "pitch_sargam.png"),
+    )
+
+    out_path = generate_analysis_report(
+        results,
+        stats_obj,
+        str(base_dir),
+        report_filename=edited_report_filename,
+    )
+    return Path(out_path).resolve()
+
+
+def _version_entry_to_info(report_path: Path, entry: Dict[str, Any]) -> TranscriptionEditVersionInfo:
+    edit_root = _edit_root_for_report(report_path)
+
+    def _resolve_name(name: Any) -> Optional[Path]:
+        if name is None:
+            return None
+        text = str(name).strip()
+        if not text:
+            return None
+        return (edit_root / text).resolve()
+
+    json_path = _resolve_name(entry.get("json_file"))
+    csv_path = _resolve_name(entry.get("csv_file"))
+    report_file = entry.get("report_file")
+    report_version_path = None
+    if report_file:
+        report_version_path = (report_path.parent / str(report_file)).resolve()
+
+    return TranscriptionEditVersionInfo(
+        version_id=str(entry.get("version_id", "")),
+        created_at=str(entry.get("created_at", "")),
+        note_count=int(entry.get("note_count", 0)),
+        phrase_count=int(entry.get("phrase_count", 0)),
+        json_url=_local_file_url(json_path) if json_path else None,
+        csv_url=_local_file_url(csv_path) if csv_path else None,
+        report_url=_local_report_url(report_version_path) if report_version_path else None,
+        source_report_url=_local_report_url(report_path),
+    )
+
+
+def _list_version_infos(report_path: Path, manifest: Dict[str, Any]) -> List[TranscriptionEditVersionInfo]:
+    versions_raw = manifest.get("versions", [])
+    if not isinstance(versions_raw, list):
+        return []
+
+    version_entries = [item for item in versions_raw if isinstance(item, dict)]
+    version_entries.sort(
+        key=lambda item: (
+            _parse_version_number(str(item.get("version_id", ""))),
+            str(item.get("created_at", "")),
+        )
+    )
+    return [_version_entry_to_info(report_path, item) for item in version_entries]
+
+
+def _build_versions_response(
+    report_path: Path,
+    manifest: Dict[str, Any],
+) -> TranscriptionEditVersionsResponse:
+    versions = _list_version_infos(report_path, manifest)
+    latest_version_id = versions[-1].version_id if versions else None
+    default_selection = _effective_default_selection(manifest)
+    default_report_path = _default_report_path(report_path, manifest)
+    default_report_url = _local_report_url(default_report_path)
+    return TranscriptionEditVersionsResponse(
+        versions=versions,
+        latest_version_id=latest_version_id,
+        default_selection=default_selection,
+        default_report_url=default_report_url,
+    )
+
+
+def _load_version_payload(report_path: Path, entry: Dict[str, Any]) -> TranscriptionEditPayload:
+    json_file = str(entry.get("json_file", "")).strip()
+    if not json_file:
+        raise HTTPException(status_code=404, detail="Version payload file is missing.")
+    payload_path = (_edit_root_for_report(report_path) / json_file).resolve()
+    if not payload_path.exists() or not payload_path.is_file():
+        raise HTTPException(status_code=404, detail="Version payload file not found.")
+
+    try:
+        loaded = json.loads(payload_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read version payload: {exc}") from exc
+
+    if not isinstance(loaded, dict):
+        raise HTTPException(status_code=500, detail="Version payload has invalid format.")
+    return _model_validate(TranscriptionEditPayload, loaded)
+
+
 def create_app(job_manager: JobManager | None = None) -> FastAPI:
     app = FastAPI(title="Raga Local App", version="0.1.0")
     manager = job_manager or JobManager(repo_root=REPO_ROOT)
@@ -335,13 +1256,22 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
     @app.get("/local-report/{dir_token}/{relative_path:path}")
     def local_report(dir_token: str, relative_path: str) -> HTMLResponse:
         base_dir = _decode_dir_token(dir_token)
-        report_path = (base_dir / relative_path).resolve()
-        if not _is_relative_to(report_path, base_dir):
+        requested_report_path = (base_dir / relative_path).resolve()
+        if not _is_relative_to(requested_report_path, base_dir):
             raise HTTPException(status_code=403, detail="Path traversal blocked.")
-        if not report_path.exists() or not report_path.is_file():
+        if not requested_report_path.exists() or not requested_report_path.is_file():
             raise HTTPException(status_code=404, detail="File not found.")
-        if report_path.suffix.lower() != ".html":
+        if requested_report_path.suffix.lower() != ".html":
             raise HTTPException(status_code=400, detail="Only HTML reports are supported by this route.")
+
+        report_path = requested_report_path
+        try:
+            manifest = _load_edit_manifest(requested_report_path)
+            source_report_name = str(manifest.get("source_report", requested_report_path.name)).strip()
+            if requested_report_path.name == source_report_name:
+                report_path = _default_report_path(requested_report_path, manifest)
+        except Exception:
+            report_path = requested_report_path
 
         raw_html = report_path.read_text(encoding="utf-8")
         rewritten_html = _rewrite_report_asset_urls(raw_html, report_path)
@@ -486,6 +1416,359 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "detect_report_url": detect_url,
             "analyze_report_url": analyze_url,
         }
+
+    @app.get(
+        "/api/transcription-edits/{dir_token}/{report_name}/versions",
+        response_model=TranscriptionEditVersionsResponse,
+    )
+    def api_transcription_edit_versions(dir_token: str, report_name: str) -> TranscriptionEditVersionsResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        manifest = _load_edit_manifest(report_path)
+        return _build_versions_response(report_path, manifest)
+
+    @app.post(
+        "/api/transcription-edits/{dir_token}/{report_name}/default",
+        response_model=TranscriptionEditVersionsResponse,
+    )
+    def api_transcription_edit_set_default(
+        dir_token: str,
+        report_name: str,
+        default_selection: str = Query(
+            ...,
+            description="'original' or a saved version id.",
+        ),
+    ) -> TranscriptionEditVersionsResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        manifest = _load_edit_manifest(report_path)
+        requested = str(default_selection or "").strip()
+        if not requested:
+            raise HTTPException(status_code=400, detail="default_selection is required.")
+        if requested != "original" and _find_version_entry(manifest, requested) is None:
+            raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+
+        manifest["default_selection"] = requested
+        _save_edit_manifest(report_path, manifest)
+        return _build_versions_response(report_path, manifest)
+
+    @app.get(
+        "/api/transcription-edits/{dir_token}/{report_name}/latest",
+        response_model=TranscriptionEditVersionResponse,
+    )
+    def api_transcription_edit_latest(dir_token: str, report_name: str) -> TranscriptionEditVersionResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        manifest = _load_edit_manifest(report_path)
+        versions_raw = manifest.get("versions", [])
+        if not isinstance(versions_raw, list):
+            versions_raw = []
+        dict_versions = [item for item in versions_raw if isinstance(item, dict)]
+        if not dict_versions:
+            return TranscriptionEditVersionResponse(has_version=False, version=None, payload=None)
+
+        dict_versions.sort(
+            key=lambda item: (
+                _parse_version_number(str(item.get("version_id", ""))),
+                str(item.get("created_at", "")),
+            )
+        )
+        latest_entry = dict_versions[-1]
+        payload = _load_version_payload(report_path, latest_entry)
+        version_info = _version_entry_to_info(report_path, latest_entry)
+        return TranscriptionEditVersionResponse(
+            has_version=True,
+            version=version_info,
+            payload=payload,
+        )
+
+    @app.get(
+        "/api/transcription-edits/{dir_token}/{report_name}/version/{version_id}",
+        response_model=TranscriptionEditVersionResponse,
+    )
+    def api_transcription_edit_version(
+        dir_token: str,
+        report_name: str,
+        version_id: str,
+    ) -> TranscriptionEditVersionResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        manifest = _load_edit_manifest(report_path)
+        versions_raw = manifest.get("versions", [])
+        if not isinstance(versions_raw, list):
+            versions_raw = []
+        requested = None
+        for item in versions_raw:
+            if isinstance(item, dict) and str(item.get("version_id", "")).strip() == version_id:
+                requested = item
+                break
+        if requested is None:
+            raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+
+        payload = _load_version_payload(report_path, requested)
+        version_info = _version_entry_to_info(report_path, requested)
+        return TranscriptionEditVersionResponse(
+            has_version=True,
+            version=version_info,
+            payload=payload,
+        )
+
+    @app.post(
+        "/api/transcription-edits/{dir_token}/{report_name}/save",
+        response_model=TranscriptionEditSaveResponse,
+    )
+    def api_transcription_edit_save(
+        dir_token: str,
+        report_name: str,
+        payload: TranscriptionEditPayload,
+        target_version_id: Optional[str] = Query(
+            default=None,
+            description="When set, update this existing version in-place.",
+        ),
+        create_new_version: bool = Query(
+            default=False,
+            description="Force creation of a new version instead of updating the selected/latest version.",
+        ),
+    ) -> TranscriptionEditSaveResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        normalized_payload = _normalize_edit_payload(payload)
+        if not normalized_payload.notes:
+            raise HTTPException(status_code=400, detail="Cannot save an empty transcription payload.")
+
+        phrases, flat_notes = _payload_to_phrase_objects(normalized_payload)
+        if not phrases or not flat_notes:
+            raise HTTPException(status_code=400, detail="Payload must include at least one phrase with notes.")
+
+        edit_root = _edit_root_for_report(report_path)
+        edit_root.mkdir(parents=True, exist_ok=True)
+
+        manifest = _load_edit_manifest(report_path)
+        versions_raw = manifest.get("versions", [])
+        if not isinstance(versions_raw, list):
+            versions_raw = []
+        manifest["versions"] = versions_raw
+
+        requested_version_id = (target_version_id or "").strip() or None
+        selected_entry: Optional[Dict[str, Any]] = None
+        save_mode = "created"
+
+        if create_new_version:
+            requested_version_id = None
+        elif requested_version_id:
+            selected_entry = _find_version_entry(manifest, requested_version_id)
+            if selected_entry is None:
+                raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+        else:
+            existing_infos = _list_version_infos(report_path, manifest)
+            if existing_infos:
+                selected_entry = _find_version_entry(manifest, existing_infos[-1].version_id)
+
+        if selected_entry is not None:
+            version_id = str(selected_entry.get("version_id", "")).strip() or _next_version_id(manifest)
+            json_filename = str(selected_entry.get("json_file", "")).strip() or f"transcription_{version_id}.json"
+            csv_filename = str(selected_entry.get("csv_file", "")).strip() or f"transcription_{version_id}.csv"
+            edited_report_filename = str(selected_entry.get("report_file", "")).strip() or f"{report_path.stem}_edited_{version_id}.html"
+            created_at = str(selected_entry.get("created_at", "")).strip()
+            save_mode = "updated"
+        else:
+            version_id = _next_version_id(manifest)
+            json_filename = f"transcription_{version_id}.json"
+            csv_filename = f"transcription_{version_id}.csv"
+            edited_report_filename = f"{report_path.stem}_edited_{version_id}.html"
+            created_at = ""
+
+        timestamp = _utc_now_iso()
+
+        json_path = (edit_root / json_filename).resolve()
+        csv_path = (edit_root / csv_filename).resolve()
+        json_path.write_text(json.dumps(_model_dump(normalized_payload), indent=2), encoding="utf-8")
+        _write_transcription_csv(flat_notes, csv_path)
+
+        context = _load_report_context(report_path)
+        try:
+            edited_report_path = _render_edited_report(
+                report_path=report_path,
+                context=context,
+                payload=normalized_payload,
+                edited_report_filename=edited_report_filename,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to regenerate edited report: {exc}") from exc
+
+        entry = {
+            "version_id": version_id,
+            "created_at": created_at or timestamp,
+            "updated_at": timestamp,
+            "json_file": json_filename,
+            "csv_file": csv_filename,
+            "report_file": edited_report_path.name,
+            "note_count": len(flat_notes),
+            "phrase_count": len(phrases),
+        }
+        if selected_entry is not None:
+            selected_entry.clear()
+            selected_entry.update(entry)
+        else:
+            versions_raw.append(entry)
+        _save_edit_manifest(report_path, manifest)
+
+        version_infos = _list_version_infos(report_path, manifest)
+        current_info = None
+        for info in version_infos:
+            if info.version_id == version_id:
+                current_info = info
+                break
+        if current_info is None:
+            current_info = _version_entry_to_info(report_path, entry)
+
+        return TranscriptionEditSaveResponse(
+            save_mode=save_mode,
+            version=current_info,
+            versions=version_infos,
+            default_selection=_effective_default_selection(manifest),
+            default_report_url=_local_report_url(_default_report_path(report_path, manifest)),
+            payload=normalized_payload,
+        )
+
+    @app.post(
+        "/api/transcription-edits/{dir_token}/{report_name}/version/{version_id}/regenerate",
+        response_model=TranscriptionEditVersionResponse,
+    )
+    def api_transcription_edit_regenerate_version(
+        dir_token: str,
+        report_name: str,
+        version_id: str,
+    ) -> TranscriptionEditVersionResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        manifest = _load_edit_manifest(report_path)
+        entry = _find_version_entry(manifest, version_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+
+        payload = _load_version_payload(report_path, entry)
+        normalized_payload = _normalize_edit_payload(payload)
+        phrases, flat_notes = _payload_to_phrase_objects(normalized_payload)
+        if not phrases or not flat_notes:
+            raise HTTPException(status_code=400, detail="Stored payload is empty and cannot be rendered.")
+
+        edited_report_filename = str(entry.get("report_file", "")).strip() or f"{report_path.stem}_edited_{version_id}.html"
+        context = _load_report_context(report_path)
+        try:
+            edited_report_path = _render_edited_report(
+                report_path=report_path,
+                context=context,
+                payload=normalized_payload,
+                edited_report_filename=edited_report_filename,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to regenerate edited report: {exc}") from exc
+
+        entry["report_file"] = edited_report_path.name
+        entry["note_count"] = len(flat_notes)
+        entry["phrase_count"] = len(phrases)
+        entry["updated_at"] = _utc_now_iso()
+        _save_edit_manifest(report_path, manifest)
+
+        version_info = _version_entry_to_info(report_path, entry)
+        return TranscriptionEditVersionResponse(
+            has_version=True,
+            version=version_info,
+            payload=normalized_payload,
+        )
+
+    @app.delete(
+        "/api/transcription-edits/{dir_token}/{report_name}/version/{version_id}",
+        response_model=TranscriptionEditVersionsResponse,
+    )
+    def api_transcription_edit_delete_version(
+        dir_token: str,
+        report_name: str,
+        version_id: str,
+    ) -> TranscriptionEditVersionsResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        manifest = _load_edit_manifest(report_path)
+        versions_raw = manifest.get("versions", [])
+        if not isinstance(versions_raw, list):
+            versions_raw = []
+            manifest["versions"] = versions_raw
+
+        idx_to_remove = None
+        entry_to_remove: Optional[Dict[str, Any]] = None
+        for idx, item in enumerate(versions_raw):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("version_id", "")).strip() == version_id:
+                idx_to_remove = idx
+                entry_to_remove = item
+                break
+        if idx_to_remove is None or entry_to_remove is None:
+            raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+
+        del versions_raw[idx_to_remove]
+        if str(manifest.get("default_selection", "")).strip() == version_id:
+            manifest["default_selection"] = "original"
+        _save_edit_manifest(report_path, manifest)
+
+        json_path = _version_file_path(report_path, entry_to_remove.get("json_file"))
+        csv_path = _version_file_path(report_path, entry_to_remove.get("csv_file"))
+        report_file = entry_to_remove.get("report_file")
+        report_version_path = None
+        if report_file is not None and str(report_file).strip():
+            report_version_path = (report_path.parent / str(report_file).strip()).resolve()
+
+        for candidate in [json_path, csv_path, report_version_path]:
+            if candidate is None:
+                continue
+            try:
+                if candidate.exists() and candidate.is_file():
+                    candidate.unlink()
+            except Exception:
+                # Best-effort cleanup; keep manifest as source of truth.
+                pass
+
+        return _build_versions_response(report_path, manifest)
 
     @app.post("/api/upload-audio")
     async def api_upload_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]:

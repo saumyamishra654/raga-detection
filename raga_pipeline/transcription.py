@@ -329,18 +329,33 @@ def _snap_pitch(
     error_closest = (pitch - closest_pitch) * 100
 
     if mode == "raga" and allowed_pcs:
-        if closest_pc in allowed_pcs:
-            return closest_pitch, error_closest, _get_sargam_label(closest_pitch, tonic_midi), True
+        allowed_sorted = sorted({int(pc) % 12 for pc in allowed_pcs})
+        if not allowed_sorted:
+            return None, 0.0, "", False
 
-        if len(candidate_offsets) > 1:
-            second_offset = candidate_offsets[1]
-            second_pitch = tonic_midi + second_offset
-            second_pc = int(second_offset % 12)
-            error_second = (pitch - second_pitch) * 100
-            if second_pc in allowed_pcs:
-                return second_pitch, error_second, _get_sargam_label(second_pitch, tonic_midi), True
+        center_oct = int(round(semitone_offset)) // 12
+        candidates: List[float] = []
+        for oct_shift in (-1, 0, 1):
+            octave = center_oct + oct_shift
+            for pc in allowed_sorted:
+                offset = (octave * 12) + pc
+                candidates.append(float(tonic_midi + offset))
 
-        return None, 0.0, "", False
+        if not candidates:
+            return None, 0.0, "", False
+
+        eps = 1e-9
+        dist_candidates = [(abs(c - pitch), c) for c in candidates]
+        min_dist = min(item[0] for item in dist_candidates)
+        nearest = [item for item in dist_candidates if abs(item[0] - min_dist) <= eps]
+
+        # Deterministic tie-break: prefer higher candidate.
+        best_dist, best_pitch = max(nearest, key=lambda item: item[1])
+        if best_dist > 1.0 + eps:
+            return None, 0.0, "", False
+
+        error_best = (pitch - best_pitch) * 100
+        return best_pitch, error_best, _get_sargam_label(best_pitch, tonic_midi), True
 
     return closest_pitch, error_closest, _get_sargam_label(closest_pitch, tonic_midi), True
 
@@ -455,6 +470,7 @@ def transcribe_to_notes(
     
     # Add Stationary Notes
     for evt in events:
+        raw_pitch = float(evt.pitch_midi)
         snapped_pitch = float(evt.snapped_midi)
         n = Note(
             start=evt.start,
@@ -467,6 +483,13 @@ def transcribe_to_notes(
             sargam=evt.sargam, # Pre-calculated
             energy=evt.energy
         )
+        # Preserve raw pitch so downstream raga correction can use continuous
+        # distance against the original contour instead of pre-quantized values.
+        n.raw_pitch_midi = raw_pitch
+        n.raw_pitch_hz = float(librosa.midi_to_hz(raw_pitch))
+        n.snapped_pitch_midi = snapped_pitch
+        n.corrected_pitch_midi = snapped_pitch
+        n.rendered_pitch_midi = snapped_pitch
         # Keep pitch class handy for downstream analysis.
         n.pitch_class = int(round(snapped_pitch)) % 12
         final_notes.append(n)
@@ -479,6 +502,7 @@ def transcribe_to_notes(
     tonic_midi_val = _resolve_tonic(tonic)
     
     for t, p in zip(inf_times, inf_pitches):
+        raw_pitch = float(p)
         sampled_energy = _sample_energy_at_time(
             float(t),
             aligned_energy_values,
@@ -505,6 +529,11 @@ def transcribe_to_notes(
             sargam=sargam,
             pitch_class=int(round(snapped_pitch)) % 12
         )
+        n.raw_pitch_midi = raw_pitch
+        n.raw_pitch_hz = float(librosa.midi_to_hz(raw_pitch))
+        n.snapped_pitch_midi = snapped_pitch
+        n.corrected_pitch_midi = snapped_pitch
+        n.rendered_pitch_midi = snapped_pitch
         final_notes.append(n)
         
     # 5. Sort by start time

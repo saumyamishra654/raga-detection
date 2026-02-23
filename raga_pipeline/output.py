@@ -18,6 +18,7 @@ import json
 import uuid
 import io
 import base64
+from pathlib import Path
 from html import escape
 from urllib.parse import quote
 from datetime import datetime
@@ -1680,6 +1681,1532 @@ def _generate_transcription_section(
     '''
 
 
+def _build_transcription_editor_payload(
+    notes: List[Note],
+    phrases: List[Phrase],
+    tonic: int,
+) -> Dict[str, Any]:
+    serialized_notes: List[Dict[str, Any]] = []
+    serialized_phrases: List[Dict[str, Any]] = []
+
+    source_phrases = phrases
+    if not source_phrases and notes:
+        source_phrases = [Phrase(notes=list(notes))]
+
+    note_counter = 1
+    phrase_counter = 1
+    for phrase in source_phrases:
+        phrase_id = f"p{phrase_counter:04d}"
+        phrase_counter += 1
+        phrase_note_ids: List[str] = []
+        phrase_notes = sorted(list(phrase.notes), key=lambda n: (n.start, n.end, n.pitch_midi))
+        for note in phrase_notes:
+            note_id = f"n{note_counter:05d}"
+            note_counter += 1
+            label = _strip_octave_markers(note.sargam or "")
+            if not label:
+                tonic_pc = int(round(tonic)) % 12
+                label = OFFSET_TO_SARGAM.get(int(round(note.pitch_midi - tonic_pc)) % 12, "")
+            pitch_class = int(round(note.pitch_midi)) % 12
+            serialized_notes.append(
+                {
+                    "id": note_id,
+                    "start": float(note.start),
+                    "end": float(note.end),
+                    "pitch_midi": float(note.pitch_midi),
+                    "pitch_hz": float(note.pitch_hz),
+                    "raw_pitch_midi": float(getattr(note, "raw_pitch_midi", note.pitch_midi)),
+                    "snapped_pitch_midi": float(getattr(note, "snapped_pitch_midi", note.pitch_midi)),
+                    "corrected_pitch_midi": float(getattr(note, "corrected_pitch_midi", note.pitch_midi)),
+                    "rendered_pitch_midi": float(getattr(note, "pitch_midi", note.pitch_midi)),
+                    "confidence": float(note.confidence),
+                    "energy": float(getattr(note, "energy", 0.0)),
+                    "sargam": label,
+                    "pitch_class": pitch_class,
+                }
+            )
+            phrase_note_ids.append(note_id)
+
+        if phrase_note_ids:
+            starts = [item["start"] for item in serialized_notes if item["id"] in phrase_note_ids]
+            ends = [item["end"] for item in serialized_notes if item["id"] in phrase_note_ids]
+            serialized_phrases.append(
+                {
+                    "id": phrase_id,
+                    "start": min(starts) if starts else float(phrase.start),
+                    "end": max(ends) if ends else float(phrase.end),
+                    "note_ids": phrase_note_ids,
+                }
+            )
+
+    tonic_pc = int(round(tonic)) % 12
+    base_sa_midi = tonic_pc + 60
+    sargam_options: List[Dict[str, Any]] = []
+    for offset in range(12):
+        sargam_options.append(
+            {
+                "offset": offset,
+                "label": OFFSET_TO_SARGAM.get(offset, f"?{offset}"),
+                "midi": int(base_sa_midi + offset),
+            }
+        )
+
+    return {
+        "tonic": tonic_pc,
+        "notes": serialized_notes,
+        "phrases": serialized_phrases,
+        "sargam_options": sargam_options,
+    }
+
+
+def _generate_transcription_editor_section(
+    notes: List[Note],
+    phrases: List[Phrase],
+    tonic: int,
+) -> str:
+    section_id = f"transcription-editor-{uuid.uuid4().hex[:8]}"
+    payload_json = json.dumps(_build_transcription_editor_payload(notes, phrases, tonic))
+    template = """
+    <section id="__SECTION_ID__" style="margin-top: 24px;">
+        <h2>Transcription Editor (Experimental)</h2>
+        <p style="font-size: 0.9em; color: #8b949e; margin-top: -2px;">
+            Use plot point/range selection as context, then adjust notes/phrases. Saves are versioned and produce edited reports.
+        </p>
+        <style>
+        #__SECTION_ID__ .editor-shell {
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            background: #0d1117;
+            overflow: hidden;
+        }
+        #__SECTION_ID__ .editor-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            border-bottom: 1px solid #30363d;
+            background: #11161d;
+        }
+        #__SECTION_ID__ .editor-toolbar button,
+        #__SECTION_ID__ .editor-toolbar select,
+        #__SECTION_ID__ .editor-toolbar input {
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #21262d;
+            color: #c9d1d9;
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        #__SECTION_ID__ .editor-toolbar button {
+            cursor: pointer;
+        }
+        #__SECTION_ID__ .editor-toolbar button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        #__SECTION_ID__ .editor-status {
+            margin-left: auto;
+            color: #8b949e;
+            font-size: 12px;
+            align-self: center;
+        }
+        #__SECTION_ID__ .editor-default {
+            color: #8b949e;
+            font-size: 12px;
+            align-self: center;
+            border: 1px solid #30363d;
+            border-radius: 999px;
+            padding: 4px 10px;
+            background: #0d1117;
+        }
+        #__SECTION_ID__ .editor-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+            padding: 12px;
+        }
+        #__SECTION_ID__ .editor-card {
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            background: #11161d;
+            padding: 10px;
+        }
+        #__SECTION_ID__ .editor-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #f0f6fc;
+        }
+        #__SECTION_ID__ .editor-field-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        #__SECTION_ID__ .editor-field-row label {
+            font-size: 12px;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #__SECTION_ID__ .editor-field-row input,
+        #__SECTION_ID__ .editor-field-row select {
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 5px 8px;
+            font-size: 12px;
+            min-width: 70px;
+        }
+        #__SECTION_ID__ .editor-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        #__SECTION_ID__ .editor-actions button {
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #21262d;
+            color: #c9d1d9;
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        #__SECTION_ID__ .editor-phrase-list {
+            max-height: 420px;
+            overflow-y: auto;
+            display: grid;
+            gap: 8px;
+        }
+        #__SECTION_ID__ .editor-phrase-row {
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            background: #0d1117;
+            padding: 8px;
+        }
+        #__SECTION_ID__ .editor-phrase-row.active {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.25) inset;
+        }
+        #__SECTION_ID__ .editor-phrase-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 11px;
+            color: #8b949e;
+            margin-bottom: 6px;
+        }
+        #__SECTION_ID__ .editor-note-chip-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        #__SECTION_ID__ .editor-note-chip {
+            border: 1px solid #30363d;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            background: #161b22;
+            color: #c9d1d9;
+            cursor: pointer;
+        }
+        #__SECTION_ID__ .editor-note-chip.active {
+            background: #f2cc60;
+            color: #111827;
+            border-color: #f2cc60;
+        }
+        @media (max-width: 1100px) {
+            #__SECTION_ID__ .editor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
+        <div class="editor-shell">
+            <div class="editor-toolbar">
+                <button type="button" id="__SECTION_ID__-undo">Undo</button>
+                <button type="button" id="__SECTION_ID__-redo">Redo</button>
+                <button type="button" id="__SECTION_ID__-save" style="background:#238636; border-color:#238636; color:#ffffff;">Save</button>
+                <button type="button" id="__SECTION_ID__-save-new">Save as New Version</button>
+                <button type="button" id="__SECTION_ID__-reset">Reset</button>
+                <select id="__SECTION_ID__-versions" title="Saved versions"></select>
+                <button type="button" id="__SECTION_ID__-load-version">Load Version</button>
+                <button type="button" id="__SECTION_ID__-delete-version">Delete Version</button>
+                <button type="button" id="__SECTION_ID__-regenerate-version">Regenerate Report</button>
+                <button type="button" id="__SECTION_ID__-set-default-selected">Set Selected Default</button>
+                <button type="button" id="__SECTION_ID__-set-default-original">Set Original Default</button>
+                <span class="editor-default" id="__SECTION_ID__-default-label">Default: Original</span>
+                <span class="editor-status" id="__SECTION_ID__-status">Editor ready.</span>
+            </div>
+            <div class="editor-grid">
+                <div class="editor-card">
+                    <h3>Selection + Actions</h3>
+                    <div id="__SECTION_ID__-selection" style="font-size:12px; color:#8b949e; margin-bottom: 8px;">
+                        Plot selection: none
+                    </div>
+                    <div id="__SECTION_ID__-stats" style="font-size:12px; color:#8b949e;">
+                        Notes: 0 | Phrases: 0
+                    </div>
+
+                    <div class="editor-field-row" style="margin-top: 10px;">
+                        <label>Sargam
+                            <select id="__SECTION_ID__-add-sargam"></select>
+                        </label>
+                        <label>Octave
+                            <select id="__SECTION_ID__-add-octave"></select>
+                        </label>
+                        <label>MIDI
+                            <input id="__SECTION_ID__-add-midi" type="text" value="-" readonly>
+                        </label>
+                    </div>
+                    <div class="editor-actions">
+                        <button type="button" id="__SECTION_ID__-add-note-range">Add Note From Range</button>
+                        <button type="button" id="__SECTION_ID__-delete-range">Delete Notes In Range</button>
+                        <button type="button" id="__SECTION_ID__-delete-note">Delete Selected Note</button>
+                    </div>
+
+                    <div class="editor-field-row" style="margin-top: 12px;">
+                        <label>Phrase start
+                            <input id="__SECTION_ID__-phrase-start" type="number" step="0.001">
+                        </label>
+                        <label>Phrase end
+                            <input id="__SECTION_ID__-phrase-end" type="number" step="0.001">
+                        </label>
+                        <button type="button" id="__SECTION_ID__-apply-phrase-bounds">Apply Phrase Bounds (Snapped)</button>
+                    </div>
+                    <div class="editor-actions">
+                        <button type="button" id="__SECTION_ID__-merge-phrases">Merge Checked Phrases</button>
+                        <button type="button" id="__SECTION_ID__-split-phrase">Split Phrase At Selected Note</button>
+                    </div>
+
+                    <div class="editor-field-row" style="margin-top: 12px;">
+                        <label>Note start
+                            <input id="__SECTION_ID__-note-start" type="number" step="0.001">
+                        </label>
+                        <label>Note end
+                            <input id="__SECTION_ID__-note-end" type="number" step="0.001">
+                        </label>
+                        <button type="button" id="__SECTION_ID__-apply-note-bounds">Resize Selected Note</button>
+                    </div>
+                </div>
+                <div class="editor-card">
+                    <h3>Phrase Notes</h3>
+                    <div class="editor-phrase-list" id="__SECTION_ID__-phrase-list"></div>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function() {
+            var root = document.getElementById("__SECTION_ID__");
+            if (!root) return;
+            var initialPayload = __EDITOR_PAYLOAD__;
+            var selectionEl = document.getElementById("__SECTION_ID__-selection");
+            var statsEl = document.getElementById("__SECTION_ID__-stats");
+            var phraseListEl = document.getElementById("__SECTION_ID__-phrase-list");
+            var statusEl = document.getElementById("__SECTION_ID__-status");
+            var undoBtn = document.getElementById("__SECTION_ID__-undo");
+            var redoBtn = document.getElementById("__SECTION_ID__-redo");
+            var saveBtn = document.getElementById("__SECTION_ID__-save");
+            var saveNewBtn = document.getElementById("__SECTION_ID__-save-new");
+            var resetBtn = document.getElementById("__SECTION_ID__-reset");
+            var versionsSelect = document.getElementById("__SECTION_ID__-versions");
+            var loadVersionBtn = document.getElementById("__SECTION_ID__-load-version");
+            var deleteVersionBtn = document.getElementById("__SECTION_ID__-delete-version");
+            var regenerateBtn = document.getElementById("__SECTION_ID__-regenerate-version");
+            var setDefaultSelectedBtn = document.getElementById("__SECTION_ID__-set-default-selected");
+            var setDefaultOriginalBtn = document.getElementById("__SECTION_ID__-set-default-original");
+            var defaultLabelEl = document.getElementById("__SECTION_ID__-default-label");
+            var addSargamSelect = document.getElementById("__SECTION_ID__-add-sargam");
+            var addOctaveSelect = document.getElementById("__SECTION_ID__-add-octave");
+            var addMidiInput = document.getElementById("__SECTION_ID__-add-midi");
+            var addNoteRangeBtn = document.getElementById("__SECTION_ID__-add-note-range");
+            var deleteRangeBtn = document.getElementById("__SECTION_ID__-delete-range");
+            var deleteNoteBtn = document.getElementById("__SECTION_ID__-delete-note");
+            var phraseStartInput = document.getElementById("__SECTION_ID__-phrase-start");
+            var phraseEndInput = document.getElementById("__SECTION_ID__-phrase-end");
+            var applyPhraseBoundsBtn = document.getElementById("__SECTION_ID__-apply-phrase-bounds");
+            var mergePhrasesBtn = document.getElementById("__SECTION_ID__-merge-phrases");
+            var splitPhraseBtn = document.getElementById("__SECTION_ID__-split-phrase");
+            var noteStartInput = document.getElementById("__SECTION_ID__-note-start");
+            var noteEndInput = document.getElementById("__SECTION_ID__-note-end");
+            var applyNoteBoundsBtn = document.getElementById("__SECTION_ID__-apply-note-bounds");
+
+            function deepClone(v) {
+                return JSON.parse(JSON.stringify(v));
+            }
+
+            function asNumber(v, fallback) {
+                var parsed = Number(v);
+                if (!isFinite(parsed)) return fallback;
+                return parsed;
+            }
+
+            function formatSec(v) {
+                var n = Number(v);
+                if (!isFinite(n)) return "n/a";
+                return n.toFixed(3) + "s";
+            }
+
+            function escapeHtml(raw) {
+                return String(raw || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+
+            var noteSeq = 0;
+            var phraseSeq = 0;
+            function initCountersFromState(snapshot) {
+                noteSeq = 0;
+                phraseSeq = 0;
+                (snapshot.notes || []).forEach(function(note) {
+                    var match = String(note.id || "").match(/(\\d+)$/);
+                    if (match) noteSeq = Math.max(noteSeq, Number(match[1]));
+                });
+                (snapshot.phrases || []).forEach(function(phrase) {
+                    var match = String(phrase.id || "").match(/(\\d+)$/);
+                    if (match) phraseSeq = Math.max(phraseSeq, Number(match[1]));
+                });
+            }
+            function nextNoteId() {
+                noteSeq += 1;
+                return "n" + String(noteSeq).padStart(5, "0");
+            }
+            function nextPhraseId() {
+                phraseSeq += 1;
+                return "p" + String(phraseSeq).padStart(4, "0");
+            }
+
+            function normalizeState(rawState) {
+                var draft = deepClone(rawState || {});
+                var notesRaw = Array.isArray(draft.notes) ? draft.notes : [];
+                var phrasesRaw = Array.isArray(draft.phrases) ? draft.phrases : [];
+
+                var notes = [];
+                var noteById = {};
+                notesRaw.forEach(function(note, idx) {
+                    var noteId = String((note && note.id) || "").trim() || ("n" + String(idx + 1).padStart(5, "0"));
+                    if (noteById[noteId]) return;
+                    var start = asNumber(note.start, 0);
+                    var end = asNumber(note.end, start + 0.001);
+                    if (end < start) {
+                        var tmp = start;
+                        start = end;
+                        end = tmp;
+                    }
+                    if (end <= start) end = start + 0.001;
+                    var pitchMidi = asNumber(note.pitch_midi, 60);
+                    var pitchHz = asNumber(note.pitch_hz, 440 * Math.pow(2, (pitchMidi - 69) / 12));
+                    if (!isFinite(pitchHz) || pitchHz <= 0) {
+                        pitchHz = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+                    }
+                    var confidence = asNumber(note.confidence, 0.8);
+                    var energy = asNumber(note.energy, 0.0);
+                    var pitchClass = isFinite(Number(note.pitch_class))
+                        ? ((Math.round(Number(note.pitch_class)) % 12) + 12) % 12
+                        : ((Math.round(pitchMidi) % 12) + 12) % 12;
+                    var normalized = {
+                        id: noteId,
+                        start: start,
+                        end: end,
+                        pitch_midi: pitchMidi,
+                        pitch_hz: pitchHz,
+                        raw_pitch_midi: asNumber(note.raw_pitch_midi, pitchMidi),
+                        snapped_pitch_midi: asNumber(note.snapped_pitch_midi, pitchMidi),
+                        corrected_pitch_midi: asNumber(note.corrected_pitch_midi, pitchMidi),
+                        rendered_pitch_midi: asNumber(note.rendered_pitch_midi, pitchMidi),
+                        confidence: confidence,
+                        energy: energy,
+                        sargam: String((note && note.sargam) || "").replace(/[\\u00B7'`’]+/g, "").trim(),
+                        pitch_class: pitchClass
+                    };
+                    notes.push(normalized);
+                    noteById[noteId] = normalized;
+                });
+
+                notes.sort(function(a, b) {
+                    if (a.start !== b.start) return a.start - b.start;
+                    if (a.end !== b.end) return a.end - b.end;
+                    return a.id.localeCompare(b.id);
+                });
+
+                var assigned = {};
+                var phrases = [];
+                phrasesRaw.forEach(function(phrase, idx) {
+                    var phraseId = String((phrase && phrase.id) || "").trim() || ("p" + String(idx + 1).padStart(4, "0"));
+                    var seenLocal = {};
+                    var noteIds = [];
+                    (Array.isArray(phrase.note_ids) ? phrase.note_ids : []).forEach(function(rawId) {
+                        var noteId = String(rawId || "").trim();
+                        if (!noteById[noteId]) return;
+                        if (assigned[noteId]) return;
+                        if (seenLocal[noteId]) return;
+                        seenLocal[noteId] = true;
+                        assigned[noteId] = true;
+                        noteIds.push(noteId);
+                    });
+                    if (!noteIds.length) return;
+                    noteIds.sort(function(a, b) {
+                        return noteById[a].start - noteById[b].start;
+                    });
+                    var start = noteById[noteIds[0]].start;
+                    var end = noteById[noteIds[0]].end;
+                    noteIds.forEach(function(noteId) {
+                        start = Math.min(start, noteById[noteId].start);
+                        end = Math.max(end, noteById[noteId].end);
+                    });
+                    phrases.push({
+                        id: phraseId,
+                        start: start,
+                        end: end,
+                        note_ids: noteIds
+                    });
+                });
+
+                notes.forEach(function(note) {
+                    if (assigned[note.id]) return;
+                    var phraseId = nextPhraseId();
+                    phrases.push({
+                        id: phraseId,
+                        start: note.start,
+                        end: note.end,
+                        note_ids: [note.id]
+                    });
+                });
+
+                phrases.sort(function(a, b) {
+                    if (a.start !== b.start) return a.start - b.start;
+                    if (a.end !== b.end) return a.end - b.end;
+                    return a.id.localeCompare(b.id);
+                });
+
+                return {
+                    tonic: asNumber(draft.tonic, 0),
+                    notes: notes,
+                    phrases: phrases,
+                    sargam_options: Array.isArray(draft.sargam_options) ? draft.sargam_options : []
+                };
+            }
+
+            var state = normalizeState(initialPayload);
+            initCountersFromState(state);
+            var undoStack = [];
+            var redoStack = [];
+            var selectedNoteId = state.notes.length ? state.notes[0].id : null;
+            var selectedPhraseId = state.phrases.length ? state.phrases[0].id : null;
+            var mergePhraseIds = {};
+            var currentRange = null;
+            var currentPoint = null;
+            var savedSnapshot = JSON.stringify(state);
+            var activeVersions = [];
+            var currentVersionId = null;
+            var defaultSelection = "original";
+            var defaultReportUrl = null;
+
+            function isDirty() {
+                return JSON.stringify(state) !== savedSnapshot;
+            }
+
+            function setStatus(msg, isError) {
+                statusEl.style.color = isError ? "#ff7b72" : "#8b949e";
+                statusEl.textContent = msg;
+            }
+
+            function updateDefaultLabel() {
+                if (!defaultLabelEl) return;
+                if (defaultSelection && defaultSelection !== "original") {
+                    defaultLabelEl.textContent = "Default: " + defaultSelection;
+                } else {
+                    defaultLabelEl.textContent = "Default: Original";
+                }
+            }
+
+            function getNoteById(noteId, inState) {
+                var snapshot = inState || state;
+                for (var i = 0; i < snapshot.notes.length; i += 1) {
+                    if (snapshot.notes[i].id === noteId) return snapshot.notes[i];
+                }
+                return null;
+            }
+
+            function getPhraseById(phraseId, inState) {
+                var snapshot = inState || state;
+                for (var i = 0; i < snapshot.phrases.length; i += 1) {
+                    if (snapshot.phrases[i].id === phraseId) return snapshot.phrases[i];
+                }
+                return null;
+            }
+
+            function findPhraseIdForNote(noteId, inState) {
+                var snapshot = inState || state;
+                for (var i = 0; i < snapshot.phrases.length; i += 1) {
+                    if (snapshot.phrases[i].note_ids.indexOf(noteId) >= 0) return snapshot.phrases[i].id;
+                }
+                return null;
+            }
+
+            function updatePickerOptions() {
+                var options = Array.isArray(state.sargam_options) ? state.sargam_options : [];
+                addSargamSelect.innerHTML = options.map(function(item, idx) {
+                    var selected = idx === 0 ? " selected" : "";
+                    return "<option value=\\"" + escapeHtml(String(item.label || "")) + "\\" data-offset=\\"" + Number(item.offset || 0) + "\\\"" + selected + ">" +
+                        escapeHtml(String(item.label || "")) + "</option>";
+                }).join("");
+                var octaveParts = [];
+                for (var octave = 2; octave <= 7; octave += 1) {
+                    var selected = octave === 5 ? " selected" : "";
+                    octaveParts.push("<option value=\\"" + octave + "\\" " + selected + ">" + octave + "</option>");
+                }
+                addOctaveSelect.innerHTML = octaveParts.join("");
+                updateMidiPreview();
+            }
+
+            function selectedPickerMidi() {
+                var selectedOption = addSargamSelect.options[addSargamSelect.selectedIndex];
+                if (!selectedOption) return null;
+                var offset = asNumber(selectedOption.getAttribute("data-offset"), 0);
+                var octave = asNumber(addOctaveSelect.value, 5);
+                var tonicPc = ((Math.round(asNumber(state.tonic, 0)) % 12) + 12) % 12;
+                var midi = (octave * 12) + tonicPc + offset;
+                return midi;
+            }
+
+            function updateMidiPreview() {
+                var midi = selectedPickerMidi();
+                addMidiInput.value = isFinite(midi) ? Number(midi).toFixed(2) : "-";
+            }
+
+            function collectBoundaries() {
+                var boundaries = [];
+                state.notes.forEach(function(note) {
+                    boundaries.push(note.start);
+                    boundaries.push(note.end);
+                });
+                boundaries.sort(function(a, b) { return a - b; });
+                return boundaries;
+            }
+
+            function nearestBoundary(value) {
+                var boundaries = collectBoundaries();
+                if (!boundaries.length) return value;
+                var best = boundaries[0];
+                var bestDist = Math.abs(best - value);
+                for (var i = 1; i < boundaries.length; i += 1) {
+                    var dist = Math.abs(boundaries[i] - value);
+                    if (dist < bestDist) {
+                        best = boundaries[i];
+                        bestDist = dist;
+                    }
+                }
+                return best;
+            }
+
+            function selectNearestNoteAtTime(t) {
+                if (!state.notes.length) return;
+                var tolerance = 0.02;
+                var best = null;
+                var bestDist = Number.POSITIVE_INFINITY;
+                state.notes.forEach(function(note) {
+                    if ((note.start - tolerance) <= t && t <= (note.end + tolerance)) {
+                        var span = note.end - note.start;
+                        if (best === null || span < (best.end - best.start)) {
+                            best = note;
+                        }
+                        return;
+                    }
+                    var dist = 0;
+                    if (t < note.start) dist = note.start - t;
+                    else if (t > note.end) dist = t - note.end;
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        best = note;
+                    }
+                });
+                if (best) {
+                    selectedNoteId = best.id;
+                    selectedPhraseId = findPhraseIdForNote(best.id, state);
+                }
+            }
+
+            function commitMutation(label, mutator) {
+                var before = deepClone(state);
+                var next = deepClone(state);
+                mutator(next);
+                next = normalizeState(next);
+                undoStack.push(before);
+                if (undoStack.length > 200) undoStack.shift();
+                redoStack = [];
+                state = next;
+                if (selectedNoteId && !getNoteById(selectedNoteId)) selectedNoteId = null;
+                if (selectedPhraseId && !getPhraseById(selectedPhraseId)) selectedPhraseId = null;
+                if (!selectedPhraseId && state.phrases.length) selectedPhraseId = state.phrases[0].id;
+                if (!selectedNoteId && state.notes.length) selectedNoteId = state.notes[0].id;
+                if (selectedNoteId) {
+                    var phraseForNote = findPhraseIdForNote(selectedNoteId, state);
+                    if (phraseForNote) selectedPhraseId = phraseForNote;
+                }
+                initCountersFromState(state);
+                render();
+                setStatus(label + (isDirty() ? " (unsaved)" : ""), false);
+            }
+
+            function loadState(payload, label, versionId) {
+                state = normalizeState(payload);
+                initCountersFromState(state);
+                undoStack = [];
+                redoStack = [];
+                mergePhraseIds = {};
+                selectedNoteId = state.notes.length ? state.notes[0].id : null;
+                selectedPhraseId = state.phrases.length ? state.phrases[0].id : null;
+                savedSnapshot = JSON.stringify(state);
+                if (typeof versionId !== "undefined") {
+                    currentVersionId = versionId;
+                }
+                render();
+                setStatus(label, false);
+            }
+
+            function renderPhraseList() {
+                if (!state.phrases.length) {
+                    phraseListEl.innerHTML = "<div style='color:#8b949e; font-size:12px;'>No phrases available.</div>";
+                    return;
+                }
+                var noteById = {};
+                state.notes.forEach(function(note) { noteById[note.id] = note; });
+                var html = state.phrases.map(function(phrase, idx) {
+                    var activeClass = phrase.id === selectedPhraseId ? " active" : "";
+                    var noteChips = phrase.note_ids.map(function(noteId) {
+                        var note = noteById[noteId];
+                        if (!note) return "";
+                        var label = note.sargam || Number(note.pitch_midi).toFixed(2);
+                        var isActive = note.id === selectedNoteId ? " active" : "";
+                        return "<span class='editor-note-chip" + isActive + "' data-note-id='" + escapeHtml(note.id) + "'>" +
+                            escapeHtml(label) + " (" + formatSec(note.end - note.start) + ")" +
+                            "</span>";
+                    }).join("");
+                    var checked = mergePhraseIds[phrase.id] ? " checked" : "";
+                    return (
+                        "<div class='editor-phrase-row" + activeClass + "' data-phrase-id='" + escapeHtml(phrase.id) + "'>" +
+                        "<div class='editor-phrase-meta'>" +
+                        "<input type='checkbox' class='editor-merge-checkbox' data-phrase-id='" + escapeHtml(phrase.id) + "'" + checked + ">" +
+                        "<button type='button' class='editor-select-phrase' data-phrase-id='" + escapeHtml(phrase.id) + "' " +
+                        "style='border:1px solid #30363d; border-radius:6px; background:#21262d; color:#c9d1d9; cursor:pointer; font-size:11px;'>" +
+                        "Phrase " + (idx + 1) + "</button>" +
+                        "<span>" + formatSec(phrase.start) + " - " + formatSec(phrase.end) + "</span>" +
+                        "<span>(" + phrase.note_ids.length + " notes)</span>" +
+                        "</div>" +
+                        "<div class='editor-note-chip-wrap'>" + noteChips + "</div>" +
+                        "</div>"
+                    );
+                }).join("");
+                phraseListEl.innerHTML = html;
+            }
+
+            function renderSelection() {
+                var parts = [];
+                if (currentPoint !== null && isFinite(currentPoint)) {
+                    parts.push("Point " + formatSec(currentPoint));
+                }
+                if (currentRange) {
+                    var lo = Math.min(currentRange.start, currentRange.end);
+                    var hi = Math.max(currentRange.start, currentRange.end);
+                    parts.push("Range " + formatSec(lo) + " - " + formatSec(hi));
+                }
+                if (selectedPhraseId) parts.push("Phrase " + escapeHtml(selectedPhraseId));
+                if (selectedNoteId) parts.push("Note " + escapeHtml(selectedNoteId));
+                selectionEl.textContent = parts.length ? ("Plot selection: " + parts.join(" | ")) : "Plot selection: none";
+            }
+
+            function renderFieldValues() {
+                var phrase = selectedPhraseId ? getPhraseById(selectedPhraseId) : null;
+                if (phrase) {
+                    phraseStartInput.value = phrase.start.toFixed(3);
+                    phraseEndInput.value = phrase.end.toFixed(3);
+                } else {
+                    phraseStartInput.value = "";
+                    phraseEndInput.value = "";
+                }
+                var note = selectedNoteId ? getNoteById(selectedNoteId) : null;
+                if (note) {
+                    noteStartInput.value = note.start.toFixed(3);
+                    noteEndInput.value = note.end.toFixed(3);
+                } else {
+                    noteStartInput.value = "";
+                    noteEndInput.value = "";
+                }
+            }
+
+            function renderButtons() {
+                undoBtn.disabled = undoStack.length === 0;
+                redoBtn.disabled = redoStack.length === 0;
+                deleteNoteBtn.disabled = !selectedNoteId;
+                splitPhraseBtn.disabled = !(selectedNoteId && selectedPhraseId);
+                applyPhraseBoundsBtn.disabled = !selectedPhraseId;
+                applyNoteBoundsBtn.disabled = !selectedNoteId;
+                deleteRangeBtn.disabled = !currentRange;
+                addNoteRangeBtn.disabled = !currentRange;
+            }
+
+            function renderStats() {
+                statsEl.textContent = "Notes: " + state.notes.length + " | Phrases: " + state.phrases.length;
+            }
+
+            function render() {
+                renderPhraseList();
+                renderSelection();
+                renderFieldValues();
+                renderButtons();
+                renderStats();
+            }
+
+            function parseReportContextFromUrl() {
+                var parts = window.location.pathname.split("/").filter(Boolean);
+                if (parts.length < 3 || parts[0] !== "local-report") {
+                    return null;
+                }
+                return {
+                    dirToken: parts[1],
+                    reportName: decodeURIComponent(parts.slice(2).join("/"))
+                };
+            }
+
+            var reportContext = parseReportContextFromUrl();
+
+            function buildApiPath(suffix) {
+                if (!reportContext) return null;
+                return "/api/transcription-edits/" +
+                    encodeURIComponent(reportContext.dirToken) +
+                    "/" +
+                    encodeURIComponent(reportContext.reportName) +
+                    "/" +
+                    suffix;
+            }
+
+            function updateVersionActionButtons() {
+                var selected = versionsSelect.value;
+                var selectedIsNew = (!selected || selected === "__new__");
+                loadVersionBtn.disabled = selectedIsNew || !activeVersions.length;
+                deleteVersionBtn.disabled = selectedIsNew || !activeVersions.length;
+                regenerateBtn.disabled = selectedIsNew || !activeVersions.length;
+                setDefaultSelectedBtn.disabled = selectedIsNew || !activeVersions.length || selected === defaultSelection;
+                setDefaultOriginalBtn.disabled = defaultSelection === "original";
+            }
+
+            function setVersionOptions(versions, preferredVersionId) {
+                activeVersions = Array.isArray(versions) ? versions.slice() : [];
+
+                var optionParts = ["<option value='__new__'>Create new version...</option>"];
+                activeVersions.forEach(function(version) {
+                    var isDefaultVersion = defaultSelection && version.version_id === defaultSelection;
+                    var defaultTag = isDefaultVersion ? " [default]" : "";
+                    optionParts.push(
+                        "<option value='" + escapeHtml(version.version_id) + "'>" +
+                        escapeHtml(version.version_id + " (" + version.created_at + ")" + defaultTag) +
+                        "</option>"
+                    );
+                });
+                versionsSelect.innerHTML = optionParts.join("");
+                versionsSelect.disabled = false;
+
+                var targetVersionId = preferredVersionId || currentVersionId || null;
+                if (targetVersionId) {
+                    var hasTarget = activeVersions.some(function(version) {
+                        return version.version_id === targetVersionId;
+                    });
+                    versionsSelect.value = hasTarget ? targetVersionId : "__new__";
+                } else {
+                    versionsSelect.value = "__new__";
+                }
+                updateDefaultLabel();
+                updateVersionActionButtons();
+            }
+
+            async function refreshVersions(preferredVersionId) {
+                if (!reportContext) {
+                    setVersionOptions([], null);
+                    return;
+                }
+                var endpoint = buildApiPath("versions");
+                if (!endpoint) return;
+                var response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch versions.");
+                }
+                var data = await response.json();
+                defaultSelection = String((data && data.default_selection) || "original");
+                defaultReportUrl = (data && data.default_report_url) ? String(data.default_report_url) : null;
+                setVersionOptions(data.versions || [], preferredVersionId || data.latest_version_id || null);
+                return data;
+            }
+
+            async function loadDefaultSelection() {
+                if (!reportContext) {
+                    setStatus("Save/load available only when opened via local app route.", false);
+                    saveBtn.disabled = true;
+                    saveNewBtn.disabled = true;
+                    deleteVersionBtn.disabled = true;
+                    loadVersionBtn.disabled = true;
+                    regenerateBtn.disabled = true;
+                    setDefaultSelectedBtn.disabled = true;
+                    setDefaultOriginalBtn.disabled = true;
+                    return;
+                }
+
+                if (defaultSelection && defaultSelection !== "original") {
+                    var hasDefault = activeVersions.some(function(version) {
+                        return version.version_id === defaultSelection;
+                    });
+                    if (hasDefault) {
+                        await loadSpecificVersion(defaultSelection);
+                        setStatus("Loaded default saved version " + defaultSelection + ".", false);
+                        return;
+                    }
+                }
+
+                loadState(initialPayload, "Loaded base auto-transcription.", null);
+                updateVersionActionButtons();
+            }
+
+            async function loadSpecificVersion(versionId) {
+                if (!reportContext || !versionId || versionId === "__new__") return;
+                var endpoint = buildApiPath("version/" + encodeURIComponent(versionId));
+                if (!endpoint) return;
+                var response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error("Failed to load version " + versionId + ".");
+                }
+                var data = await response.json();
+                if (!data || !data.has_version || !data.payload) {
+                    throw new Error("Version payload missing.");
+                }
+                loadState(data.payload, "Loaded version " + versionId + ".", versionId);
+                await refreshVersions(versionId);
+            }
+
+            async function setDefaultSelectionTo(selectionValue) {
+                if (!reportContext) {
+                    setStatus("Cannot set default outside local app report route.", true);
+                    return;
+                }
+                var selection = String(selectionValue || "").trim();
+                if (!selection) {
+                    setStatus("Default selection is required.", true);
+                    return;
+                }
+                var endpoint = buildApiPath("default");
+                if (!endpoint) return;
+                endpoint += "?default_selection=" + encodeURIComponent(selection);
+                var response = await fetch(endpoint, { method: "POST" });
+                var data = await response.json();
+                if (!response.ok) {
+                    throw new Error((data && data.detail) ? data.detail : "Failed to update default selection.");
+                }
+                defaultSelection = String((data && data.default_selection) || "original");
+                defaultReportUrl = (data && data.default_report_url) ? String(data.default_report_url) : null;
+                setVersionOptions(data.versions || [], currentVersionId || null);
+                return data;
+            }
+
+            function payloadForSave() {
+                return {
+                    notes: state.notes.map(function(note) {
+                        return {
+                            id: note.id,
+                            start: note.start,
+                            end: note.end,
+                            pitch_midi: note.pitch_midi,
+                            pitch_hz: note.pitch_hz,
+                            raw_pitch_midi: note.raw_pitch_midi,
+                            snapped_pitch_midi: note.snapped_pitch_midi,
+                            corrected_pitch_midi: note.corrected_pitch_midi,
+                            rendered_pitch_midi: note.rendered_pitch_midi,
+                            confidence: note.confidence,
+                            energy: note.energy,
+                            sargam: note.sargam,
+                            pitch_class: note.pitch_class
+                        };
+                    }),
+                    phrases: state.phrases.map(function(phrase) {
+                        return {
+                            id: phrase.id,
+                            start: phrase.start,
+                            end: phrase.end,
+                            note_ids: phrase.note_ids.slice()
+                        };
+                    })
+                };
+            }
+
+            function buildSaveEndpoint(createNewVersion) {
+                var endpoint = buildApiPath("save");
+                if (!endpoint) return null;
+                var selectedVersion = versionsSelect.value;
+                var params = new URLSearchParams();
+                if (createNewVersion || selectedVersion === "__new__") {
+                    params.set("create_new_version", "true");
+                } else {
+                    var targetVersion = selectedVersion || currentVersionId || "";
+                    if (targetVersion && targetVersion !== "__new__") {
+                        params.set("target_version_id", targetVersion);
+                    }
+                }
+                var query = params.toString();
+                if (!query) return endpoint;
+                return endpoint + "?" + query;
+            }
+
+            async function saveCurrentVersion(createNewVersion) {
+                if (!reportContext) {
+                    setStatus("Cannot save outside local app report route.", true);
+                    return;
+                }
+                var endpoint = buildSaveEndpoint(!!createNewVersion);
+                if (!endpoint) return;
+                saveBtn.disabled = true;
+                saveNewBtn.disabled = true;
+                setStatus(createNewVersion ? "Saving as new version..." : "Saving selected version...", false);
+                try {
+                    var response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payloadForSave())
+                    });
+                    var data = await response.json();
+                    if (!response.ok) {
+                        throw new Error((data && data.detail) ? data.detail : "Save failed.");
+                    }
+                    if (data && data.payload) {
+                        var savedVersionId = data.version ? data.version.version_id : null;
+                        loadState(
+                            data.payload,
+                            "",
+                            savedVersionId
+                        );
+                    }
+                    var activeVersionId = data.version ? data.version.version_id : null;
+                    defaultSelection = String((data && data.default_selection) || "original");
+                    defaultReportUrl = (data && data.default_report_url) ? String(data.default_report_url) : null;
+                    setVersionOptions(data.versions || [], activeVersionId);
+                    var modeText = (data && data.save_mode === "updated") ? "Updated" : "Created";
+                    if (data.version && data.version.report_url) {
+                        setStatus(
+                            modeText + " " + data.version.version_id + ". Edited report: " + data.version.report_url,
+                            false
+                        );
+                    } else {
+                        setStatus(modeText + " transcription edit version.", false);
+                    }
+                } catch (err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                } finally {
+                    saveBtn.disabled = false;
+                    saveNewBtn.disabled = false;
+                }
+            }
+
+            async function deleteSelectedVersion() {
+                if (!reportContext) {
+                    setStatus("Cannot delete outside local app report route.", true);
+                    return;
+                }
+                var selectedVersion = versionsSelect.value;
+                if (!selectedVersion || selectedVersion === "__new__") {
+                    setStatus("Choose a saved version to delete.", true);
+                    return;
+                }
+                var okay = window.confirm("Delete version " + selectedVersion + "? This cannot be undone.");
+                if (!okay) return;
+
+                var endpoint = buildApiPath("version/" + encodeURIComponent(selectedVersion));
+                if (!endpoint) return;
+                deleteVersionBtn.disabled = true;
+                setStatus("Deleting version " + selectedVersion + "...", false);
+                try {
+                    var response = await fetch(endpoint, { method: "DELETE" });
+                    var data = await response.json();
+                    if (!response.ok) {
+                        throw new Error((data && data.detail) ? data.detail : "Delete failed.");
+                    }
+                    if (currentVersionId === selectedVersion) {
+                        currentVersionId = null;
+                    }
+                    defaultSelection = String((data && data.default_selection) || "original");
+                    defaultReportUrl = (data && data.default_report_url) ? String(data.default_report_url) : null;
+                    var latestAfterDelete = data.latest_version_id || null;
+                    setVersionOptions(data.versions || [], latestAfterDelete);
+                    if (latestAfterDelete) {
+                        await loadSpecificVersion(latestAfterDelete);
+                    } else {
+                        loadState(initialPayload, "Deleted " + selectedVersion + ". No saved versions remain.", null);
+                        setVersionOptions([], null);
+                    }
+                    if (latestAfterDelete) {
+                        setStatus("Deleted " + selectedVersion + ".", false);
+                    }
+                } catch (err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                } finally {
+                    updateVersionActionButtons();
+                }
+            }
+
+            async function regenerateSelectedVersion() {
+                if (!reportContext) {
+                    setStatus("Cannot regenerate outside local app report route.", true);
+                    return;
+                }
+                var selectedVersion = versionsSelect.value;
+                if (!selectedVersion || selectedVersion === "__new__") {
+                    setStatus("Choose a saved version to regenerate.", true);
+                    return;
+                }
+                var endpoint = buildApiPath(
+                    "version/" + encodeURIComponent(selectedVersion) + "/regenerate"
+                );
+                if (!endpoint) return;
+                regenerateBtn.disabled = true;
+                setStatus("Regenerating report for " + selectedVersion + "...", false);
+                try {
+                    var response = await fetch(endpoint, { method: "POST" });
+                    var data = await response.json();
+                    if (!response.ok) {
+                        throw new Error((data && data.detail) ? data.detail : "Regenerate failed.");
+                    }
+                    if (data && data.payload) {
+                        loadState(data.payload, "", selectedVersion);
+                    }
+                    await refreshVersions(selectedVersion);
+                    if (data && data.version && data.version.report_url) {
+                        setStatus(
+                            "Regenerated " + selectedVersion + ". Edited report: " + data.version.report_url,
+                            false
+                        );
+                    } else {
+                        setStatus("Regenerated " + selectedVersion + ".", false);
+                    }
+                } catch (err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                } finally {
+                    updateVersionActionButtons();
+                }
+            }
+
+            async function setSelectedVersionAsDefault() {
+                var selectedVersion = versionsSelect.value;
+                if (!selectedVersion || selectedVersion === "__new__") {
+                    setStatus("Choose a saved version to set as default.", true);
+                    return;
+                }
+                setDefaultSelectedBtn.disabled = true;
+                setStatus("Setting default transcription to " + selectedVersion + "...", false);
+                try {
+                    await setDefaultSelectionTo(selectedVersion);
+                    setStatus("Default transcription set to " + selectedVersion + ".", false);
+                } catch (err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                } finally {
+                    updateVersionActionButtons();
+                }
+            }
+
+            async function setOriginalAsDefault() {
+                setDefaultOriginalBtn.disabled = true;
+                setStatus("Setting default transcription to original...", false);
+                try {
+                    await setDefaultSelectionTo("original");
+                    setStatus("Default transcription set to original.", false);
+                } catch (err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                } finally {
+                    updateVersionActionButtons();
+                }
+            }
+
+            function handleUndo() {
+                if (!undoStack.length) return;
+                var current = deepClone(state);
+                var previous = undoStack.pop();
+                redoStack.push(current);
+                state = normalizeState(previous);
+                initCountersFromState(state);
+                render();
+                setStatus("Undo applied" + (isDirty() ? " (unsaved)" : ""), false);
+            }
+
+            function handleRedo() {
+                if (!redoStack.length) return;
+                var current = deepClone(state);
+                var next = redoStack.pop();
+                undoStack.push(current);
+                state = normalizeState(next);
+                initCountersFromState(state);
+                render();
+                setStatus("Redo applied" + (isDirty() ? " (unsaved)" : ""), false);
+            }
+
+            function handleDeleteSelectedNote() {
+                if (!selectedNoteId) return;
+                var noteId = selectedNoteId;
+                commitMutation("Deleted selected note", function(next) {
+                    next.notes = next.notes.filter(function(note) { return note.id !== noteId; });
+                    next.phrases.forEach(function(phrase) {
+                        phrase.note_ids = phrase.note_ids.filter(function(id) { return id !== noteId; });
+                    });
+                    next.phrases = next.phrases.filter(function(phrase) { return phrase.note_ids.length > 0; });
+                });
+            }
+
+            function handleDeleteRange() {
+                if (!currentRange) return;
+                var lo = Math.min(currentRange.start, currentRange.end);
+                var hi = Math.max(currentRange.start, currentRange.end);
+                commitMutation("Deleted notes in selected range", function(next) {
+                    var removeIds = {};
+                    next.notes.forEach(function(note) {
+                        if (note.end >= lo && note.start <= hi) {
+                            removeIds[note.id] = true;
+                        }
+                    });
+                    next.notes = next.notes.filter(function(note) { return !removeIds[note.id]; });
+                    next.phrases.forEach(function(phrase) {
+                        phrase.note_ids = phrase.note_ids.filter(function(noteId) { return !removeIds[noteId]; });
+                    });
+                    next.phrases = next.phrases.filter(function(phrase) { return phrase.note_ids.length > 0; });
+                });
+            }
+
+            function handleMergePhrases() {
+                var ids = Object.keys(mergePhraseIds).filter(function(id) { return !!mergePhraseIds[id]; });
+                if (ids.length < 2) {
+                    setStatus("Check at least two phrases to merge.", true);
+                    return;
+                }
+                commitMutation("Merged selected phrases", function(next) {
+                    var selected = next.phrases.filter(function(phrase) { return ids.indexOf(phrase.id) >= 0; });
+                    if (selected.length < 2) return;
+                    selected.sort(function(a, b) { return a.start - b.start; });
+                    var mergedNoteIds = [];
+                    var seen = {};
+                    selected.forEach(function(phrase) {
+                        phrase.note_ids.forEach(function(noteId) {
+                            if (seen[noteId]) return;
+                            seen[noteId] = true;
+                            mergedNoteIds.push(noteId);
+                        });
+                    });
+                    var keepId = selected[0].id;
+                    next.phrases = next.phrases.filter(function(phrase) { return ids.indexOf(phrase.id) < 0; });
+                    next.phrases.push({
+                        id: keepId,
+                        start: 0,
+                        end: 0,
+                        note_ids: mergedNoteIds
+                    });
+                    selectedPhraseId = keepId;
+                    mergePhraseIds = {};
+                });
+            }
+
+            function handleSplitPhrase() {
+                if (!selectedPhraseId || !selectedNoteId) {
+                    setStatus("Select a phrase and a split note first.", true);
+                    return;
+                }
+                var phrase = getPhraseById(selectedPhraseId);
+                if (!phrase) return;
+                var splitIdx = phrase.note_ids.indexOf(selectedNoteId);
+                if (splitIdx <= 0 || splitIdx >= phrase.note_ids.length - 1) {
+                    setStatus("Split note must be inside phrase (not first/last).", true);
+                    return;
+                }
+                var phraseId = selectedPhraseId;
+                var noteId = selectedNoteId;
+                commitMutation("Split phrase at selected note", function(next) {
+                    var target = null;
+                    for (var i = 0; i < next.phrases.length; i += 1) {
+                        if (next.phrases[i].id === phraseId) {
+                            target = next.phrases[i];
+                            break;
+                        }
+                    }
+                    if (!target) return;
+                    var idx = target.note_ids.indexOf(noteId);
+                    if (idx <= 0 || idx >= target.note_ids.length - 1) return;
+                    var rightIds = target.note_ids.slice(idx + 1);
+                    target.note_ids = target.note_ids.slice(0, idx + 1);
+                    next.phrases.push({
+                        id: nextPhraseId(),
+                        start: 0,
+                        end: 0,
+                        note_ids: rightIds
+                    });
+                });
+            }
+
+            function handleApplyPhraseBounds() {
+                if (!selectedPhraseId) return;
+                var requestedStart = asNumber(phraseStartInput.value, NaN);
+                var requestedEnd = asNumber(phraseEndInput.value, NaN);
+                if (!isFinite(requestedStart) || !isFinite(requestedEnd)) {
+                    setStatus("Phrase start/end must be valid numbers.", true);
+                    return;
+                }
+                var snappedStart = nearestBoundary(requestedStart);
+                var snappedEnd = nearestBoundary(requestedEnd);
+                if (snappedEnd < snappedStart) {
+                    var tmp = snappedStart;
+                    snappedStart = snappedEnd;
+                    snappedEnd = tmp;
+                }
+                if (snappedEnd <= snappedStart) {
+                    setStatus("Phrase bounds collapse to zero after snapping.", true);
+                    return;
+                }
+                var phraseId = selectedPhraseId;
+                commitMutation("Updated phrase bounds (snapped to note boundaries)", function(next) {
+                    var selectedIds = next.notes
+                        .filter(function(note) { return note.end >= snappedStart && note.start <= snappedEnd; })
+                        .map(function(note) { return note.id; });
+                    if (!selectedIds.length) return;
+                    next.phrases.forEach(function(phrase) {
+                        if (phrase.id !== phraseId) {
+                            phrase.note_ids = phrase.note_ids.filter(function(noteId) {
+                                return selectedIds.indexOf(noteId) < 0;
+                            });
+                        }
+                    });
+                    var target = null;
+                    next.phrases.forEach(function(phrase) {
+                        if (phrase.id === phraseId) target = phrase;
+                    });
+                    if (!target) {
+                        target = {
+                            id: phraseId,
+                            start: 0,
+                            end: 0,
+                            note_ids: []
+                        };
+                        next.phrases.push(target);
+                    }
+                    target.note_ids = selectedIds.slice();
+                    next.phrases = next.phrases.filter(function(phrase) { return phrase.note_ids.length > 0; });
+                });
+            }
+
+            function handleApplyNoteBounds() {
+                if (!selectedNoteId) return;
+                var requestedStart = asNumber(noteStartInput.value, NaN);
+                var requestedEnd = asNumber(noteEndInput.value, NaN);
+                if (!isFinite(requestedStart) || !isFinite(requestedEnd)) {
+                    setStatus("Note start/end must be valid numbers.", true);
+                    return;
+                }
+                if (requestedEnd < requestedStart) {
+                    var tmp = requestedStart;
+                    requestedStart = requestedEnd;
+                    requestedEnd = tmp;
+                }
+                if (requestedEnd <= requestedStart) requestedEnd = requestedStart + 0.001;
+                var noteId = selectedNoteId;
+                commitMutation("Resized selected note", function(next) {
+                    next.notes.forEach(function(note) {
+                        if (note.id !== noteId) return;
+                        note.start = requestedStart;
+                        note.end = requestedEnd;
+                    });
+                });
+            }
+
+            function handleAddNoteFromRange() {
+                if (!currentRange) {
+                    setStatus("Select a range on the plot before adding a note.", true);
+                    return;
+                }
+                var lo = Math.min(currentRange.start, currentRange.end);
+                var hi = Math.max(currentRange.start, currentRange.end);
+                if (hi <= lo) hi = lo + 0.04;
+                var midi = selectedPickerMidi();
+                if (!isFinite(midi)) {
+                    setStatus("Could not resolve MIDI for selected picker values.", true);
+                    return;
+                }
+                var selectedOption = addSargamSelect.options[addSargamSelect.selectedIndex];
+                var label = selectedOption ? String(selectedOption.value || selectedOption.textContent || "").trim() : "";
+                commitMutation("Added note from selected range", function(next) {
+                    var noteId = nextNoteId();
+                    var note = {
+                        id: noteId,
+                        start: lo,
+                        end: hi,
+                        pitch_midi: midi,
+                        pitch_hz: 440 * Math.pow(2, (midi - 69) / 12),
+                        raw_pitch_midi: midi,
+                        snapped_pitch_midi: midi,
+                        corrected_pitch_midi: midi,
+                        rendered_pitch_midi: midi,
+                        confidence: 0.95,
+                        energy: 0.0,
+                        sargam: label,
+                        pitch_class: ((Math.round(midi) % 12) + 12) % 12
+                    };
+                    next.notes.push(note);
+
+                    var targetPhrase = null;
+                    if (selectedPhraseId) {
+                        next.phrases.forEach(function(phrase) {
+                            if (phrase.id === selectedPhraseId) targetPhrase = phrase;
+                        });
+                    }
+                    if (!targetPhrase) {
+                        next.phrases.forEach(function(phrase) {
+                            if (targetPhrase) return;
+                            if (phrase.end >= lo && phrase.start <= hi) targetPhrase = phrase;
+                        });
+                    }
+                    if (!targetPhrase) {
+                        targetPhrase = {
+                            id: nextPhraseId(),
+                            start: lo,
+                            end: hi,
+                            note_ids: []
+                        };
+                        next.phrases.push(targetPhrase);
+                    }
+                    targetPhrase.note_ids.push(noteId);
+                    selectedNoteId = noteId;
+                    selectedPhraseId = targetPhrase.id;
+                });
+            }
+
+            phraseListEl.addEventListener("click", function(evt) {
+                var noteTarget = evt.target.closest("[data-note-id]");
+                if (noteTarget) {
+                    selectedNoteId = noteTarget.getAttribute("data-note-id");
+                    selectedPhraseId = findPhraseIdForNote(selectedNoteId, state);
+                    render();
+                    return;
+                }
+                var phraseTarget = evt.target.closest("[data-phrase-id]");
+                if (phraseTarget && evt.target.classList.contains("editor-select-phrase")) {
+                    selectedPhraseId = phraseTarget.getAttribute("data-phrase-id");
+                    var phrase = getPhraseById(selectedPhraseId);
+                    if (phrase && phrase.note_ids.length) {
+                        selectedNoteId = phrase.note_ids[0];
+                    }
+                    render();
+                }
+            });
+
+            phraseListEl.addEventListener("change", function(evt) {
+                if (!evt.target.classList.contains("editor-merge-checkbox")) return;
+                var phraseId = evt.target.getAttribute("data-phrase-id");
+                mergePhraseIds[phraseId] = !!evt.target.checked;
+            });
+
+            document.addEventListener("raga-transcription-selection", function(evt) {
+                if (!evt || !evt.detail) return;
+                var detail = evt.detail;
+                if (detail.mode === "none") {
+                    currentRange = null;
+                    currentPoint = null;
+                    render();
+                    return;
+                }
+                if (detail.mode === "point") {
+                    currentPoint = asNumber(detail.time, null);
+                    currentRange = null;
+                    if (isFinite(currentPoint)) {
+                        selectNearestNoteAtTime(currentPoint);
+                    }
+                    render();
+                    return;
+                }
+                if (detail.mode === "range") {
+                    var start = asNumber(detail.start, NaN);
+                    var end = asNumber(detail.end, NaN);
+                    if (isFinite(start) && isFinite(end)) {
+                        currentRange = { start: start, end: end };
+                        currentPoint = null;
+                        selectNearestNoteAtTime((start + end) * 0.5);
+                        render();
+                    }
+                }
+            });
+
+            undoBtn.addEventListener("click", handleUndo);
+            redoBtn.addEventListener("click", handleRedo);
+            saveBtn.addEventListener("click", function() { saveCurrentVersion(false); });
+            saveNewBtn.addEventListener("click", function() { saveCurrentVersion(true); });
+            resetBtn.addEventListener("click", function() {
+                loadState(initialPayload, "Reset editor to base auto-transcription.", null);
+                setVersionOptions(activeVersions, currentVersionId);
+            });
+            loadVersionBtn.addEventListener("click", function() {
+                var selectedVersion = versionsSelect.value;
+                if (!selectedVersion || selectedVersion === "__new__") return;
+                loadSpecificVersion(selectedVersion).catch(function(err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                });
+            });
+            deleteVersionBtn.addEventListener("click", function() {
+                deleteSelectedVersion().catch(function(err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                });
+            });
+            regenerateBtn.addEventListener("click", function() {
+                regenerateSelectedVersion().catch(function(err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                });
+            });
+            setDefaultSelectedBtn.addEventListener("click", function() {
+                setSelectedVersionAsDefault().catch(function(err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                });
+            });
+            setDefaultOriginalBtn.addEventListener("click", function() {
+                setOriginalAsDefault().catch(function(err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                });
+            });
+            versionsSelect.addEventListener("change", function() {
+                updateVersionActionButtons();
+            });
+            addSargamSelect.addEventListener("change", updateMidiPreview);
+            addOctaveSelect.addEventListener("change", updateMidiPreview);
+            addNoteRangeBtn.addEventListener("click", handleAddNoteFromRange);
+            deleteRangeBtn.addEventListener("click", handleDeleteRange);
+            deleteNoteBtn.addEventListener("click", handleDeleteSelectedNote);
+            mergePhrasesBtn.addEventListener("click", handleMergePhrases);
+            splitPhraseBtn.addEventListener("click", handleSplitPhrase);
+            applyPhraseBoundsBtn.addEventListener("click", handleApplyPhraseBounds);
+            applyNoteBoundsBtn.addEventListener("click", handleApplyNoteBounds);
+
+            updatePickerOptions();
+            render();
+
+            Promise.resolve()
+                .then(function() {
+                    return refreshVersions();
+                })
+                .then(function() {
+                    return loadDefaultSelection();
+                })
+                .then(function() {
+                    return refreshVersions(currentVersionId);
+                })
+                .catch(function(err) {
+                    setStatus(String(err && err.message ? err.message : err), true);
+                });
+        })();
+        </script>
+    </section>
+    """
+    return template.replace("__SECTION_ID__", section_id).replace("__EDITOR_PAYLOAD__", payload_json)
+
+
 def _generate_transition_section(matrix: np.ndarray) -> str:
     """Generate transition matrix heatmap section."""
     
@@ -2090,6 +3617,7 @@ def plot_pitch_wide_to_base64_with_legend(
     overlay_timestamps: Optional[np.ndarray] = None,
     overlay_label: str = "RMS Energy",
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
+    transcription_notes: Optional[List[Note]] = None,
 ) -> Tuple[str, str, int, float, float]:
     """
     Generate wide pitch contour and overlay sargam lines, returning base64 images.
@@ -2097,8 +3625,40 @@ def plot_pitch_wide_to_base64_with_legend(
     """
     import io
     import base64
-    import librosa
+    import re
     from matplotlib.ticker import MultipleLocator
+
+    def _hz_to_midi(values: np.ndarray) -> np.ndarray:
+        safe = np.asarray(values, dtype=float)
+        safe = np.maximum(safe, 1e-6)
+        return 69.0 + 12.0 * np.log2(safe / 440.0)
+
+    def _note_name_to_midi(note_text: str) -> Optional[float]:
+        pattern = re.compile(r"^\s*([A-Ga-g])([#b]?)(-?\d+)?\s*$")
+        match = pattern.match(note_text)
+        if not match:
+            return None
+        letter = match.group(1).upper()
+        accidental = match.group(2)
+        octave_text = match.group(3)
+        octave = int(octave_text) if octave_text is not None else 4
+        base_pc = {
+            "C": 0,
+            "D": 2,
+            "E": 4,
+            "F": 5,
+            "G": 7,
+            "A": 9,
+            "B": 11,
+        }.get(letter)
+        if base_pc is None:
+            return None
+        if accidental == "#":
+            base_pc += 1
+        elif accidental == "b":
+            base_pc -= 1
+        pc = base_pc % 12
+        return float((octave + 1) * 12 + pc)
     
     # Resolve tonic
     tonic_midi_base: float
@@ -2109,11 +3669,14 @@ def plot_pitch_wide_to_base64_with_legend(
         tonic_midi_base = float(tonic_midi + 60) # Default to middle C octave if int
         tonic_label = _tonic_name(tonic_ref)
     else:
-        try:
-            tonic_midi_base = float(librosa.note_to_midi(str(tonic_ref) + '4'))
-            tonic_midi = int(tonic_midi_base) % 12
+        resolved_tonic = _note_name_to_midi(str(tonic_ref))
+        if resolved_tonic is None:
+            resolved_tonic = _note_name_to_midi(f"{tonic_ref}4")
+        if resolved_tonic is not None:
+            tonic_midi_base = float(resolved_tonic)
+            tonic_midi = int(round(tonic_midi_base)) % 12
             tonic_label = str(tonic_ref)
-        except Exception:
+        else:
             tonic_midi_base = 60.0
             tonic_midi = 0
             tonic_label = "C"
@@ -2137,7 +3700,7 @@ def plot_pitch_wide_to_base64_with_legend(
          # Return empty placeholders
          return "", "", 100, 0.0, 1.0
 
-    voiced_midi = librosa.hz_to_midi(pitch_hz[voiced_mask])
+    voiced_midi = _hz_to_midi(pitch_hz[voiced_mask])
     voiced_midi_rounded = np.round(voiced_midi).astype(int)
     
     # Calculate range dynamically based on data min/max
@@ -2217,77 +3780,177 @@ def plot_pitch_wide_to_base64_with_legend(
         ax.plot(voiced_times[s:e], voiced_midi[s:e], color='tab:blue', linewidth=1.5, alpha=0.9)
 
     # --- Transcription Overlay ---
-    # Detect events
-    transcription_events = transcription.detect_stationary_events(
-        pitch_hz=pitch_hz,
-        timestamps=timestamps,
-        voicing_mask=voiced_mask, # Note: voiced_mask is boolean array same length as pitch_hz
-        tonic=tonic_midi_base,
-        energy=pitch_data.energy,
-        energy_threshold=transcription_energy_threshold,
-        snap_mode='chromatic', # Default to chromatic for now
-        smoothing_sigma_ms=transcription_smoothing_ms,
-        derivative_threshold=transcription_derivative_threshold,
-        min_event_duration=transcription_min_duration
-    )
-    
-    # Plot events
-    for i, event in enumerate(transcription_events):
-        # Draw horizontal line for the note
-        if i == 0:
-            ax.hlines(
-                y=event.snapped_midi,
-                xmin=event.start,
-                xmax=event.end,
-                colors='orange',
-                linewidth=3,
-                alpha=0.8,
-                label='Transcribed'
-            )
-        else:
-            ax.hlines(
-                y=event.snapped_midi,
-                xmin=event.start,
-                xmax=event.end,
-                colors='orange',
-                linewidth=3,
-                alpha=0.8
-            )
+    # If a note timeline is provided (for example edited transcription),
+    # render directly from notes so the plot reflects saved edits.
+    if transcription_notes:
+        rendered_any = False
+        rendered_stationary = False
+        rendered_inflection = False
+        problematic_points: List[Dict[str, float]] = []
+        for note in transcription_notes:
+            start_t = float(getattr(note, "start", 0.0))
+            end_t = float(getattr(note, "end", 0.0))
+            pitch_midi = float(getattr(note, "pitch_midi", np.nan))
+            if not np.isfinite(start_t) or not np.isfinite(end_t) or not np.isfinite(pitch_midi):
+                continue
+            if end_t <= start_t:
+                continue
 
-    # --- Inflection Points Overlay ---
-    # Detect turning points (derivative = 0)
-    inflection_times, inflection_pitches = transcription.detect_pitch_inflection_points(
-        pitch_hz=pitch_hz,
-        timestamps=timestamps,
-        voicing_mask=voiced_mask,
-        smoothing_sigma_ms=transcription_smoothing_ms, # Use same smoothing as transcription
-    )
-    
-    # Filter out inflection points that are already covered by stationary events (orange bars)
-    if len(inflection_times) > 0 and transcription_events:
-        keep_mask = np.ones(len(inflection_times), dtype=bool)
-        for event in transcription_events:
-            # Mark points inside this event's duration as False using strict boundaries.
-            overlap = (inflection_times >= event.start) & (inflection_times <= event.end)
-            keep_mask[overlap] = False
-            
-        inflection_times = inflection_times[keep_mask]
-        inflection_pitches = inflection_pitches[keep_mask]
-    
-    if len(inflection_times) > 0:
-         # Plot vertical lines for inflection points
-         ax.vlines(
-             x=inflection_times,
-             ymin=min_m,
-             ymax=max_m,
-             colors='red',
-             linestyles=':',
-             linewidth=0.8,
-             alpha=0.4,
-             label='Inflection'
-         )
-         # Optionally mark points
-         ax.scatter(inflection_times, inflection_pitches, c='red', s=10, alpha=0.5, zorder=3)
+            confidence = float(getattr(note, "confidence", 1.0))
+            is_inflection = confidence < 0.95
+            raw_pitch = float(getattr(note, "raw_pitch_midi", np.nan))
+            snapped_pitch = float(getattr(note, "snapped_pitch_midi", pitch_midi))
+            corrected_pitch = float(getattr(note, "corrected_pitch_midi", pitch_midi))
+            color = 'red' if is_inflection else 'orange'
+            line_width = 2.0 if is_inflection else 3.0
+            alpha = 0.75 if is_inflection else 0.82
+            label = None
+            if is_inflection and not rendered_inflection:
+                label = "Inflection"
+                rendered_inflection = True
+            elif (not is_inflection) and not rendered_stationary:
+                label = "Transcribed"
+                rendered_stationary = True
+
+            ax.hlines(
+                y=pitch_midi,
+                xmin=start_t,
+                xmax=end_t,
+                colors=color,
+                linewidth=line_width,
+                alpha=alpha,
+                label=label,
+                zorder=3,
+            )
+            rendered_any = True
+
+            if is_inflection:
+                rendered_mismatch = not np.isclose(
+                    pitch_midi,
+                    corrected_pitch,
+                    atol=1e-9,
+                )
+                detached_from_raw = np.isfinite(raw_pitch) and abs(pitch_midi - raw_pitch) > 1.0
+                if rendered_mismatch or detached_from_raw:
+                    problematic_points.append(
+                        {
+                            "time": (start_t + end_t) * 0.5,
+                            "raw_pitch_midi": raw_pitch,
+                            "snapped_pitch_midi": snapped_pitch,
+                            "corrected_pitch_midi": corrected_pitch,
+                            "rendered_pitch_midi": pitch_midi,
+                        }
+                    )
+
+        if rendered_inflection:
+            inflection_points_x = []
+            inflection_points_y = []
+            for note in transcription_notes:
+                confidence = float(getattr(note, "confidence", 1.0))
+                if confidence >= 0.95:
+                    continue
+                start_t = float(getattr(note, "start", 0.0))
+                end_t = float(getattr(note, "end", 0.0))
+                pitch_midi = float(getattr(note, "pitch_midi", np.nan))
+                if not np.isfinite(start_t) or not np.isfinite(end_t) or not np.isfinite(pitch_midi):
+                    continue
+                inflection_points_x.append((start_t + end_t) * 0.5)
+                inflection_points_y.append(pitch_midi)
+            if inflection_points_x:
+                ax.scatter(
+                    inflection_points_x,
+                    inflection_points_y,
+                    c='red',
+                    s=10,
+                    alpha=0.5,
+                    zorder=4,
+                )
+
+        # Fallback for corrupted payloads: preserve legacy detection overlay.
+        if not rendered_any:
+            transcription_notes = None
+        elif problematic_points:
+            print(f"[PLOT_DIAG] Found {len(problematic_points)} problematic inflection points")
+            for diag in problematic_points:
+                print(
+                    "[PLOT_DIAG] "
+                    f"t={diag['time']:.3f}s "
+                    f"raw={diag['raw_pitch_midi']:.4f} "
+                    f"snapped={diag['snapped_pitch_midi']:.4f} "
+                    f"corrected={diag['corrected_pitch_midi']:.4f} "
+                    f"rendered={diag['rendered_pitch_midi']:.4f}"
+                )
+
+    if not transcription_notes:
+        try:
+            transcription_events = transcription.detect_stationary_events(
+                pitch_hz=pitch_hz,
+                timestamps=timestamps,
+                voicing_mask=voiced_mask, # Note: voiced_mask is boolean array same length as pitch_hz
+                tonic=tonic_midi_base,
+                energy=pitch_data.energy,
+                energy_threshold=transcription_energy_threshold,
+                snap_mode='chromatic', # Default to chromatic for now
+                smoothing_sigma_ms=transcription_smoothing_ms,
+                derivative_threshold=transcription_derivative_threshold,
+                min_event_duration=transcription_min_duration
+            )
+        except Exception:
+            transcription_events = []
+
+        for i, event in enumerate(transcription_events):
+            if i == 0:
+                ax.hlines(
+                    y=event.snapped_midi,
+                    xmin=event.start,
+                    xmax=event.end,
+                    colors='orange',
+                    linewidth=3,
+                    alpha=0.8,
+                    label='Transcribed'
+                )
+            else:
+                ax.hlines(
+                    y=event.snapped_midi,
+                    xmin=event.start,
+                    xmax=event.end,
+                    colors='orange',
+                    linewidth=3,
+                    alpha=0.8
+                )
+
+        try:
+            inflection_times, inflection_pitches = transcription.detect_pitch_inflection_points(
+                pitch_hz=pitch_hz,
+                timestamps=timestamps,
+                voicing_mask=voiced_mask,
+                smoothing_sigma_ms=transcription_smoothing_ms, # Use same smoothing as transcription
+            )
+        except Exception:
+            inflection_times = np.array([])
+            inflection_pitches = np.array([])
+
+        if len(inflection_times) > 0 and transcription_events:
+            keep_mask = np.ones(len(inflection_times), dtype=bool)
+            for event in transcription_events:
+                overlap = (inflection_times >= event.start) & (inflection_times <= event.end)
+                keep_mask[overlap] = False
+
+            inflection_times = inflection_times[keep_mask]
+            inflection_pitches = inflection_pitches[keep_mask]
+
+        if len(inflection_times) > 0:
+            ax.vlines(
+                x=inflection_times,
+                ymin=min_m,
+                ymax=max_m,
+                colors='red',
+                linestyles=':',
+                linewidth=0.8,
+                alpha=0.4,
+                label='Inflection'
+            )
+            ax.scatter(inflection_times, inflection_pitches, c='red', s=10, alpha=0.5, zorder=3)
 
     # --- RMS Energy Overlay ---
     # Scaled energy is drawn as a filled area in the bottom 25 % of the plot.
@@ -2409,6 +4072,7 @@ def create_scrollable_pitch_plot_html(
         overlay_timestamps=overlay_timestamps,
         overlay_label=overlay_label,
         phrase_ranges=phrase_ranges,
+        transcription_notes=transcription_notes,
     )
     
     if not plot_b64:
@@ -2446,6 +4110,10 @@ def create_scrollable_pitch_plot_html(
                 "end": end,
                 "sargam": str(getattr(note, "sargam", "") or ""),
                 "pitch_midi": _safe_json_float(getattr(note, "pitch_midi", None)),
+                "raw_pitch_midi": _safe_json_float(getattr(note, "raw_pitch_midi", None)),
+                "snapped_pitch_midi": _safe_json_float(getattr(note, "snapped_pitch_midi", getattr(note, "pitch_midi", None))),
+                "corrected_pitch_midi": _safe_json_float(getattr(note, "corrected_pitch_midi", getattr(note, "pitch_midi", None))),
+                "rendered_pitch_midi": _safe_json_float(getattr(note, "pitch_midi", None)),
                 "energy": _safe_json_float(getattr(note, "energy", None)),
                 "confidence": _safe_json_float(getattr(note, "confidence", None)),
             }
@@ -2466,6 +4134,7 @@ def create_scrollable_pitch_plot_html(
                     <!-- Inspector markers -->
                     <div id="{unique_id}-range-band" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0; display: none; background: rgba(56,139,253,0.18); border: 1px solid rgba(56,139,253,0.7); pointer-events: none; z-index: 4;"></div>
                     <div id="{unique_id}-point-marker" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e3b341; display: none; pointer-events: none; z-index: 6;"></div>
+                    <div id="{unique_id}-hover-tooltip" style="position: absolute; left: 0; top: 0; display: none; max-width: 320px; padding: 6px 8px; border-radius: 6px; border: 1px solid #30363d; background: rgba(17, 22, 29, 0.95); color: #c9d1d9; font-size: 11px; line-height: 1.4; pointer-events: none; z-index: 7; box-shadow: 0 2px 8px rgba(0,0,0,0.45);"></div>
                     <!-- Cursor Line -->
                     <div id="{unique_id}-cursor" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e94560; box-shadow: 0 0 5px #e94560; pointer-events: none; z-index: 5;"></div>
                 </div>
@@ -2499,6 +4168,7 @@ def create_scrollable_pitch_plot_html(
         const plotImage = document.getElementById("{unique_id}-plot-image");
         const cursor = document.getElementById("{unique_id}-cursor");
         const pointMarker = document.getElementById("{unique_id}-point-marker");
+        const hoverTooltip = document.getElementById("{unique_id}-hover-tooltip");
         const rangeBand = document.getElementById("{unique_id}-range-band");
         const selectionTypeEl = document.getElementById("{unique_id}-selection-type");
         const selectionTimeEl = document.getElementById("{unique_id}-selection-time");
@@ -2514,6 +4184,7 @@ def create_scrollable_pitch_plot_html(
             container &&
             cursor &&
             pointMarker &&
+            hoverTooltip &&
             rangeBand &&
             selectionTypeEl &&
             selectionTimeEl &&
@@ -2557,6 +4228,10 @@ def create_scrollable_pitch_plot_html(
                         end: end,
                         sargam: (note.sargam || "").toString(),
                         pitch_midi: Number(note.pitch_midi),
+                        raw_pitch_midi: Number(note.raw_pitch_midi),
+                        snapped_pitch_midi: Number(note.snapped_pitch_midi),
+                        corrected_pitch_midi: Number(note.corrected_pitch_midi),
+                        rendered_pitch_midi: Number(note.rendered_pitch_midi),
                         energy: Number(note.energy),
                         confidence: Number(note.confidence),
                     }};
@@ -2580,6 +4255,37 @@ def create_scrollable_pitch_plot_html(
             function formatMaybe(v, digits) {{
                 if (!isFinite(v)) return "n/a";
                 return v.toFixed(digits);
+            }}
+
+            function formatPitchTrace(note) {{
+                return (
+                    "raw " + formatMaybe(note.raw_pitch_midi, 3) +
+                    " | snapped " + formatMaybe(note.snapped_pitch_midi, 3) +
+                    " | corrected " + formatMaybe(note.corrected_pitch_midi, 3) +
+                    " | rendered " + formatMaybe(note.rendered_pitch_midi, 3)
+                );
+            }}
+
+            function centsDistance(notePitch, correctedPitch) {{
+                if (!isFinite(notePitch) || !isFinite(correctedPitch)) {{
+                    return NaN;
+                }}
+                return Math.abs((notePitch - correctedPitch) * 100.0);
+            }}
+
+            function formatCentsDistance(value) {{
+                if (!isFinite(value)) {{
+                    return "n/a";
+                }}
+                return value.toFixed(1) + "c";
+            }}
+
+            function formatPitchDistance(note) {{
+                return (
+                    "raw " + formatCentsDistance(centsDistance(note.raw_pitch_midi, note.corrected_pitch_midi)) +
+                    " | snapped " + formatCentsDistance(centsDistance(note.snapped_pitch_midi, note.corrected_pitch_midi)) +
+                    " | rendered " + formatCentsDistance(centsDistance(note.rendered_pitch_midi, note.corrected_pitch_midi))
+                );
             }}
 
             function escapeHtml(raw) {{
@@ -2607,6 +4313,12 @@ def create_scrollable_pitch_plot_html(
                 const rect = container.getBoundingClientRect();
                 const rawX = evt.clientX - rect.left + container.scrollLeft;
                 return clamp(rawX, plotStartPx, plotEndPx);
+            }}
+
+            function yFromEvent(evt) {{
+                const rect = container.getBoundingClientRect();
+                const rawY = evt.clientY - rect.top;
+                return clamp(rawY, 0, Math.max(container.clientHeight, 0));
             }}
 
             function seekAllTracks(targetTime) {{
@@ -2680,10 +4392,27 @@ def create_scrollable_pitch_plot_html(
                 selectionNotesEl.textContent = "No selection.";
             }}
 
+            function emitSelectionUpdate(detail) {{
+                try {{
+                    document.dispatchEvent(
+                        new CustomEvent("raga-transcription-selection", {{
+                            detail: Object.assign({{
+                                sourcePlotId: "{unique_id}",
+                                overlayLabel: overlayLabel,
+                            }}, detail || {{}})
+                        }})
+                    );
+                }} catch (_err) {{
+                    // Ignore event bridge failures.
+                }}
+            }}
+
             function clearSelection() {{
                 pointMarker.style.display = "none";
                 rangeBand.style.display = "none";
+                hideHoverTooltip();
                 setDefaultInspector();
+                emitSelectionUpdate({{ mode: "none" }});
             }}
 
             function nearestEnergySample(t) {{
@@ -2765,14 +4494,24 @@ def create_scrollable_pitch_plot_html(
                 return "?";
             }}
 
+            function noteKindLabel(note) {{
+                if (isFinite(note.confidence) && note.confidence < 0.95) {{
+                    return "Inflection";
+                }}
+                return "Stationary";
+            }}
+
             function noteBreakdownTableHtml(notes) {{
                 const rows = notes.map(function(note) {{
                     const duration = Math.max(0, note.end - note.start);
+                    const noteLabel = formatNoteSymbol(note) + " (" + noteKindLabel(note) + ")";
                     return (
                         "<tr>" +
-                        "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + escapeHtml(formatNoteSymbol(note)) + "</td>" +
+                        "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + escapeHtml(noteLabel) + "</td>" +
                         "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + formatSeconds(duration) + "s</td>" +
                         "<td style='padding:4px 6px; border-top:1px solid #30363d;'>midi " + formatMaybe(note.pitch_midi, 2) + "</td>" +
+                        "<td style='padding:4px 6px; border-top:1px solid #30363d; color:#8b949e;'>" + escapeHtml(formatPitchDistance(note)) + "</td>" +
+                        "<td style='padding:4px 6px; border-top:1px solid #30363d; color:#8b949e;'>" + escapeHtml(formatPitchTrace(note)) + "</td>" +
                         "</tr>"
                     );
                 }}).join("");
@@ -2785,6 +4524,8 @@ def create_scrollable_pitch_plot_html(
                     "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Note</th>" +
                     "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Duration</th>" +
                     "<th style='text-align:left; padding:5px 6px; background:#161b22;'>MIDI</th>" +
+                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Dist to Corrected</th>" +
+                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Pitch Trace</th>" +
                     "</tr>" +
                     "</thead>" +
                     "<tbody>" + rows + "</tbody>" +
@@ -2856,10 +4597,7 @@ def create_scrollable_pitch_plot_html(
                     noteBreakdownTableHtml(notes);
             }}
 
-            function runPointQuery(plotX, shouldSeek) {{
-                const x = clamp(plotX, plotStartPx, plotEndPx);
-                const t = xToTime(x);
-                const energySample = nearestEnergySample(t);
+            function resolveNotesAtTime(t) {{
                 let overlapping = transcriptionNotes.filter(function(note) {{
                     return (note.start - pointToleranceSec) <= t && t <= (note.end + pointToleranceSec);
                 }});
@@ -2880,10 +4618,85 @@ def create_scrollable_pitch_plot_html(
                     usedNearest = true;
                 }}
 
+                return {{
+                    notes: overlapping,
+                    usedNearest: usedNearest,
+                }};
+            }}
+
+            function hideHoverTooltip() {{
+                hoverTooltip.style.display = "none";
+                hoverTooltip.innerHTML = "";
+            }}
+
+            function renderHoverTooltip(plotX, pointerY) {{
+                if (!transcriptionNotes.length) {{
+                    hideHoverTooltip();
+                    return;
+                }}
+
+                const x = clamp(plotX, plotStartPx, plotEndPx);
+                const t = xToTime(x);
+                const resolved = resolveNotesAtTime(t);
+                const notes = resolved.notes;
+                if (!notes.length) {{
+                    hideHoverTooltip();
+                    return;
+                }}
+
+                const maxTooltipItems = 2;
+                const rows = notes.slice(0, maxTooltipItems).map(function(note) {{
+                    const symbol = formatNoteSymbol(note);
+                    const kind = noteKindLabel(note);
+                    const region = formatSeconds(note.start) + "s - " + formatSeconds(note.end) + "s";
+                    const cents = formatPitchDistance(note);
+                    return (
+                        "<div style='margin-top:4px;'>" +
+                        "<strong>" + escapeHtml(symbol) + "</strong> " +
+                        "<span style='color:#8b949e;'>" + escapeHtml(kind) + "</span><br>" +
+                        "<span style='color:#8b949e;'>region " + escapeHtml(region) + "</span><br>" +
+                        "<span style='color:#8b949e;'>dist to corrected: " + escapeHtml(cents) + "</span>" +
+                        "</div>"
+                    );
+                }}).join("");
+                const remaining = notes.length - maxTooltipItems;
+                const nearestTag = resolved.usedNearest ? " (nearest)" : "";
+                hoverTooltip.innerHTML =
+                    "<div><strong>t=" + escapeHtml(formatSeconds(t)) + "s" + escapeHtml(nearestTag) + "</strong></div>" +
+                    rows +
+                    (remaining > 0
+                        ? "<div style='margin-top:4px; color:#8b949e;'>+" + remaining + " more note(s)</div>"
+                        : "");
+
+                const maxLeft = Math.max(0, pixelWidth - 340);
+                const maxTop = Math.max(0, container.clientHeight - 120);
+                hoverTooltip.style.left = clamp(x + 14, 0, maxLeft) + "px";
+                hoverTooltip.style.top = clamp(pointerY + 14, 0, maxTop) + "px";
+                hoverTooltip.style.display = "block";
+            }}
+
+            function runPointQuery(plotX, shouldSeek) {{
+                const x = clamp(plotX, plotStartPx, plotEndPx);
+                const t = xToTime(x);
+                const energySample = nearestEnergySample(t);
+                const resolved = resolveNotesAtTime(t);
+                const overlapping = resolved.notes;
+                const usedNearest = resolved.usedNearest;
+
                 pointMarker.style.display = "block";
                 pointMarker.style.left = x + "px";
                 rangeBand.style.display = "none";
                 renderPointSelection(t, energySample, overlapping, usedNearest);
+                emitSelectionUpdate({{
+                    mode: "point",
+                    time: t,
+                    start: t,
+                    end: t,
+                    notes: overlapping,
+                    usedNearest: usedNearest,
+                    energy: energySample ? energySample.e : null,
+                    energySampleTime: energySample ? energySample.t : null,
+                }});
 
                 if (shouldSeek && isFinite(t)) {{
                     const sourceBeforeSeek = getPlayingAudio() || activeAudio;
@@ -2913,6 +4726,15 @@ def create_scrollable_pitch_plot_html(
                 rangeBand.style.width = width + "px";
                 pointMarker.style.display = "none";
                 renderRangeSelection(lo, hi, energyStats, notes);
+                emitSelectionUpdate({{
+                    mode: "range",
+                    start: lo,
+                    end: hi,
+                    notes: notes,
+                    energyMin: energyStats ? energyStats.min : null,
+                    energyMean: energyStats ? energyStats.mean : null,
+                    energyMax: energyStats ? energyStats.max : null,
+                }});
             }}
 
             function updateDragPreview(startX, currentX) {{
@@ -2950,9 +4772,23 @@ def create_scrollable_pitch_plot_html(
                     return;
                 }}
                 e.preventDefault();
+                hideHoverTooltip();
                 isPointerDown = true;
                 pointerStartX = xFromEvent(e);
                 pointerCurrentX = pointerStartX;
+            }});
+
+            container.addEventListener("mousemove", function(e) {{
+                if (isPointerDown) {{
+                    return;
+                }}
+                renderHoverTooltip(xFromEvent(e), yFromEvent(e));
+            }});
+
+            container.addEventListener("mouseleave", function() {{
+                if (!isPointerDown) {{
+                    hideHoverTooltip();
+                }}
             }});
 
             document.addEventListener("mousemove", function(e) {{
@@ -2972,6 +4808,7 @@ def create_scrollable_pitch_plot_html(
                 pointerCurrentX = xFromEvent(e);
                 const movedPx = Math.abs(pointerCurrentX - pointerStartX);
                 isPointerDown = false;
+                hideHoverTooltip();
 
                 if (movedPx >= dragThresholdPx) {{
                     runRangeQuery(pointerStartX, pointerCurrentX);
@@ -3501,15 +5338,100 @@ class AnalysisStats:
     pitch_plot_path: str
 
 
+def _relpath_or_raw(path_value: Any, root_dir: str) -> Any:
+    if path_value is None:
+        return None
+    path_text = str(path_value)
+    if not path_text:
+        return path_text
+    try:
+        return os.path.relpath(path_text, root_dir)
+    except Exception:
+        return path_text
+
+
+def _abspath_or_raw(path_value: Any) -> str:
+    if path_value is None:
+        return ""
+    path_text = str(path_value).strip()
+    if not path_text:
+        return ""
+    try:
+        return str(Path(path_text).expanduser().resolve())
+    except Exception:
+        return path_text
+
+
+def _build_analysis_report_metadata(
+    results: 'AnalysisResults',
+    stats: AnalysisStats,
+    output_dir: str,
+    report_path: str,
+) -> Dict[str, Any]:
+    stem_dir = os.path.abspath(output_dir)
+    config = results.config
+    metadata: Dict[str, Any] = {
+        "schema_version": 1,
+        "report_filename": os.path.basename(report_path),
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "config": {
+            "audio_path": _abspath_or_raw(getattr(config, "audio_path", "")),
+            "vocals_path": _abspath_or_raw(getattr(config, "vocals_path", "")),
+            "accompaniment_path": _abspath_or_raw(getattr(config, "accompaniment_path", "")),
+            "melody_source": str(getattr(config, "melody_source", "separated") or "separated"),
+            "transcription_smoothing_ms": float(getattr(config, "transcription_smoothing_ms", 70.0)),
+            "transcription_min_duration": float(getattr(config, "transcription_min_duration", 0.04)),
+            "transcription_derivative_threshold": float(getattr(config, "transcription_derivative_threshold", 2.0)),
+            "energy_threshold": float(getattr(config, "energy_threshold", 0.0)),
+            "show_rms_overlay": bool(getattr(config, "show_rms_overlay", True)),
+        },
+        "detected": {
+            "tonic": int(results.detected_tonic) if results.detected_tonic is not None else None,
+            "raga": str(results.detected_raga) if results.detected_raga else None,
+        },
+        "stats": {
+            "correction_summary": stats.correction_summary,
+            "pattern_analysis": stats.pattern_analysis,
+            "raga_name": stats.raga_name,
+            "tonic": stats.tonic,
+            "transition_matrix_path": _relpath_or_raw(stats.transition_matrix_path, stem_dir),
+            "pitch_plot_path": _relpath_or_raw(stats.pitch_plot_path, stem_dir),
+        },
+        "plot_paths": {
+            key: _relpath_or_raw(path, stem_dir)
+            for key, path in (results.plot_paths or {}).items()
+        },
+        "pitch_csv_paths": {
+            "original": ["composite_pitch_data.csv"],
+            "vocals": ["melody_pitch_data.csv", "vocals_pitch_data.csv"],
+            "accompaniment": ["accompaniment_pitch_data.csv"],
+        },
+    }
+    return metadata
+
+
+def _write_analysis_report_metadata(
+    results: 'AnalysisResults',
+    stats: AnalysisStats,
+    output_dir: str,
+    report_path: str,
+) -> None:
+    metadata = _build_analysis_report_metadata(results, stats, output_dir, report_path)
+    metadata_path = str(Path(report_path).with_suffix(".meta.json"))
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+
+
 def generate_analysis_report(
     results: 'AnalysisResults',
     stats: AnalysisStats,
-    output_dir: str
+    output_dir: str,
+    report_filename: str = "analysis_report.html",
 ) -> str:
     """
     Generate detailed analysis report (Phase 2).
     """
-    report_path = os.path.join(output_dir, "analysis_report.html")
+    report_path = os.path.join(output_dir, report_filename)
     
     # Relative paths for audio assets
     original_audio_path = _require_audio_path(results.config)
@@ -3882,6 +5804,11 @@ def generate_analysis_report(
         results.detected_tonic or 0,
         audio_element_ids=None,
     )
+    transcription_editor_html = _generate_transcription_editor_section(
+        results.notes,
+        results.phrases,
+        results.detected_tonic or 0,
+    )
 
     # Phrase karaoke section (top interactive view)
     karaoke_html = ""
@@ -4103,6 +6030,7 @@ def generate_analysis_report(
             {correction_html}
 
             {transcription_html}
+            {transcription_editor_html}
 
             {pattern_html}
 
@@ -4121,6 +6049,10 @@ def generate_analysis_report(
     
     with open(report_path, "w", encoding='utf-8') as f:
         f.write(html_content)
+    try:
+        _write_analysis_report_metadata(results, stats, output_dir, report_path)
+    except Exception as exc:
+        print(f"[WARN] Failed to write analysis report metadata: {exc}")
         
     return report_path
 

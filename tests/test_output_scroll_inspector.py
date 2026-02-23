@@ -66,6 +66,7 @@ class ScrollInspectorHtmlTests(unittest.TestCase):
 
         self.assertRegex(html, r'id="sp_[0-9a-f]{6}-point-marker"')
         self.assertRegex(html, r'id="sp_[0-9a-f]{6}-range-band"')
+        self.assertRegex(html, r'id="sp_[0-9a-f]{6}-hover-tooltip"')
         self.assertRegex(html, r'id="sp_[0-9a-f]{6}-inspector"')
         self.assertRegex(html, r'id="sp_[0-9a-f]{6}-clear-selection"')
 
@@ -78,13 +79,17 @@ class ScrollInspectorHtmlTests(unittest.TestCase):
         self.assertIn('draggable="false"', html)
         self.assertIn("function normalizeSargamLabel", html)
         self.assertIn("function noteBreakdownTableHtml", html)
+        self.assertIn("function centsDistance", html)
+        self.assertIn("function renderHoverTooltip", html)
         self.assertIn("max-height:\" + maxHeight + \"px; overflow-y:auto", html)
         self.assertIn(">Note</th>", html)
         self.assertIn(">Duration</th>", html)
         self.assertIn(">MIDI</th>", html)
+        self.assertIn(">Dist to Corrected</th>", html)
         self.assertIn("addEventListener(\"dragstart\"", html)
         self.assertIn("addEventListener(\"mousedown\"", html)
         self.assertIn("addEventListener(\"mousemove\"", html)
+        self.assertIn("addEventListener(\"mouseleave\"", html)
         self.assertIn("addEventListener(\"mouseup\"", html)
         self.assertIn("raga-scroll-selection-clear", html)
 

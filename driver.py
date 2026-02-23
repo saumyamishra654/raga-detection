@@ -706,12 +706,24 @@ def run_pipeline(
         correction_summary = {}
         if raga_db and results.detected_raga:
             print(f"  Applying raga correction for {results.detected_raga}...")
+            strict_raga_max_cents = max(float(getattr(config, "strict_raga_max_cents", 35.0)), 0.0)
+            raga_max_distance = (strict_raga_max_cents / 100.0) if config.strict_raga_35c_filter else 1.0
+            keep_impure_notes = config.keep_impure_notes
+            if config.strict_raga_35c_filter and keep_impure_notes:
+                keep_impure_notes = False
+                print(
+                    "  [INFO] --strict-raga-35c-filter enabled; "
+                    "--keep-impure-notes is ignored for correction."
+                )
+            if config.strict_raga_35c_filter:
+                print(f"  [INFO] Strict raga filter window: +/-{strict_raga_max_cents:.1f} cents")
             corrected_notes, correction_stats, _ = apply_raga_correction_to_notes(
                 raw_notes, 
                 raga_db, 
                 results.detected_raga, 
                 results.detected_tonic,
-                keep_impure=config.keep_impure_notes
+                max_distance=raga_max_distance,
+                keep_impure=keep_impure_notes,
             )
             results.notes = corrected_notes
             correction_summary = correction_stats

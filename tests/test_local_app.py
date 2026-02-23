@@ -1,3 +1,6 @@
+import base64
+import json
+import os
 import tempfile
 import time
 import types
@@ -402,6 +405,425 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["ragas"], ["Bageshri", "Shudh Bageshri"])
+
+    def test_regenerate_without_metadata_recovers_audio_and_header_from_report_html(self) -> None:
+        stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "demo_song"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+        external_audio_dir = Path(self.tmp.name) / "audio_test_files"
+        external_audio_dir.mkdir(parents=True, exist_ok=True)
+
+        original_audio = external_audio_dir / "demo_song.mp3"
+        vocals_audio = stem_dir / "vocals.mp3"
+        accomp_audio = stem_dir / "accompaniment.mp3"
+        original_audio.write_bytes(b"orig")
+        vocals_audio.write_bytes(b"voc")
+        accomp_audio.write_bytes(b"acc")
+
+        original_rel = os.path.relpath(str(original_audio.resolve()), str(stem_dir.resolve()))
+        report_html = f"""
+        <html>
+            <head><title>Raga Analysis Report: Yaman</title></head>
+            <body>
+                <p class="subtitle">Yaman (Tonic: C#)</p>
+                <audio id="original-player" controls>
+                    <source src="{original_rel}" type="audio/mpeg">
+                </audio>
+                <audio id="vocals-player" controls>
+                    <source src="vocals.mp3" type="audio/mpeg">
+                </audio>
+                <audio id="accomp-player" controls>
+                    <source src="accompaniment.mp3" type="audio/mpeg">
+                </audio>
+            </body>
+        </html>
+        """
+        report_path = stem_dir / "analysis_report.html"
+        report_path.write_text(report_html, encoding="utf-8")
+
+        for img_name in ["transition_matrix.png", "pitch_sargam.png"]:
+            (stem_dir / img_name).write_bytes(b"png")
+
+        pitch_csv = (
+            "timestamp,pitch_hz,confidence,voicing,energy\n"
+            "0.0,261.63,0.95,1,0.10\n"
+            "0.1,261.63,0.95,1,0.20\n"
+            "0.2,293.66,0.95,1,0.25\n"
+            "0.3,293.66,0.95,1,0.22\n"
+        )
+        (stem_dir / "composite_pitch_data.csv").write_text(pitch_csv, encoding="utf-8")
+        (stem_dir / "melody_pitch_data.csv").write_text(pitch_csv, encoding="utf-8")
+        (stem_dir / "accompaniment_pitch_data.csv").write_text(pitch_csv, encoding="utf-8")
+
+        token = base64.urlsafe_b64encode(str(stem_dir.resolve()).encode("utf-8")).decode("ascii").rstrip("=")
+        report_name = "analysis_report.html"
+        save_payload = {
+            "notes": [
+                {
+                    "id": "n00001",
+                    "start": 0.10,
+                    "end": 0.35,
+                    "pitch_midi": 60.0,
+                    "pitch_hz": 261.63,
+                    "confidence": 0.95,
+                    "energy": 0.2,
+                    "sargam": "Sa",
+                    "pitch_class": 0,
+                },
+                {
+                    "id": "n00002",
+                    "start": 0.40,
+                    "end": 0.62,
+                    "pitch_midi": 62.0,
+                    "pitch_hz": 293.66,
+                    "confidence": 0.95,
+                    "energy": 0.3,
+                    "sargam": "Re",
+                    "pitch_class": 2,
+                },
+            ],
+            "phrases": [
+                {
+                    "id": "p0001",
+                    "start": 0.10,
+                    "end": 0.62,
+                    "note_ids": ["n00001", "n00002"],
+                }
+            ],
+        }
+
+        save_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/save",
+            json=save_payload,
+        )
+        self.assertEqual(save_resp.status_code, 200, save_resp.text)
+        save_data = save_resp.json()
+        self.assertEqual(save_data["version"]["version_id"], "v0001")
+
+        regenerate_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/version/v0001/regenerate"
+        )
+        self.assertEqual(regenerate_resp.status_code, 200, regenerate_resp.text)
+        regenerate_data = regenerate_resp.json()
+        report_resp = self.client.get(regenerate_data["version"]["report_url"])
+        self.assertEqual(report_resp.status_code, 200)
+        self.assertIn("Yaman (Tonic: C#)", report_resp.text)
+
+        original_audio_block = re.search(
+            r'<audio id="original-player"[^>]*>(.*?)</audio>',
+            report_resp.text,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(original_audio_block)
+        self.assertIn("/local-files/", original_audio_block.group(1))
+
+    def test_transcription_edit_endpoints_save_and_load_versions(self) -> None:
+        stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "demo_song"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+
+        report_path = stem_dir / "analysis_report.html"
+        report_path.write_text("<html><body>base report</body></html>", encoding="utf-8")
+
+        original_audio = stem_dir / "demo_song.mp3"
+        vocals_audio = stem_dir / "vocals.mp3"
+        accomp_audio = stem_dir / "accompaniment.mp3"
+        original_audio.write_bytes(b"orig")
+        vocals_audio.write_bytes(b"voc")
+        accomp_audio.write_bytes(b"acc")
+        original_audio_rel = os.path.relpath(str(original_audio.resolve()), str(self.repo_root.resolve()))
+        vocals_audio_rel = os.path.relpath(str(vocals_audio.resolve()), str(self.repo_root.resolve()))
+        accomp_audio_rel = os.path.relpath(str(accomp_audio.resolve()), str(self.repo_root.resolve()))
+
+        for img_name in ["transition_matrix.png", "pitch_sargam.png", "note_duration_histogram.png"]:
+            (stem_dir / img_name).write_bytes(b"png")
+
+        pitch_csv = (
+            "timestamp,pitch_hz,confidence,voicing,energy\n"
+            "0.0,261.63,0.95,1,0.10\n"
+            "0.1,261.63,0.95,1,0.20\n"
+            "0.2,293.66,0.95,1,0.25\n"
+            "0.3,293.66,0.95,1,0.22\n"
+        )
+        (stem_dir / "composite_pitch_data.csv").write_text(pitch_csv, encoding="utf-8")
+        (stem_dir / "melody_pitch_data.csv").write_text(pitch_csv, encoding="utf-8")
+        (stem_dir / "accompaniment_pitch_data.csv").write_text(pitch_csv, encoding="utf-8")
+
+        metadata = {
+            "schema_version": 1,
+            "report_filename": report_path.name,
+            "config": {
+                "audio_path": original_audio_rel,
+                "vocals_path": vocals_audio_rel,
+                "accompaniment_path": accomp_audio_rel,
+                "melody_source": "separated",
+                "transcription_smoothing_ms": 70.0,
+                "transcription_min_duration": 0.04,
+                "transcription_derivative_threshold": 2.0,
+                "energy_threshold": 0.0,
+                "show_rms_overlay": True,
+            },
+            "detected": {
+                "tonic": 0,
+                "raga": "Bhairavi",
+            },
+            "stats": {
+                "correction_summary": {},
+                "pattern_analysis": {},
+                "raga_name": "Bhairavi",
+                "tonic": "C",
+                "transition_matrix_path": "transition_matrix.png",
+                "pitch_plot_path": "pitch_sargam.png",
+            },
+            "plot_paths": {
+                "note_duration_histogram": "note_duration_histogram.png",
+            },
+            "pitch_csv_paths": {
+                "original": ["composite_pitch_data.csv"],
+                "vocals": ["melody_pitch_data.csv"],
+                "accompaniment": ["accompaniment_pitch_data.csv"],
+            },
+        }
+        report_path.with_suffix(".meta.json").write_text(
+            json.dumps(metadata, indent=2),
+            encoding="utf-8",
+        )
+
+        token = base64.urlsafe_b64encode(str(stem_dir.resolve()).encode("utf-8")).decode("ascii").rstrip("=")
+        report_name = "analysis_report.html"
+        save_payload = {
+            "notes": [
+                {
+                    "id": "n00001",
+                    "start": 0.10,
+                    "end": 0.35,
+                    "pitch_midi": 60.0,
+                    "pitch_hz": 261.63,
+                    "confidence": 0.95,
+                    "energy": 0.2,
+                    "sargam": "Sa",
+                    "pitch_class": 0,
+                },
+                {
+                    "id": "n00002",
+                    "start": 0.40,
+                    "end": 0.62,
+                    "pitch_midi": 62.0,
+                    "pitch_hz": 293.66,
+                    "confidence": 0.95,
+                    "energy": 0.3,
+                    "sargam": "Re",
+                    "pitch_class": 2,
+                },
+            ],
+            "phrases": [
+                {
+                    "id": "p0001",
+                    "start": 0.10,
+                    "end": 0.62,
+                    "note_ids": ["n00001", "n00002"],
+                }
+            ],
+        }
+
+        save_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/save",
+            json=save_payload,
+        )
+        self.assertEqual(save_resp.status_code, 200, save_resp.text)
+        save_data = save_resp.json()
+        self.assertEqual(save_data["save_mode"], "created")
+        self.assertEqual(save_data["version"]["version_id"], "v0001")
+        self.assertEqual(save_data["version"]["note_count"], 2)
+        self.assertEqual(save_data["version"]["phrase_count"], 1)
+        self.assertTrue(save_data["version"]["report_url"])
+        self.assertEqual(save_data["default_selection"], "original")
+        self.assertTrue(save_data["default_report_url"])
+        edited_report_url = save_data["version"]["report_url"]
+
+        edit_root = stem_dir / "transcription_edits"
+        self.assertTrue((edit_root / "transcription_v0001.json").exists())
+        self.assertTrue((edit_root / "transcription_v0001.csv").exists())
+        self.assertTrue((stem_dir / "analysis_report_edited_v0001.html").exists())
+
+        versions_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
+        self.assertEqual(versions_resp.status_code, 200)
+        versions_data = versions_resp.json()
+        self.assertEqual(versions_data["latest_version_id"], "v0001")
+        self.assertEqual(len(versions_data["versions"]), 1)
+        self.assertEqual(versions_data["default_selection"], "original")
+        self.assertTrue(versions_data["default_report_url"])
+
+        set_default_v1_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/default",
+            params={"default_selection": "v0001"},
+        )
+        self.assertEqual(set_default_v1_resp.status_code, 200, set_default_v1_resp.text)
+        set_default_v1_data = set_default_v1_resp.json()
+        self.assertEqual(set_default_v1_data["default_selection"], "v0001")
+        self.assertTrue(set_default_v1_data["default_report_url"])
+        self.assertIn("analysis_report_edited_v0001.html", set_default_v1_data["default_report_url"])
+
+        defaulted_source_report_resp = self.client.get(f"/local-report/{token}/{report_name}")
+        self.assertEqual(defaulted_source_report_resp.status_code, 200)
+        edited_report_resp = self.client.get(edited_report_url)
+        self.assertEqual(edited_report_resp.status_code, 200)
+        self.assertEqual(defaulted_source_report_resp.text, edited_report_resp.text)
+
+        set_default_original_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/default",
+            params={"default_selection": "original"},
+        )
+        self.assertEqual(set_default_original_resp.status_code, 200, set_default_original_resp.text)
+        set_default_original_data = set_default_original_resp.json()
+        self.assertEqual(set_default_original_data["default_selection"], "original")
+        source_report_resp = self.client.get(f"/local-report/{token}/{report_name}")
+        self.assertEqual(source_report_resp.status_code, 200)
+        self.assertIn("base report", source_report_resp.text)
+
+        updated_payload = json.loads(json.dumps(save_payload))
+        updated_payload["notes"][0]["end"] = 0.48
+        update_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/save",
+            params={"target_version_id": "v0001"},
+            json=updated_payload,
+        )
+        self.assertEqual(update_resp.status_code, 200, update_resp.text)
+        update_data = update_resp.json()
+        self.assertEqual(update_data["save_mode"], "updated")
+        self.assertEqual(update_data["version"]["version_id"], "v0001")
+        self.assertEqual(len(update_data["versions"]), 1)
+
+        version_after_update_resp = self.client.get(
+            f"/api/transcription-edits/{token}/{report_name}/version/v0001"
+        )
+        self.assertEqual(version_after_update_resp.status_code, 200)
+        version_after_update = version_after_update_resp.json()
+        self.assertEqual(version_after_update["payload"]["notes"][0]["end"], 0.48)
+
+        regenerate_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/version/v0001/regenerate"
+        )
+        self.assertEqual(regenerate_resp.status_code, 200, regenerate_resp.text)
+        regenerate_data = regenerate_resp.json()
+        self.assertTrue(regenerate_data["has_version"])
+        self.assertEqual(regenerate_data["version"]["version_id"], "v0001")
+        self.assertTrue(regenerate_data["version"]["report_url"])
+        self.assertEqual(regenerate_data["payload"]["notes"][0]["end"], 0.48)
+        regenerated_report_resp = self.client.get(regenerate_data["version"]["report_url"])
+        self.assertEqual(regenerated_report_resp.status_code, 200)
+        original_audio_block = re.search(
+            r'<audio id="original-player"[^>]*>(.*?)</audio>',
+            regenerated_report_resp.text,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(original_audio_block)
+        self.assertIn("/local-files/", original_audio_block.group(1))
+
+        create_new_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/save",
+            params={"create_new_version": "true"},
+            json=save_payload,
+        )
+        self.assertEqual(create_new_resp.status_code, 200, create_new_resp.text)
+        create_new_data = create_new_resp.json()
+        self.assertEqual(create_new_data["save_mode"], "created")
+        self.assertEqual(create_new_data["version"]["version_id"], "v0002")
+        self.assertEqual(len(create_new_data["versions"]), 2)
+
+        versions_after_new_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
+        self.assertEqual(versions_after_new_resp.status_code, 200)
+        versions_after_new = versions_after_new_resp.json()
+        self.assertEqual(versions_after_new["latest_version_id"], "v0002")
+        self.assertEqual(len(versions_after_new["versions"]), 2)
+
+        set_default_v2_resp = self.client.post(
+            f"/api/transcription-edits/{token}/{report_name}/default",
+            params={"default_selection": "v0002"},
+        )
+        self.assertEqual(set_default_v2_resp.status_code, 200, set_default_v2_resp.text)
+        self.assertEqual(set_default_v2_resp.json()["default_selection"], "v0002")
+
+        delete_v2_resp = self.client.delete(
+            f"/api/transcription-edits/{token}/{report_name}/version/v0002"
+        )
+        self.assertEqual(delete_v2_resp.status_code, 200, delete_v2_resp.text)
+        delete_v2_data = delete_v2_resp.json()
+        self.assertEqual(delete_v2_data["latest_version_id"], "v0001")
+        self.assertEqual(len(delete_v2_data["versions"]), 1)
+        self.assertEqual(delete_v2_data["default_selection"], "original")
+        self.assertFalse((edit_root / "transcription_v0002.json").exists())
+        self.assertFalse((stem_dir / "analysis_report_edited_v0002.html").exists())
+
+        latest_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/latest")
+        self.assertEqual(latest_resp.status_code, 200)
+        latest_data = latest_resp.json()
+        self.assertTrue(latest_data["has_version"])
+        self.assertEqual(latest_data["version"]["version_id"], "v0001")
+        self.assertEqual(len(latest_data["payload"]["notes"]), 2)
+
+        version_resp = self.client.get(
+            f"/api/transcription-edits/{token}/{report_name}/version/v0001"
+        )
+        self.assertEqual(version_resp.status_code, 200)
+        version_data = version_resp.json()
+        self.assertTrue(version_data["has_version"])
+        self.assertEqual(version_data["version"]["version_id"], "v0001")
+
+        self.assertIn("Transcription Editor (Experimental)", edited_report_resp.text)
+        self.assertIn("/api/transcription-edits/", edited_report_resp.text)
+
+        delete_v1_resp = self.client.delete(
+            f"/api/transcription-edits/{token}/{report_name}/version/v0001"
+        )
+        self.assertEqual(delete_v1_resp.status_code, 200, delete_v1_resp.text)
+        delete_v1_data = delete_v1_resp.json()
+        self.assertIsNone(delete_v1_data["latest_version_id"])
+        self.assertEqual(len(delete_v1_data["versions"]), 0)
+        self.assertEqual(delete_v1_data["default_selection"], "original")
+
+    def test_local_report_prefers_source_when_default_edit_is_older(self) -> None:
+        stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "stale_case"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+
+        report_path = stem_dir / "analysis_report.html"
+        report_path.write_text("<html><body>source-v1</body></html>", encoding="utf-8")
+
+        edited_report = stem_dir / "analysis_report_edited_v0001.html"
+        edited_report.write_text("<html><body>edited-v1</body></html>", encoding="utf-8")
+
+        edit_root = stem_dir / "transcription_edits"
+        edit_root.mkdir(parents=True, exist_ok=True)
+        manifest = {
+            "schema_version": 1,
+            "source_report": "analysis_report.html",
+            "default_selection": "v0001",
+            "versions": [
+                {
+                    "version_id": "v0001",
+                    "created_at": "2026-02-23T00:00:00+00:00",
+                    "updated_at": "2026-02-23T00:00:00+00:00",
+                    "json_file": "transcription_v0001.json",
+                    "csv_file": "transcription_v0001.csv",
+                    "report_file": edited_report.name,
+                    "note_count": 1,
+                    "phrase_count": 1,
+                }
+            ],
+        }
+        (edit_root / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        token = base64.urlsafe_b64encode(str(stem_dir.resolve()).encode("utf-8")).decode("ascii").rstrip("=")
+        report_name = "analysis_report.html"
+
+        before_refresh = self.client.get(f"/local-report/{token}/{report_name}")
+        self.assertEqual(before_refresh.status_code, 200)
+        self.assertIn("edited-v1", before_refresh.text)
+
+        time.sleep(1.1)
+        report_path.write_text("<html><body>source-v2</body></html>", encoding="utf-8")
+
+        after_refresh = self.client.get(f"/local-report/{token}/{report_name}")
+        self.assertEqual(after_refresh.status_code, 200)
+        self.assertIn("source-v2", after_refresh.text)
 
 
 if __name__ == "__main__":

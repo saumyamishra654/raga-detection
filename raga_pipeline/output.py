@@ -2252,13 +2252,13 @@ def _generate_transcription_editor_section(
                 var options = Array.isArray(state.sargam_options) ? state.sargam_options : [];
                 addSargamSelect.innerHTML = options.map(function(item, idx) {
                     var selected = idx === 0 ? " selected" : "";
-                    return "<option value=\\"" + escapeHtml(String(item.label || "")) + "\\" data-offset=\\"" + Number(item.offset || 0) + "\\\"" + selected + ">" +
+                    return '<option value="' + escapeHtml(String(item.label || "")) + '" data-offset="' + Number(item.offset || 0) + '"' + selected + ">" +
                         escapeHtml(String(item.label || "")) + "</option>";
                 }).join("");
                 var octaveParts = [];
                 for (var octave = 2; octave <= 7; octave += 1) {
                     var selected = octave === 5 ? " selected" : "";
-                    octaveParts.push("<option value=\\"" + octave + "\\" " + selected + ">" + octave + "</option>");
+                    octaveParts.push('<option value="' + octave + '"' + selected + ">" + octave + "</option>");
                 }
                 addOctaveSelect.innerHTML = octaveParts.join("");
                 updateMidiPreview();
@@ -2770,6 +2770,36 @@ def _generate_transcription_editor_section(
                 regenerateBtn.disabled = true;
                 setStatus("Regenerating report for " + selectedVersion + "...", false);
                 try {
+                    if (isDirty()) {
+                        setStatus("Unsaved changes detected. Saving before regenerate...", false);
+                        var saveEndpoint = buildSaveEndpoint(false);
+                        if (!saveEndpoint) {
+                            throw new Error("Unable to resolve save endpoint before regenerate.");
+                        }
+                        var saveResponse = await fetch(saveEndpoint, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payloadForSave())
+                        });
+                        var saveData = await saveResponse.json();
+                        if (!saveResponse.ok) {
+                            throw new Error((saveData && saveData.detail) ? saveData.detail : "Save before regenerate failed.");
+                        }
+                        if (saveData && saveData.payload) {
+                            var savedVersionId = saveData.version ? saveData.version.version_id : selectedVersion;
+                            loadState(saveData.payload, "", savedVersionId);
+                            selectedVersion = savedVersionId || selectedVersion;
+                        }
+                        defaultSelection = String((saveData && saveData.default_selection) || "original");
+                        defaultReportUrl = (saveData && saveData.default_report_url) ? String(saveData.default_report_url) : null;
+                        setVersionOptions(saveData.versions || [], selectedVersion);
+                        endpoint = buildApiPath(
+                            "version/" + encodeURIComponent(selectedVersion) + "/regenerate"
+                        );
+                        if (!endpoint) {
+                            throw new Error("Unable to resolve regenerate endpoint after save.");
+                        }
+                    }
                     var response = await fetch(endpoint, { method: "POST" });
                     var data = await response.json();
                     if (!response.ok) {
@@ -2784,6 +2814,18 @@ def _generate_transcription_editor_section(
                             "Regenerated " + selectedVersion + ". Edited report: " + data.version.report_url,
                             false
                         );
+                        try {
+                            document.dispatchEvent(
+                                new CustomEvent("raga-transcription-report-regenerated", {
+                                    detail: {
+                                        report_url: String(data.version.report_url),
+                                        version_id: String(selectedVersion),
+                                    },
+                                })
+                            );
+                        } catch (_err) {
+                            // Ignore event dispatch failures.
+                        }
                     } else {
                         setStatus("Regenerated " + selectedVersion + ".", false);
                     }
@@ -4151,13 +4193,16 @@ def create_scrollable_pitch_plot_html(
         tonic_pitch_class = 0
 
     note_payload: List[Dict[str, Any]] = []
-    for note in (transcription_notes or []):
+    for note_idx, note in enumerate(transcription_notes or []):
         start = _safe_json_float(note.start)
         end = _safe_json_float(note.end)
         if start is None or end is None:
             continue
+        note_id_raw = str(getattr(note, "id", "") or "").strip()
+        note_id = note_id_raw if note_id_raw else f"n{note_idx + 1:05d}"
         note_payload.append(
             {
+                "id": note_id,
                 "start": start,
                 "end": end,
                 "sargam": str(getattr(note, "sargam", "") or ""),
@@ -4171,6 +4216,26 @@ def create_scrollable_pitch_plot_html(
             }
         )
     
+    phrase_payload: List[Dict[str, Any]] = []
+    for phrase_idx, phrase_range in enumerate(phrase_ranges or []):
+        if not isinstance(phrase_range, (list, tuple)) or len(phrase_range) < 2:
+            continue
+        start = _safe_json_float(phrase_range[0])
+        end = _safe_json_float(phrase_range[1])
+        if start is None or end is None:
+            continue
+        lo = min(start, end)
+        hi = max(start, end)
+        if hi <= lo:
+            continue
+        phrase_payload.append(
+            {
+                "id": f"p{phrase_idx + 1:04d}",
+                "start": lo,
+                "end": hi,
+            }
+        )
+
     html = f"""
     <div class="scroll-plot-wrapper" id="{unique_id}-wrapper" style="border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin: 20px 0; background: #0d1117;">
         <div style="display: flex; height: 700px; position: relative;">
@@ -4217,6 +4282,7 @@ def create_scrollable_pitch_plot_html(
         const hoverPitchTimestamps = {json.dumps(hover_pitch_timestamps_payload)};
         const hoverPitchMidi = {json.dumps(hover_pitch_midi_payload)};
         const transcriptionNotesRaw = {json.dumps(note_payload)};
+        const phraseRangesRaw = {json.dumps(phrase_payload)};
         const overlayLabel = {json.dumps(overlay_label)};
         const tonicPitchClass = {tonic_pitch_class};
         const clearSelectionEventName = "raga-scroll-selection-clear";
@@ -4299,6 +4365,7 @@ def create_scrollable_pitch_plot_html(
                     const start = Number(note.start);
                     const end = Number(note.end);
                     return {{
+                        id: String(note.id || ""),
                         start: start,
                         end: end,
                         sargam: (note.sargam || "").toString(),
@@ -4313,6 +4380,24 @@ def create_scrollable_pitch_plot_html(
                 }})
                 .filter(function(note) {{
                     return isFinite(note.start) && isFinite(note.end) && (note.end >= note.start);
+                }})
+                .sort(function(a, b) {{
+                    if (a.start !== b.start) return a.start - b.start;
+                    return a.end - b.end;
+                }});
+
+            const phraseRanges = phraseRangesRaw
+                .map(function(phrase) {{
+                    const start = Number(phrase.start);
+                    const end = Number(phrase.end);
+                    return {{
+                        id: String(phrase.id || ""),
+                        start: start,
+                        end: end,
+                    }};
+                }})
+                .filter(function(phrase) {{
+                    return isFinite(phrase.start) && isFinite(phrase.end) && (phrase.end > phrase.start);
                 }})
                 .sort(function(a, b) {{
                     if (a.start !== b.start) return a.start - b.start;
@@ -4805,6 +4890,18 @@ def create_scrollable_pitch_plot_html(
                 }};
             }}
 
+            function resolvePhrasesAtTime(t) {{
+                return phraseRanges.filter(function(phrase) {{
+                    return phrase.start <= t && t <= phrase.end;
+                }});
+            }}
+
+            function resolvePhrasesInRange(lo, hi) {{
+                return phraseRanges.filter(function(phrase) {{
+                    return phrase.end >= lo && phrase.start <= hi;
+                }});
+            }}
+
             function hideHoverTooltip() {{
                 hideHoverGuides();
                 hoverTooltip.style.display = "none";
@@ -4879,6 +4976,7 @@ def create_scrollable_pitch_plot_html(
                 const resolved = resolveNotesAtTime(t);
                 const overlapping = resolved.notes;
                 const usedNearest = resolved.usedNearest;
+                const phrases = resolvePhrasesAtTime(t);
 
                 pointMarker.style.display = "block";
                 pointMarker.style.left = x + "px";
@@ -4890,6 +4988,7 @@ def create_scrollable_pitch_plot_html(
                     start: t,
                     end: t,
                     notes: overlapping,
+                    phrases: phrases,
                     usedNearest: usedNearest,
                     energy: energySample ? energySample.e : null,
                     energySampleTime: energySample ? energySample.t : null,
@@ -4916,6 +5015,7 @@ def create_scrollable_pitch_plot_html(
                 const notes = transcriptionNotes.filter(function(note) {{
                     return note.end >= lo && note.start <= hi;
                 }});
+                const phrases = resolvePhrasesInRange(lo, hi);
                 const energyStats = computeRangeEnergy(lo, hi);
 
                 rangeBand.style.display = "block";
@@ -4928,6 +5028,7 @@ def create_scrollable_pitch_plot_html(
                     start: lo,
                     end: hi,
                     notes: notes,
+                    phrases: phrases,
                     energyMin: energyStats ? energyStats.min : null,
                     energyMean: energyStats ? energyStats.mean : null,
                     energyMax: energyStats ? energyStats.max : null,
@@ -5559,6 +5660,34 @@ def _abspath_or_raw(path_value: Any) -> str:
         return path_text
 
 
+def _to_json_compatible(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, bool)):
+        return value
+
+    if isinstance(value, float):
+        return value if np.isfinite(value) else None
+
+    if isinstance(value, np.generic):
+        return _to_json_compatible(value.item())
+
+    if isinstance(value, np.ndarray):
+        return [_to_json_compatible(item) for item in value.tolist()]
+
+    if isinstance(value, Path):
+        return str(value)
+
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    if isinstance(value, dict):
+        return {str(key): _to_json_compatible(item) for key, item in value.items()}
+
+    if isinstance(value, (list, tuple, set)):
+        return [_to_json_compatible(item) for item in value]
+
+    return str(value)
+
+
 def _build_analysis_report_metadata(
     results: 'AnalysisResults',
     stats: AnalysisStats,
@@ -5567,6 +5696,7 @@ def _build_analysis_report_metadata(
 ) -> Dict[str, Any]:
     stem_dir = os.path.abspath(output_dir)
     config = results.config
+    tonic_for_editor = int(results.detected_tonic) if results.detected_tonic is not None else 0
     metadata: Dict[str, Any] = {
         "schema_version": 1,
         "report_filename": os.path.basename(report_path),
@@ -5587,8 +5717,8 @@ def _build_analysis_report_metadata(
             "raga": str(results.detected_raga) if results.detected_raga else None,
         },
         "stats": {
-            "correction_summary": stats.correction_summary,
-            "pattern_analysis": stats.pattern_analysis,
+            "correction_summary": _to_json_compatible(stats.correction_summary),
+            "pattern_analysis": _to_json_compatible(stats.pattern_analysis),
             "raga_name": stats.raga_name,
             "tonic": stats.tonic,
             "transition_matrix_path": _relpath_or_raw(stats.transition_matrix_path, stem_dir),
@@ -5603,8 +5733,14 @@ def _build_analysis_report_metadata(
             "vocals": ["melody_pitch_data.csv", "vocals_pitch_data.csv"],
             "accompaniment": ["accompaniment_pitch_data.csv"],
         },
+        # Base payload for local-app transcription editing workspace.
+        "transcription_edit_payload": _build_transcription_editor_payload(
+            results.notes,
+            results.phrases,
+            tonic_for_editor,
+        ),
     }
-    return metadata
+    return _to_json_compatible(metadata)
 
 
 def _write_analysis_report_metadata(
@@ -5616,7 +5752,7 @@ def _write_analysis_report_metadata(
     metadata = _build_analysis_report_metadata(results, stats, output_dir, report_path)
     metadata_path = str(Path(report_path).with_suffix(".meta.json"))
     with open(metadata_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2)
+        json.dump(metadata, f, indent=2, allow_nan=False)
 
 
 def generate_analysis_report(
@@ -6001,11 +6137,6 @@ def generate_analysis_report(
         results.detected_tonic or 0,
         audio_element_ids=None,
     )
-    transcription_editor_html = _generate_transcription_editor_section(
-        results.notes,
-        results.phrases,
-        results.detected_tonic or 0,
-    )
 
     # Phrase karaoke section (top interactive view)
     karaoke_html = ""
@@ -6227,7 +6358,6 @@ def generate_analysis_report(
             {correction_html}
 
             {transcription_html}
-            {transcription_editor_html}
 
             {pattern_html}
 

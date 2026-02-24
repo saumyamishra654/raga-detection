@@ -92,6 +92,15 @@ class TranscriptionEditVersionsResponse(BaseModel):
     default_report_url: Optional[str] = None
 
 
+class TranscriptionEditBaseResponse(BaseModel):
+    ready: bool
+    requires_rerun: bool = False
+    detail: Optional[str] = None
+    payload: Optional[TranscriptionEditPayload] = None
+    tonic: Optional[int] = None
+    sargam_options: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class TranscriptionEditVersionResponse(BaseModel):
     has_version: bool
     version: Optional[TranscriptionEditVersionInfo] = None

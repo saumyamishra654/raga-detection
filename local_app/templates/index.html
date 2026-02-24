@@ -67,12 +67,37 @@
             <ul id="artifact-list"></ul>
         </section>
 
+        <section class="panel analyze-workspace-panel" id="analyze-workspace-panel" hidden>
+            <h2>Analyze Workspace</h2>
+            <div id="analyze-workspace-status" class="analyze-workspace-status">
+                Run analyze once to enable in-app transcription editing.
+            </div>
+            <div class="analyze-workspace-grid">
+                <div class="analyze-workspace-report">
+                    <h3>Analyze Report</h3>
+                    <div class="analyze-report-frame-wrap">
+                        <iframe
+                            id="analyze-report-frame"
+                            title="Analyze Report"
+                            loading="lazy"
+                            class="analyze-report-frame"
+                        ></iframe>
+                    </div>
+                </div>
+                <div class="analyze-workspace-editor">
+                    <h3>Transcription Edits</h3>
+                    <div id="analyze-editor-root"></div>
+                </div>
+            </div>
+        </section>
+
         <section class="panel">
             <h2>Logs</h2>
             <pre id="logs"></pre>
         </section>
     </main>
 
+    <script src="/static/transcription_editor.js?v={{ static_version or '1' }}"></script>
     <script src="/static/app.js?v={{ static_version or '1' }}"></script>
 </body>
 </html>

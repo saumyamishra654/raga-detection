@@ -13,6 +13,10 @@
     const openDetectReportBtn = document.getElementById("open-detect-report-btn");
     const openAnalyzeReportBtn = document.getElementById("open-analyze-report-btn");
     const runBatchBtn = document.getElementById("run-batch-btn");
+    const analyzeWorkspacePanel = document.getElementById("analyze-workspace-panel");
+    const analyzeWorkspaceStatusEl = document.getElementById("analyze-workspace-status");
+    const analyzeReportFrame = document.getElementById("analyze-report-frame");
+    const analyzeEditorRoot = document.getElementById("analyze-editor-root");
 
     let currentSchema = null;
     let activeJobId = null;
@@ -24,6 +28,10 @@
     let pendingNextSuggestion = null;
     const modeDrafts = new Map();
     let currentReportLinks = { detect: null, analyze: null };
+    let currentAnalyzeReportContext = null;
+    let analyzeWorkspaceRequestSeq = 0;
+    let analyzeFrameSelectionHandler = null;
+    let analyzeFrameSelectionHandlerTarget = null;
     const ragaNameCacheBySource = new Map();
     const audioFileCacheBySource = new Map();
     const tanpuraTrackCache = new Map();
@@ -147,7 +155,229 @@
         return getFieldDefault("demucs_model", "htdemucs");
     }
 
-    function applyReportLinks(detectUrl, analyzeUrl) {
+    function isSameAnalyzeContext(left, right) {
+        if (!left || !right) return false;
+        return (
+            String(left.url || "") === String(right.url || "") &&
+            String(left.dirToken || "") === String(right.dirToken || "") &&
+            String(left.reportName || "") === String(right.reportName || "")
+        );
+    }
+
+    function isAnalyzeModeSelected() {
+        if (!modeSelect) return false;
+        return String(modeSelect.value || "").trim() === "analyze";
+    }
+
+    function setAnalyzeWorkspaceStatus(text, isError) {
+        if (!analyzeWorkspaceStatusEl) return;
+        analyzeWorkspaceStatusEl.textContent = String(text || "");
+        if (isError) {
+            analyzeWorkspaceStatusEl.classList.add("error");
+        } else {
+            analyzeWorkspaceStatusEl.classList.remove("error");
+        }
+    }
+
+    function clearAnalyzeEditor() {
+        if (!analyzeEditorRoot) return;
+        while (analyzeEditorRoot.firstChild) {
+            analyzeEditorRoot.removeChild(analyzeEditorRoot.firstChild);
+        }
+    }
+
+    function detachAnalyzeFrameBridge() {
+        if (analyzeFrameSelectionHandlerTarget && analyzeFrameSelectionHandler) {
+            try {
+                analyzeFrameSelectionHandlerTarget.removeEventListener(
+                    "raga-transcription-selection",
+                    analyzeFrameSelectionHandler
+                );
+            } catch (_err) {
+                // Ignore detached-frame errors.
+            }
+        }
+        analyzeFrameSelectionHandler = null;
+        analyzeFrameSelectionHandlerTarget = null;
+    }
+
+    function withCacheBust(url) {
+        const raw = String(url || "").trim();
+        if (!raw) return raw;
+        try {
+            const parsed = new URL(raw, window.location.origin);
+            parsed.searchParams.set("_ts", String(Date.now()));
+            return parsed.pathname + parsed.search + parsed.hash;
+        } catch (_err) {
+            return raw;
+        }
+    }
+
+    function attachAnalyzeFrameBridge() {
+        detachAnalyzeFrameBridge();
+        if (!analyzeReportFrame || !analyzeReportFrame.contentWindow) return;
+        let frameDoc = null;
+        try {
+            frameDoc = analyzeReportFrame.contentWindow.document;
+        } catch (_err) {
+            frameDoc = null;
+        }
+        if (!frameDoc) return;
+
+        analyzeFrameSelectionHandler = function (evt) {
+            try {
+                document.dispatchEvent(
+                    new CustomEvent("raga-transcription-selection", {
+                        detail: evt && evt.detail ? evt.detail : {},
+                    })
+                );
+            } catch (_err) {
+                // Ignore event bridge failures.
+            }
+        };
+        frameDoc.addEventListener("raga-transcription-selection", analyzeFrameSelectionHandler);
+        analyzeFrameSelectionHandlerTarget = frameDoc;
+    }
+
+    function normalizeAnalyzeReportContext(rawContext) {
+        if (!rawContext || typeof rawContext !== "object") return null;
+        const url = String(rawContext.url || "").trim();
+        const dirToken = String(rawContext.dir_token || rawContext.dirToken || "").trim();
+        const reportName = String(rawContext.report_name || rawContext.reportName || "").trim();
+        if (!url || !dirToken || !reportName) return null;
+        return {
+            url: url,
+            dirToken: dirToken,
+            reportName: reportName,
+        };
+    }
+
+    function deriveAnalyzeContextFromUrl(analyzeUrl) {
+        const rawUrl = String(analyzeUrl || "").trim();
+        if (!rawUrl) return null;
+        let parsed = null;
+        try {
+            parsed = new URL(rawUrl, window.location.origin);
+        } catch (_err) {
+            return null;
+        }
+        const parts = parsed.pathname.split("/").filter(Boolean);
+        if (parts.length < 3 || parts[0] !== "local-report") {
+            return null;
+        }
+        return {
+            url: parsed.pathname + parsed.search + parsed.hash,
+            dirToken: parts[1],
+            reportName: decodeURIComponent(parts.slice(2).join("/")),
+        };
+    }
+
+    async function fetchTranscriptionBasePayload(reportContext) {
+        const endpoint = new URL(
+            "/api/transcription-edits/" +
+                encodeURIComponent(reportContext.dirToken) +
+                "/" +
+                encodeURIComponent(reportContext.reportName) +
+                "/base",
+            window.location.origin
+        );
+        const res = await fetch(endpoint.toString());
+        const payload = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+            throw new Error(payload.detail || "Failed to load base transcription payload.");
+        }
+        return payload;
+    }
+
+    async function loadAnalyzeWorkspace(reportContext) {
+        if (!analyzeWorkspacePanel) return;
+        const requestSeq = ++analyzeWorkspaceRequestSeq;
+        currentAnalyzeReportContext = reportContext;
+        analyzeWorkspacePanel.hidden = !isAnalyzeModeSelected();
+        setAnalyzeWorkspaceStatus("Loading in-app transcription editor...", false);
+        clearAnalyzeEditor();
+        detachAnalyzeFrameBridge();
+
+        if (analyzeReportFrame) {
+            analyzeReportFrame.removeAttribute("src");
+            analyzeReportFrame.onload = function () {
+                if (requestSeq !== analyzeWorkspaceRequestSeq) return;
+                attachAnalyzeFrameBridge();
+            };
+            analyzeReportFrame.src = reportContext.url;
+        }
+
+        let basePayload = null;
+        try {
+            basePayload = await fetchTranscriptionBasePayload(reportContext);
+        } catch (err) {
+            if (requestSeq !== analyzeWorkspaceRequestSeq) return;
+            setAnalyzeWorkspaceStatus(
+                "Failed to load transcription edit payload: " + (err && err.message ? err.message : String(err)),
+                true
+            );
+            return;
+        }
+        if (requestSeq !== analyzeWorkspaceRequestSeq) return;
+
+        if (!basePayload || !basePayload.ready || !basePayload.payload) {
+            const detail = basePayload && basePayload.detail
+                ? String(basePayload.detail)
+                : "Run analyze again to enable in-app transcription editing.";
+            setAnalyzeWorkspaceStatus(detail, true);
+            return;
+        }
+
+        if (!window.RagaTranscriptionEditor || typeof window.RagaTranscriptionEditor.mount !== "function") {
+            setAnalyzeWorkspaceStatus("Transcription editor module not loaded.", true);
+            return;
+        }
+
+        try {
+            const editorPayload = {
+                tonic: Number.isFinite(Number(basePayload.tonic)) ? Number(basePayload.tonic) : 0,
+                sargam_options: Array.isArray(basePayload.sargam_options) ? basePayload.sargam_options : [],
+                notes: Array.isArray(basePayload.payload.notes) ? basePayload.payload.notes : [],
+                phrases: Array.isArray(basePayload.payload.phrases) ? basePayload.payload.phrases : [],
+            };
+            window.RagaTranscriptionEditor.mount({
+                rootEl: analyzeEditorRoot,
+                reportContext: {
+                    dirToken: reportContext.dirToken,
+                    reportName: reportContext.reportName,
+                },
+                initialPayload: editorPayload,
+                onStatus: function (_state, message) {
+                    if (message) {
+                        setAnalyzeWorkspaceStatus(message, _state === "error");
+                    }
+                },
+            });
+            setAnalyzeWorkspaceStatus("In-app transcription editor ready.", false);
+        } catch (err) {
+            setAnalyzeWorkspaceStatus(
+                "Failed to initialize transcription editor: " + (err && err.message ? err.message : String(err)),
+                true
+            );
+        }
+    }
+
+    function clearAnalyzeWorkspace() {
+        currentAnalyzeReportContext = null;
+        analyzeWorkspaceRequestSeq += 1;
+        detachAnalyzeFrameBridge();
+        clearAnalyzeEditor();
+        if (analyzeReportFrame) {
+            analyzeReportFrame.removeAttribute("src");
+            analyzeReportFrame.onload = null;
+        }
+        if (analyzeWorkspacePanel) {
+            analyzeWorkspacePanel.hidden = true;
+        }
+        setAnalyzeWorkspaceStatus("Run analyze once to enable in-app transcription editing.", false);
+    }
+
+    function applyReportLinks(detectUrl, analyzeUrl, analyzeReportContext) {
         currentReportLinks = {
             detect: detectUrl || null,
             analyze: analyzeUrl || null,
@@ -158,6 +388,25 @@
         if (openAnalyzeReportBtn) {
             openAnalyzeReportBtn.disabled = !currentReportLinks.analyze;
         }
+
+        const normalizedAnalyzeContext =
+            normalizeAnalyzeReportContext(analyzeReportContext) || deriveAnalyzeContextFromUrl(analyzeUrl);
+        if (!normalizedAnalyzeContext) {
+            clearAnalyzeWorkspace();
+            return;
+        }
+        if (isSameAnalyzeContext(currentAnalyzeReportContext, normalizedAnalyzeContext)) {
+            if (analyzeWorkspacePanel) {
+                analyzeWorkspacePanel.hidden = !isAnalyzeModeSelected();
+            }
+            return;
+        }
+        loadAnalyzeWorkspace(normalizedAnalyzeContext).catch(function (err) {
+            setAnalyzeWorkspaceStatus(
+                "Failed to load analyze workspace: " + (err && err.message ? err.message : String(err)),
+                true
+            );
+        });
     }
 
     async function fetchAudioArtifacts(audioPath) {
@@ -176,14 +425,18 @@
 
     async function loadArtifactsForSelectedAudio() {
         if (!selectedAudioPath) {
-            applyReportLinks(null, null);
+            applyReportLinks(null, null, null);
             clearChildren(artifactListEl);
             return;
         }
 
         const payload = await fetchAudioArtifacts(selectedAudioPath);
         renderArtifacts(payload.artifacts || []);
-        applyReportLinks(payload.detect_report_url, payload.analyze_report_url);
+        applyReportLinks(
+            payload.detect_report_url,
+            payload.analyze_report_url,
+            payload.analyze_report_context || null
+        );
         if (payload.found) {
             setStatus("Loaded existing artifacts for " + (payload.audio_stem || "selected audio"));
         } else {
@@ -1532,6 +1785,7 @@
     function deriveReportLinksFromArtifacts(artifacts) {
         let detectUrl = null;
         let analyzeUrl = null;
+        let analyzeContext = null;
         (artifacts || []).forEach(function (artifact) {
             if (!artifact || !artifact.url || !artifact.name) return;
             const lowerName = String(artifact.name).toLowerCase();
@@ -1540,9 +1794,10 @@
             }
             if (!analyzeUrl && (lowerName === "analysis_report.html" || lowerName === "report.html")) {
                 analyzeUrl = artifact.url;
+                analyzeContext = deriveAnalyzeContextFromUrl(artifact.url);
             }
         });
-        return { detectUrl: detectUrl, analyzeUrl: analyzeUrl };
+        return { detectUrl: detectUrl, analyzeUrl: analyzeUrl, analyzeContext: analyzeContext };
     }
 
     function renderArtifacts(artifacts) {
@@ -1569,6 +1824,22 @@
             fetch("/api/jobs/" + jobId),
             fetch("/api/jobs/" + jobId + "/logs"),
         ]);
+        if (jobRes.status === 404 || logRes.status === 404) {
+            if (activeJobId === jobId) {
+                activeJobId = null;
+            }
+            if (pendingNextJobId === jobId) {
+                clearPendingNextSuggestion();
+                updateNextButtonState();
+            }
+            if (pollHandle) {
+                clearInterval(pollHandle);
+                pollHandle = null;
+            }
+            setBusy(false);
+            setStatus("Previous job session was not found. Start a new run.");
+            return;
+        }
         if (!jobRes.ok || !logRes.ok) {
             throw new Error("Failed to refresh job state");
         }
@@ -1593,7 +1864,7 @@
 
             const reportLinks = deriveReportLinksFromArtifacts(job.artifacts || []);
             if (reportLinks.detectUrl || reportLinks.analyzeUrl) {
-                applyReportLinks(reportLinks.detectUrl, reportLinks.analyzeUrl);
+                applyReportLinks(reportLinks.detectUrl, reportLinks.analyzeUrl, reportLinks.analyzeContext);
             }
         }
 
@@ -1671,7 +1942,7 @@
             progressEl.value = 0;
             logsEl.textContent = "";
             artifactListEl.textContent = "";
-            applyReportLinks(null, null);
+            applyReportLinks(null, null, null);
             startPolling(job.job_id);
             await refreshJob(job.job_id, { refreshArtifacts: false });
         } catch (err) {
@@ -1751,7 +2022,7 @@
                 progressEl.value = 0;
                 logsEl.textContent = "";
                 artifactListEl.textContent = "";
-                applyReportLinks(null, null);
+                applyReportLinks(null, null, null);
                 startPolling(job.job_id);
                 await refreshJob(job.job_id, { refreshArtifacts: false });
             } catch (err) {
@@ -1775,10 +2046,33 @@
     });
 
     modeSelect.addEventListener("change", function () {
+        if (analyzeWorkspacePanel) {
+            analyzeWorkspacePanel.hidden = !(isAnalyzeModeSelected() && !!currentAnalyzeReportContext);
+        }
+        if (isAnalyzeModeSelected()) {
+            loadArtifactsForSelectedAudio().catch(function (err) {
+                setStatus("Artifact lookup error: " + err.message);
+            });
+        }
         captureDraftForCurrentMode();
         loadSchema(modeSelect.value).catch(function (err) {
             setStatus("Schema load error: " + err.message);
         });
+    });
+
+    document.addEventListener("raga-transcription-report-regenerated", function (evt) {
+        if (!isAnalyzeModeSelected()) return;
+        if (!analyzeReportFrame) return;
+        const detail = evt && evt.detail ? evt.detail : {};
+        const reportUrl = String(detail.report_url || detail.reportUrl || "").trim();
+        if (!reportUrl) return;
+        analyzeReportFrame.src = withCacheBust(reportUrl);
+        const versionId = String(detail.version_id || detail.versionId || "").trim();
+        if (versionId) {
+            setAnalyzeWorkspaceStatus("Regenerated " + versionId + ". Reloaded embedded report.", false);
+        } else {
+            setAnalyzeWorkspaceStatus("Reloaded embedded regenerated report.", false);
+        }
     });
 
     if (DEFAULT_MODE) {
@@ -1798,6 +2092,7 @@
         stopActiveRecording(true);
     });
 
+    clearAnalyzeWorkspace();
     loadSchema(modeSelect.value).catch(function (err) {
         setStatus("Schema load error: " + err.message);
     });

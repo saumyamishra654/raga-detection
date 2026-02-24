@@ -30,6 +30,7 @@ from local_app.schemas import (
     JobCreateRequest,
     JobLogsResponse,
     JobStatusResponse,
+    TranscriptionEditBaseResponse,
     TranscriptionEditPayload,
     TranscriptionEditSaveResponse,
     TranscriptionEditVersionInfo,
@@ -53,7 +54,6 @@ ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".mp4", ".aac", ".o
 DEFAULT_AUDIO_DIR_REL = "../audio_test_files"
 DEFAULT_OUTPUT_DIR_REL = "batch_results"
 DEFAULT_UI_MODE = "detect"
-STATIC_VERSION = str(int((STATIC_DIR / "app.js").stat().st_mtime)) if (STATIC_DIR / "app.js").exists() else "1"
 RAGA_NAME_COLUMNS = ["names", "raga", "raga_name", "name", "Raga", "RagaName"]
 KNOWN_ARTIFACT_FILES = [
     "detection_report.html",
@@ -68,6 +68,21 @@ ASSET_ATTR_RE = re.compile(r'(\b(?:src|href)\s*=\s*)(["\'])([^"\']+)(\2)', re.IG
 TRANSCRIPTION_EDIT_DIRNAME = "transcription_edits"
 TRANSCRIPTION_EDIT_MANIFEST = "manifest.json"
 TRANSCRIPTION_EDIT_SCHEMA_VERSION = 1
+
+
+def _compute_static_version() -> str:
+    candidates = [
+        STATIC_DIR / "app.js",
+        STATIC_DIR / "style.css",
+        STATIC_DIR / "transcription_editor.js",
+    ]
+    mtimes = [path.stat().st_mtime for path in candidates if path.exists()]
+    if not mtimes:
+        return "1"
+    return str(int(max(mtimes)))
+
+
+STATIC_VERSION = _compute_static_version()
 
 
 def _health_checks() -> List[str]:
@@ -123,6 +138,32 @@ def _local_report_url(path: Path) -> Optional[str]:
 
 def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
     report_dir = report_path.parent.resolve()
+    basename_fallbacks: Dict[str, Path] = {}
+
+    # Build a lookup of any resolvable local assets referenced in the report.
+    # This lets us rewrite missing sibling paths (for example "song.mp3")
+    # to an equivalent known path found elsewhere in the same document
+    # (for example "../../../audio_test_files/song.mp3").
+    for match in ASSET_ATTR_RE.finditer(html):
+        raw_value = (match.group(3) or "").strip()
+        if not raw_value:
+            continue
+        raw_lower = raw_value.lower()
+        if raw_lower.startswith(("http://", "https://", "data:", "javascript:", "mailto:")):
+            continue
+        if raw_value.startswith(("#", "/local-files/", "/local-report/", "/static/")):
+            continue
+        parsed = urlparse(raw_value)
+        candidate = (parsed.path or "").strip()
+        if not candidate:
+            continue
+        decoded = unquote(candidate)
+        if os.path.isabs(decoded):
+            resolved = Path(decoded).resolve()
+        else:
+            resolved = (report_dir / decoded).resolve()
+        if resolved.exists() and resolved.is_file():
+            basename_fallbacks.setdefault(resolved.name.lower(), resolved)
 
     def _replace(match: re.Match[str]) -> str:
         prefix, q1, raw_value, q2 = match.groups()
@@ -158,6 +199,10 @@ def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
             abs_target = (report_dir / decoded).resolve()
 
         new_url = _local_file_url(abs_target)
+        if not new_url:
+            fallback_target = basename_fallbacks.get(Path(decoded).name.lower())
+            if fallback_target is not None:
+                new_url = _local_file_url(fallback_target)
         if not new_url:
             return match.group(0)
 
@@ -1227,6 +1272,85 @@ def _load_version_payload(report_path: Path, entry: Dict[str, Any]) -> Transcrip
     return _model_validate(TranscriptionEditPayload, loaded)
 
 
+def _load_base_edit_payload(report_path: Path) -> Optional[Dict[str, Any]]:
+    def _build_sargam_options(tonic_pc: int) -> List[Dict[str, Any]]:
+        from raga_pipeline.sequence import OFFSET_TO_SARGAM
+
+        tonic_pc = int(tonic_pc) % 12
+        base_sa_midi = tonic_pc + 60
+        options: List[Dict[str, Any]] = []
+        for offset in range(12):
+            options.append(
+                {
+                    "offset": offset,
+                    "label": OFFSET_TO_SARGAM.get(offset, f"?{offset}"),
+                    "midi": int(base_sa_midi + offset),
+                }
+            )
+        return options
+
+    def _tonic_from_context(context_blob: Dict[str, Any]) -> Optional[int]:
+        detected_blob = context_blob.get("detected", {})
+        if not isinstance(detected_blob, dict):
+            return None
+        tonic_raw = detected_blob.get("tonic")
+        if tonic_raw is None:
+            return None
+        try:
+            return int(round(float(tonic_raw))) % 12
+        except Exception:
+            return None
+
+    def _from_metadata_payload(context_blob: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        payload_raw = context_blob.get("transcription_edit_payload")
+        if not isinstance(payload_raw, dict):
+            return None
+
+        payload_blob = {
+            "notes": payload_raw.get("notes", []),
+            "phrases": payload_raw.get("phrases", []),
+        }
+        try:
+            payload = _model_validate(TranscriptionEditPayload, payload_blob)
+        except Exception:
+            return None
+
+        normalized = _normalize_edit_payload(payload)
+        if not normalized.notes:
+            return None
+
+        tonic_raw = payload_raw.get("tonic")
+        tonic_value = None
+        if tonic_raw is not None:
+            try:
+                tonic_value = int(round(float(tonic_raw))) % 12
+            except Exception:
+                tonic_value = None
+        if tonic_value is None:
+            tonic_value = _tonic_from_context(context_blob)
+
+        sargam_options_raw = payload_raw.get("sargam_options", [])
+        sargam_options: List[Dict[str, Any]] = []
+        if isinstance(sargam_options_raw, list):
+            for item in sargam_options_raw:
+                if isinstance(item, dict):
+                    sargam_options.append(dict(item))
+        if not sargam_options:
+            sargam_options = _build_sargam_options(tonic_value or 0)
+
+        return {
+            "payload": normalized,
+            "tonic": tonic_value,
+            "sargam_options": sargam_options,
+        }
+
+    context = _load_report_context(report_path)
+    from_metadata = _from_metadata_payload(context)
+    if from_metadata is not None:
+        return from_metadata
+    return None
+
+
 def create_app(job_manager: JobManager | None = None) -> FastAPI:
     app = FastAPI(title="Raga Local App", version="0.1.0")
     manager = job_manager or JobManager(repo_root=REPO_ROOT)
@@ -1392,18 +1516,29 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
                 "artifacts": [],
                 "detect_report_url": None,
                 "analyze_report_url": None,
+                "analyze_report_context": None,
             }
 
         stem_dir = existing_dirs[0]
         artifacts = _collect_stem_artifacts(stem_dir)
         detect_url = None
         analyze_url = None
+        analyze_report_name = None
         for item in artifacts:
             lower_name = item.name.lower()
             if detect_url is None and lower_name == "detection_report.html":
                 detect_url = item.url
             if analyze_url is None and lower_name in {"analysis_report.html", "report.html"}:
                 analyze_url = item.url
+                analyze_report_name = item.name
+
+        analyze_report_context = None
+        if analyze_url and analyze_report_name:
+            analyze_report_context = {
+                "url": analyze_url,
+                "dir_token": _encode_dir_token(stem_dir),
+                "report_name": analyze_report_name,
+            }
 
         return {
             "found": True,
@@ -1415,7 +1550,43 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "artifacts": [_artifact_to_dict(item) for item in artifacts],
             "detect_report_url": detect_url,
             "analyze_report_url": analyze_url,
+            "analyze_report_context": analyze_report_context,
         }
+
+    @app.get(
+        "/api/transcription-edits/{dir_token}/{report_name}/base",
+        response_model=TranscriptionEditBaseResponse,
+    )
+    def api_transcription_edit_base(dir_token: str, report_name: str) -> TranscriptionEditBaseResponse:
+        base_dir = _decode_dir_token(dir_token)
+        report_path = _resolve_report_relative_path(base_dir, report_name)
+        if not report_path.exists() or not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Report file not found.")
+        if report_path.suffix.lower() != ".html":
+            raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
+
+        payload_bundle = _load_base_edit_payload(report_path)
+        if payload_bundle is None:
+            return TranscriptionEditBaseResponse(
+                ready=False,
+                requires_rerun=True,
+                detail=(
+                    "Base transcription payload is unavailable for this report. "
+                    "Rerun analyze to enable in-app transcription editing."
+                ),
+                payload=None,
+                tonic=None,
+                sargam_options=[],
+            )
+
+        return TranscriptionEditBaseResponse(
+            ready=True,
+            requires_rerun=False,
+            detail=None,
+            payload=payload_bundle["payload"],
+            tonic=payload_bundle["tonic"],
+            sargam_options=payload_bundle["sargam_options"],
+        )
 
     @app.get(
         "/api/transcription-edits/{dir_token}/{report_name}/versions",
@@ -1593,14 +1764,14 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             version_id = str(selected_entry.get("version_id", "")).strip() or _next_version_id(manifest)
             json_filename = str(selected_entry.get("json_file", "")).strip() or f"transcription_{version_id}.json"
             csv_filename = str(selected_entry.get("csv_file", "")).strip() or f"transcription_{version_id}.csv"
-            edited_report_filename = str(selected_entry.get("report_file", "")).strip() or f"{report_path.stem}_edited_{version_id}.html"
+            edited_report_filename = str(selected_entry.get("report_file", "")).strip()
             created_at = str(selected_entry.get("created_at", "")).strip()
             save_mode = "updated"
         else:
             version_id = _next_version_id(manifest)
             json_filename = f"transcription_{version_id}.json"
             csv_filename = f"transcription_{version_id}.csv"
-            edited_report_filename = f"{report_path.stem}_edited_{version_id}.html"
+            edited_report_filename = ""
             created_at = ""
 
         timestamp = _utc_now_iso()
@@ -1610,26 +1781,13 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         json_path.write_text(json.dumps(_model_dump(normalized_payload), indent=2), encoding="utf-8")
         _write_transcription_csv(flat_notes, csv_path)
 
-        context = _load_report_context(report_path)
-        try:
-            edited_report_path = _render_edited_report(
-                report_path=report_path,
-                context=context,
-                payload=normalized_payload,
-                edited_report_filename=edited_report_filename,
-            )
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to regenerate edited report: {exc}") from exc
-
         entry = {
             "version_id": version_id,
             "created_at": created_at or timestamp,
             "updated_at": timestamp,
             "json_file": json_filename,
             "csv_file": csv_filename,
-            "report_file": edited_report_path.name,
+            "report_file": edited_report_filename,
             "note_count": len(flat_notes),
             "phrase_count": len(phrases),
         }

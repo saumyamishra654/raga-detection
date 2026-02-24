@@ -120,6 +120,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(payload["mode"], "detect")
         self.assertTrue(payload["fields"])
 
+    def test_app_page_includes_analyze_workspace_and_editor_script(self) -> None:
+        response = self.client.get("/app")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn("analyze-workspace-panel", html)
+        self.assertIn("analyze-editor-root", html)
+        self.assertIn("/static/transcription_editor.js", html)
+
     def test_detect_schema_includes_skip_separation(self) -> None:
         response = self.client.get("/api/schema/detect")
         self.assertEqual(response.status_code, 200)
@@ -302,6 +310,10 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(Path(payload["stem_dir"]), stem_dir.resolve())
         self.assertTrue(payload["detect_report_url"])
         self.assertTrue(payload["analyze_report_url"])
+        self.assertIsInstance(payload["analyze_report_context"], dict)
+        self.assertEqual(payload["analyze_report_context"]["report_name"], "analysis_report.html")
+        self.assertTrue(payload["analyze_report_context"]["dir_token"])
+        self.assertTrue(payload["analyze_report_context"]["url"])
 
         detect_resp = self.client.get(payload["detect_report_url"])
         self.assertEqual(detect_resp.status_code, 200)
@@ -355,6 +367,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(html_resp.status_code, 200)
         html = html_resp.text
         self.assertIn("/local-files/", html)
+        self.assertNotIn('src="aahatein.mp3"', html)
         self.assertNotIn("../../../audio_test_files/aahatein.mp3", html)
 
         # At least one rewritten source should be fetchable (the fallback audio).
@@ -581,6 +594,45 @@ class ApiTests(unittest.TestCase):
                 "vocals": ["melody_pitch_data.csv"],
                 "accompaniment": ["accompaniment_pitch_data.csv"],
             },
+            "transcription_edit_payload": {
+                "tonic": 0,
+                "notes": [
+                    {
+                        "id": "n00001",
+                        "start": 0.10,
+                        "end": 0.35,
+                        "pitch_midi": 60.0,
+                        "pitch_hz": 261.63,
+                        "confidence": 0.95,
+                        "energy": 0.2,
+                        "sargam": "Sa",
+                        "pitch_class": 0,
+                    },
+                    {
+                        "id": "n00002",
+                        "start": 0.40,
+                        "end": 0.62,
+                        "pitch_midi": 62.0,
+                        "pitch_hz": 293.66,
+                        "confidence": 0.95,
+                        "energy": 0.3,
+                        "sargam": "Re",
+                        "pitch_class": 2,
+                    },
+                ],
+                "phrases": [
+                    {
+                        "id": "p0001",
+                        "start": 0.10,
+                        "end": 0.62,
+                        "note_ids": ["n00001", "n00002"],
+                    }
+                ],
+                "sargam_options": [
+                    {"offset": 0, "label": "Sa", "midi": 60},
+                    {"offset": 2, "label": "Re", "midi": 62},
+                ],
+            },
         }
         report_path.with_suffix(".meta.json").write_text(
             json.dumps(metadata, indent=2),
@@ -624,6 +676,16 @@ class ApiTests(unittest.TestCase):
             ],
         }
 
+        base_payload_resp = self.client.get(
+            f"/api/transcription-edits/{token}/{report_name}/base",
+        )
+        self.assertEqual(base_payload_resp.status_code, 200, base_payload_resp.text)
+        base_payload_data = base_payload_resp.json()
+        self.assertTrue(base_payload_data["ready"])
+        self.assertFalse(base_payload_data["requires_rerun"])
+        self.assertEqual(base_payload_data["tonic"], 0)
+        self.assertEqual(len(base_payload_data["payload"]["notes"]), 2)
+
         save_resp = self.client.post(
             f"/api/transcription-edits/{token}/{report_name}/save",
             json=save_payload,
@@ -634,15 +696,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(save_data["version"]["version_id"], "v0001")
         self.assertEqual(save_data["version"]["note_count"], 2)
         self.assertEqual(save_data["version"]["phrase_count"], 1)
-        self.assertTrue(save_data["version"]["report_url"])
+        self.assertIsNone(save_data["version"]["report_url"])
         self.assertEqual(save_data["default_selection"], "original")
         self.assertTrue(save_data["default_report_url"])
-        edited_report_url = save_data["version"]["report_url"]
 
         edit_root = stem_dir / "transcription_edits"
         self.assertTrue((edit_root / "transcription_v0001.json").exists())
         self.assertTrue((edit_root / "transcription_v0001.csv").exists())
-        self.assertTrue((stem_dir / "analysis_report_edited_v0001.html").exists())
+        self.assertFalse((stem_dir / "analysis_report_edited_v0001.html").exists())
 
         versions_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
         self.assertEqual(versions_resp.status_code, 200)
@@ -651,6 +712,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(len(versions_data["versions"]), 1)
         self.assertEqual(versions_data["default_selection"], "original")
         self.assertTrue(versions_data["default_report_url"])
+        self.assertIsNone(versions_data["versions"][0]["report_url"])
 
         set_default_v1_resp = self.client.post(
             f"/api/transcription-edits/{token}/{report_name}/default",
@@ -660,13 +722,11 @@ class ApiTests(unittest.TestCase):
         set_default_v1_data = set_default_v1_resp.json()
         self.assertEqual(set_default_v1_data["default_selection"], "v0001")
         self.assertTrue(set_default_v1_data["default_report_url"])
-        self.assertIn("analysis_report_edited_v0001.html", set_default_v1_data["default_report_url"])
+        self.assertIn("/local-report/", set_default_v1_data["default_report_url"])
 
         defaulted_source_report_resp = self.client.get(f"/local-report/{token}/{report_name}")
         self.assertEqual(defaulted_source_report_resp.status_code, 200)
-        edited_report_resp = self.client.get(edited_report_url)
-        self.assertEqual(edited_report_resp.status_code, 200)
-        self.assertEqual(defaulted_source_report_resp.text, edited_report_resp.text)
+        self.assertIn("base report", defaulted_source_report_resp.text)
 
         set_default_original_resp = self.client.post(
             f"/api/transcription-edits/{token}/{report_name}/default",
@@ -708,7 +768,8 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(regenerate_data["version"]["version_id"], "v0001")
         self.assertTrue(regenerate_data["version"]["report_url"])
         self.assertEqual(regenerate_data["payload"]["notes"][0]["end"], 0.48)
-        regenerated_report_resp = self.client.get(regenerate_data["version"]["report_url"])
+        edited_report_url = regenerate_data["version"]["report_url"]
+        regenerated_report_resp = self.client.get(edited_report_url)
         self.assertEqual(regenerated_report_resp.status_code, 200)
         original_audio_block = re.search(
             r'<audio id="original-player"[^>]*>(.*?)</audio>',
@@ -728,6 +789,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(create_new_data["save_mode"], "created")
         self.assertEqual(create_new_data["version"]["version_id"], "v0002")
         self.assertEqual(len(create_new_data["versions"]), 2)
+        self.assertIsNone(create_new_data["version"]["report_url"])
 
         versions_after_new_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
         self.assertEqual(versions_after_new_resp.status_code, 200)
@@ -768,8 +830,8 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(version_data["has_version"])
         self.assertEqual(version_data["version"]["version_id"], "v0001")
 
-        self.assertIn("Transcription Editor (Experimental)", edited_report_resp.text)
-        self.assertIn("/api/transcription-edits/", edited_report_resp.text)
+        self.assertNotIn("Transcription Editor (Experimental)", regenerated_report_resp.text)
+        self.assertNotIn("/api/transcription-edits/", regenerated_report_resp.text)
 
         delete_v1_resp = self.client.delete(
             f"/api/transcription-edits/{token}/{report_name}/version/v0001"
@@ -779,6 +841,43 @@ class ApiTests(unittest.TestCase):
         self.assertIsNone(delete_v1_data["latest_version_id"])
         self.assertEqual(len(delete_v1_data["versions"]), 0)
         self.assertEqual(delete_v1_data["default_selection"], "original")
+
+    def test_transcription_edit_base_requires_rerun_for_legacy_report(self) -> None:
+        stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "legacy_song"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+        report_path = stem_dir / "analysis_report.html"
+        report_path.write_text("<html><body>legacy report</body></html>", encoding="utf-8")
+
+        token = base64.urlsafe_b64encode(str(stem_dir.resolve()).encode("utf-8")).decode("ascii").rstrip("=")
+        report_name = "analysis_report.html"
+        response = self.client.get(f"/api/transcription-edits/{token}/{report_name}/base")
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertFalse(payload["ready"])
+        self.assertTrue(payload["requires_rerun"])
+        self.assertIsNone(payload["payload"])
+        self.assertIn("Rerun analyze", payload["detail"])
+
+    def test_transcription_edit_base_does_not_fallback_to_transcribed_notes_csv(self) -> None:
+        stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "legacy_song_csv_only"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+        report_path = stem_dir / "analysis_report.html"
+        report_path.write_text("<html><body>legacy report</body></html>", encoding="utf-8")
+        (stem_dir / "transcribed_notes.csv").write_text(
+            "id,start,end,pitch_midi,pitch_hz,confidence,energy,sargam,pitch_class\n"
+            "n00001,0.10,0.35,60.0,261.63,0.95,0.20,Sa,0\n",
+            encoding="utf-8",
+        )
+
+        token = base64.urlsafe_b64encode(str(stem_dir.resolve()).encode("utf-8")).decode("ascii").rstrip("=")
+        report_name = "analysis_report.html"
+        response = self.client.get(f"/api/transcription-edits/{token}/{report_name}/base")
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertFalse(payload["ready"])
+        self.assertTrue(payload["requires_rerun"])
+        self.assertIsNone(payload["payload"])
+        self.assertIn("Rerun analyze", payload["detail"])
 
     def test_local_report_prefers_source_when_default_edit_is_older(self) -> None:
         stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "stale_case"

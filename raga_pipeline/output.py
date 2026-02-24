@@ -3618,10 +3618,19 @@ def plot_pitch_wide_to_base64_with_legend(
     overlay_label: str = "RMS Energy",
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
     transcription_notes: Optional[List[Note]] = None,
-) -> Tuple[str, str, int, float, float]:
+) -> Tuple[str, str, int, float, float, float, float]:
     """
     Generate wide pitch contour and overlay sargam lines, returning base64 images.
-    Returns: (legend_b64, plot_b64, pixel_width, x_axis_start, x_axis_end)
+    Returns:
+        (
+            legend_b64,
+            plot_b64,
+            pixel_width,
+            x_axis_start,
+            x_axis_end,
+            y_axis_min,
+            y_axis_max,
+        )
     """
     import io
     import base64
@@ -3698,7 +3707,7 @@ def plot_pitch_wide_to_base64_with_legend(
     
     if not np.any(voiced_mask):
          # Return empty placeholders
-         return "", "", 100, 0.0, 1.0
+         return "", "", 100, 0.0, 1.0, 0.0, 1.0
 
     voiced_midi = _hz_to_midi(pitch_hz[voiced_mask])
     voiced_midi_rounded = np.round(voiced_midi).astype(int)
@@ -4039,7 +4048,9 @@ def plot_pitch_wide_to_base64_with_legend(
     plt.close(legend_fig)
     legend_b64 = base64.b64encode(lbuf.getvalue()).decode('ascii')
 
-    return legend_b64, plot_b64, pixel_width, x_axis_start, x_axis_end
+    y_axis_min = float(min_m - 1)
+    y_axis_max = float(max_m + 1)
+    return legend_b64, plot_b64, pixel_width, x_axis_start, x_axis_end, y_axis_min, y_axis_max
 
 def create_scrollable_pitch_plot_html(
     pitch_data: PitchData,
@@ -4061,7 +4072,15 @@ def create_scrollable_pitch_plot_html(
     """
     Create HTML component for scrollable pitch plot with audio sync.
     """
-    legend_b64, plot_b64, px_width, x_axis_start, x_axis_end = plot_pitch_wide_to_base64_with_legend(
+    (
+        legend_b64,
+        plot_b64,
+        px_width,
+        x_axis_start,
+        x_axis_end,
+        y_axis_min,
+        y_axis_max,
+    ) = plot_pitch_wide_to_base64_with_legend(
         pitch_data, tonic, raga_name, raga_notes, 
         transcription_smoothing_ms=transcription_smoothing_ms,
         transcription_min_duration=transcription_min_duration,
@@ -4097,6 +4116,39 @@ def create_scrollable_pitch_plot_html(
     overlay_timestamps_payload: List[Optional[float]] = []
     if overlay_timestamps is not None:
         overlay_timestamps_payload = [_safe_json_float(v) for v in np.asarray(overlay_timestamps)]
+
+    hover_pitch_timestamps_payload: List[float] = []
+    hover_pitch_midi_payload: List[float] = []
+    try:
+        ts_arr = np.asarray(pitch_data.timestamps, dtype=float)
+        hz_arr = np.asarray(pitch_data.pitch_hz, dtype=float)
+        voiced_arr = np.asarray(pitch_data.voiced_mask, dtype=bool)
+        valid = np.isfinite(ts_arr) & np.isfinite(hz_arr) & (hz_arr > 0)
+        if voiced_arr.shape == valid.shape:
+            valid = valid & voiced_arr
+        if np.any(valid):
+            ts_valid = ts_arr[valid]
+            midi_valid = 69.0 + 12.0 * np.log2(np.maximum(hz_arr[valid], 1e-6) / 440.0)
+            for ts_val, midi_val in zip(ts_valid.tolist(), midi_valid.tolist()):
+                safe_ts = _safe_json_float(ts_val)
+                safe_midi = _safe_json_float(midi_val)
+                if safe_ts is None or safe_midi is None:
+                    continue
+                hover_pitch_timestamps_payload.append(safe_ts)
+                hover_pitch_midi_payload.append(safe_midi)
+    except Exception:
+        # Hover pitch sampling is optional; fallback keeps inspector functional.
+        hover_pitch_timestamps_payload = []
+        hover_pitch_midi_payload = []
+
+    try:
+        tonic_pitch_class = (
+            _parse_tonic(tonic)
+            if isinstance(tonic, str)
+            else int(round(float(tonic))) % 12
+        )
+    except Exception:
+        tonic_pitch_class = 0
 
     note_payload: List[Dict[str, Any]] = []
     for note in (transcription_notes or []):
@@ -4134,6 +4186,8 @@ def create_scrollable_pitch_plot_html(
                     <!-- Inspector markers -->
                     <div id="{unique_id}-range-band" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0; display: none; background: rgba(56,139,253,0.18); border: 1px solid rgba(56,139,253,0.7); pointer-events: none; z-index: 4;"></div>
                     <div id="{unique_id}-point-marker" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e3b341; display: none; pointer-events: none; z-index: 6;"></div>
+                    <div id="{unique_id}-hover-v-guide" style="position: absolute; left: 0; top: 0; width: 0; height: 0; display: none; border-left: 1px dotted rgba(88,62,14,0.98); pointer-events: none; z-index: 6;"></div>
+                    <div id="{unique_id}-hover-h-guide" style="position: absolute; left: 0; top: 0; width: 0; height: 0; display: none; border-top: 1px dotted rgba(88,62,14,0.98); pointer-events: none; z-index: 6;"></div>
                     <div id="{unique_id}-hover-tooltip" style="position: absolute; left: 0; top: 0; display: none; max-width: 320px; padding: 6px 8px; border-radius: 6px; border: 1px solid #30363d; background: rgba(17, 22, 29, 0.95); color: #c9d1d9; font-size: 11px; line-height: 1.4; pointer-events: none; z-index: 7; box-shadow: 0 2px 8px rgba(0,0,0,0.45);"></div>
                     <!-- Cursor Line -->
                     <div id="{unique_id}-cursor" style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e94560; box-shadow: 0 0 5px #e94560; pointer-events: none; z-index: 5;"></div>
@@ -4160,14 +4214,19 @@ def create_scrollable_pitch_plot_html(
         const trackIds = {json.dumps(audio_element_ids)};
         const overlayEnergyValues = {json.dumps(overlay_energy_payload)};
         const overlayEnergyTimestamps = {json.dumps(overlay_timestamps_payload)};
+        const hoverPitchTimestamps = {json.dumps(hover_pitch_timestamps_payload)};
+        const hoverPitchMidi = {json.dumps(hover_pitch_midi_payload)};
         const transcriptionNotesRaw = {json.dumps(note_payload)};
         const overlayLabel = {json.dumps(overlay_label)};
+        const tonicPitchClass = {tonic_pitch_class};
         const clearSelectionEventName = "raga-scroll-selection-clear";
         const container = document.getElementById("{unique_id}-container");
         const plotLayer = document.getElementById("{unique_id}-plot-layer");
         const plotImage = document.getElementById("{unique_id}-plot-image");
         const cursor = document.getElementById("{unique_id}-cursor");
         const pointMarker = document.getElementById("{unique_id}-point-marker");
+        const hoverVGuide = document.getElementById("{unique_id}-hover-v-guide");
+        const hoverHGuide = document.getElementById("{unique_id}-hover-h-guide");
         const hoverTooltip = document.getElementById("{unique_id}-hover-tooltip");
         const rangeBand = document.getElementById("{unique_id}-range-band");
         const selectionTypeEl = document.getElementById("{unique_id}-selection-type");
@@ -4177,6 +4236,8 @@ def create_scrollable_pitch_plot_html(
         const clearSelectionBtn = document.getElementById("{unique_id}-clear-selection");
         const xStart = {x_axis_start};
         const xEnd = {x_axis_end};
+        const yAxisMin = {y_axis_min};
+        const yAxisMax = {y_axis_max};
         const totalDuration = xEnd - xStart;
         const pixelWidth = {px_width};
 
@@ -4184,6 +4245,8 @@ def create_scrollable_pitch_plot_html(
             container &&
             cursor &&
             pointMarker &&
+            hoverVGuide &&
+            hoverHGuide &&
             hoverTooltip &&
             rangeBand &&
             selectionTypeEl &&
@@ -4197,6 +4260,8 @@ def create_scrollable_pitch_plot_html(
             // Plot margins (matches python subplots_adjust)
             const marginL = 0.005;
             const marginR = 0.995;
+            const marginT = 0.05;
+            const marginB = 0.10;
             const plotStartPx = marginL * pixelWidth;
             const plotEndPx = marginR * pixelWidth;
             const dragThresholdPx = 8;
@@ -4216,6 +4281,16 @@ def create_scrollable_pitch_plot_html(
                 const e = Number(overlayEnergyValues[i]);
                 if (isFinite(ts) && isFinite(e)) {{
                     energyFrames.push({{ t: ts, e: e }});
+                }}
+            }}
+
+            const pitchFrames = [];
+            const pitchFrameCount = Math.min(hoverPitchTimestamps.length, hoverPitchMidi.length);
+            for (let i = 0; i < pitchFrameCount; i += 1) {{
+                const ts = Number(hoverPitchTimestamps[i]);
+                const midi = Number(hoverPitchMidi[i]);
+                if (isFinite(ts) && isFinite(midi)) {{
+                    pitchFrames.push({{ t: ts, midi: midi }});
                 }}
             }}
 
@@ -4288,6 +4363,70 @@ def create_scrollable_pitch_plot_html(
                 );
             }}
 
+            function nearestPitchSample(t) {{
+                if (!pitchFrames.length) {{
+                    return null;
+                }}
+
+                let lo = 0;
+                let hi = pitchFrames.length - 1;
+                while (lo < hi) {{
+                    const mid = Math.floor((lo + hi) / 2);
+                    if (pitchFrames[mid].t < t) {{
+                        lo = mid + 1;
+                    }} else {{
+                        hi = mid;
+                    }}
+                }}
+
+                let idx = lo;
+                if (
+                    idx > 0 &&
+                    Math.abs(pitchFrames[idx - 1].t - t) <= Math.abs(pitchFrames[idx].t - t)
+                ) {{
+                    idx = idx - 1;
+                }}
+                return pitchFrames[idx];
+            }}
+
+            function midiToWesternLabel(midi) {{
+                if (!isFinite(midi)) {{
+                    return "";
+                }}
+                const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+                const rounded = Math.round(midi);
+                const pc = ((rounded % 12) + 12) % 12;
+                const octave = Math.floor(rounded / 12) - 1;
+                return names[pc] + String(octave);
+            }}
+
+            function midiToSargamLabel(midi) {{
+                if (!isFinite(midi)) {{
+                    return "";
+                }}
+                const labels = ["Sa", "re", "Re", "ga", "Ga", "ma", "Ma", "Pa", "dha", "Dha", "ni", "Ni"];
+                const rounded = Math.round(midi);
+                const offset = ((rounded - tonicPitchClass) % 12 + 12) % 12;
+                return labels[offset] || "";
+            }}
+
+            function hoverPitchLineHtml(sample) {{
+                if (!sample || !isFinite(sample.midi)) {{
+                    return "<div style='margin-top:4px; color:#8b949e;'><strong>Y-axis pitch @ t:</strong> unavailable</div>";
+                }}
+                const sargam = midiToSargamLabel(sample.midi);
+                const western = midiToWesternLabel(sample.midi);
+                const label = sargam
+                    ? (sargam + " · " + western)
+                    : western;
+                return (
+                    "<div style='margin-top:4px;'>" +
+                    "<strong>Y-axis pitch @ t:</strong> " +
+                    "<span>" + escapeHtml(label) + " (midi " + sample.midi.toFixed(2) + ")</span>" +
+                    "</div>"
+                );
+            }}
+
             function escapeHtml(raw) {{
                 return String(raw)
                     .replace(/&/g, "&amp;")
@@ -4309,6 +4448,17 @@ def create_scrollable_pitch_plot_html(
                 return xStart + (pct * totalDuration);
             }}
 
+            function midiToY(midi) {{
+                if (!isFinite(midi) || !isFinite(yAxisMin) || !isFinite(yAxisMax) || yAxisMax <= yAxisMin) {{
+                    return NaN;
+                }}
+                const plotHeight = Math.max(plotLayer.clientHeight || container.clientHeight || 1, 1);
+                const plotTopPx = marginT * plotHeight;
+                const plotBottomPx = (1 - marginB) * plotHeight;
+                const frac = clamp((midi - yAxisMin) / (yAxisMax - yAxisMin), 0, 1);
+                return plotBottomPx - (frac * Math.max(plotBottomPx - plotTopPx, 1));
+            }}
+
             function xFromEvent(evt) {{
                 const rect = container.getBoundingClientRect();
                 const rawX = evt.clientX - rect.left + container.scrollLeft;
@@ -4319,6 +4469,37 @@ def create_scrollable_pitch_plot_html(
                 const rect = container.getBoundingClientRect();
                 const rawY = evt.clientY - rect.top;
                 return clamp(rawY, 0, Math.max(container.clientHeight, 0));
+            }}
+
+            function hideHoverGuides() {{
+                hoverVGuide.style.display = "none";
+                hoverVGuide.style.height = "0px";
+                hoverHGuide.style.display = "none";
+                hoverHGuide.style.width = "0px";
+            }}
+
+            function showHoverGuides(x, midi) {{
+                const y = midiToY(midi);
+                if (!isFinite(y)) {{
+                    hideHoverGuides();
+                    return;
+                }}
+                const safeX = clamp(x, plotStartPx, plotEndPx);
+                const plotHeight = Math.max(plotLayer.clientHeight || container.clientHeight || 1, 1);
+                const plotBottomPx = (1 - marginB) * plotHeight;
+                const safeY = clamp(y, marginT * plotHeight, plotBottomPx);
+
+                const vHeight = Math.max(0, plotBottomPx - safeY);
+                hoverVGuide.style.left = safeX + "px";
+                hoverVGuide.style.top = safeY + "px";
+                hoverVGuide.style.height = vHeight + "px";
+                hoverVGuide.style.display = "block";
+
+                const hWidth = Math.max(0, safeX - plotStartPx);
+                hoverHGuide.style.left = plotStartPx + "px";
+                hoverHGuide.style.top = safeY + "px";
+                hoverHGuide.style.width = hWidth + "px";
+                hoverHGuide.style.display = "block";
             }}
 
             function seekAllTracks(targetTime) {{
@@ -4625,48 +4806,64 @@ def create_scrollable_pitch_plot_html(
             }}
 
             function hideHoverTooltip() {{
+                hideHoverGuides();
                 hoverTooltip.style.display = "none";
                 hoverTooltip.innerHTML = "";
             }}
 
             function renderHoverTooltip(plotX, pointerY) {{
-                if (!transcriptionNotes.length) {{
-                    hideHoverTooltip();
-                    return;
-                }}
-
                 const x = clamp(plotX, plotStartPx, plotEndPx);
                 const t = xToTime(x);
+                const pitchSample = nearestPitchSample(t);
                 const resolved = resolveNotesAtTime(t);
                 const notes = resolved.notes;
-                if (!notes.length) {{
+
+                if (!pitchSample && !notes.length) {{
                     hideHoverTooltip();
                     return;
                 }}
 
-                const maxTooltipItems = 2;
-                const rows = notes.slice(0, maxTooltipItems).map(function(note) {{
-                    const symbol = formatNoteSymbol(note);
-                    const kind = noteKindLabel(note);
-                    const region = formatSeconds(note.start) + "s - " + formatSeconds(note.end) + "s";
-                    const cents = formatPitchDistance(note);
-                    return (
-                        "<div style='margin-top:4px;'>" +
-                        "<strong>" + escapeHtml(symbol) + "</strong> " +
-                        "<span style='color:#8b949e;'>" + escapeHtml(kind) + "</span><br>" +
-                        "<span style='color:#8b949e;'>region " + escapeHtml(region) + "</span><br>" +
-                        "<span style='color:#8b949e;'>dist to corrected: " + escapeHtml(cents) + "</span>" +
-                        "</div>"
-                    );
-                }}).join("");
-                const remaining = notes.length - maxTooltipItems;
+                if (pitchSample && isFinite(pitchSample.t) && isFinite(pitchSample.midi)) {{
+                    showHoverGuides(timeToX(pitchSample.t), pitchSample.midi);
+                }} else {{
+                    hideHoverGuides();
+                }}
+
                 const nearestTag = resolved.usedNearest ? " (nearest)" : "";
+                const pitchLine = hoverPitchLineHtml(pitchSample);
+                let noteSection = "<div style='margin-top:4px; color:#8b949e;'><strong>Nearest transcribed note:</strong> unavailable</div>";
+                if (notes.length) {{
+                    const noteHeader = resolved.usedNearest
+                        ? "Nearest transcribed note"
+                        : "Active transcribed note(s)";
+                    const maxTooltipItems = 2;
+                    const rows = notes.slice(0, maxTooltipItems).map(function(note) {{
+                        const symbol = formatNoteSymbol(note);
+                        const kind = noteKindLabel(note);
+                        const region = formatSeconds(note.start) + "s - " + formatSeconds(note.end) + "s";
+                        const cents = formatPitchDistance(note);
+                        return (
+                            "<div style='margin-top:4px;'>" +
+                            "<strong>" + escapeHtml(symbol) + "</strong> " +
+                            "<span style='color:#8b949e;'>" + escapeHtml(kind) + "</span><br>" +
+                            "<span style='color:#8b949e;'>region " + escapeHtml(region) + "</span><br>" +
+                            "<span style='color:#8b949e;'>dist to corrected: " + escapeHtml(cents) + "</span>" +
+                            "</div>"
+                        );
+                    }}).join("");
+                    const remaining = notes.length - maxTooltipItems;
+                    noteSection =
+                        "<div style='margin-top:4px;'><strong>" + escapeHtml(noteHeader) + ":</strong></div>" +
+                        rows +
+                        (remaining > 0
+                            ? "<div style='margin-top:4px; color:#8b949e;'>+" + remaining + " more note(s)</div>"
+                            : "");
+                }}
+
                 hoverTooltip.innerHTML =
                     "<div><strong>t=" + escapeHtml(formatSeconds(t)) + "s" + escapeHtml(nearestTag) + "</strong></div>" +
-                    rows +
-                    (remaining > 0
-                        ? "<div style='margin-top:4px; color:#8b949e;'>+" + remaining + " more note(s)</div>"
-                        : "");
+                    pitchLine +
+                    noteSection;
 
                 const maxLeft = Math.max(0, pixelWidth - 340);
                 const maxTop = Math.max(0, container.clientHeight - 120);

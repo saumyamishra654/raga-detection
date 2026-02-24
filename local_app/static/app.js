@@ -2129,9 +2129,9 @@
         analyzeReportFrame.src = withCacheBust(reportUrl);
         const versionId = String(detail.version_id || detail.versionId || "").trim();
         if (versionId) {
-            setAnalyzeWorkspaceStatus("Regenerated " + versionId + ". Reloaded embedded report.", false);
+            setAnalyzeWorkspaceStatus("Updated " + versionId + ". Reloaded embedded report.", false);
         } else {
-            setAnalyzeWorkspaceStatus("Reloaded embedded regenerated report.", false);
+            setAnalyzeWorkspaceStatus("Reloaded embedded edited report.", false);
         }
     });
 

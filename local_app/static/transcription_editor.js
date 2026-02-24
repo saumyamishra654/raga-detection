@@ -110,6 +110,7 @@
 
         const statusEl = byId("-status");
         if (statusEl) {
+            let lastReportUrlEvent = "";
             const normalizeStatus = () => {
                 const raw = String(statusEl.textContent || "");
                 let next = raw;
@@ -120,6 +121,24 @@
                 next = next.replace(/\btranscription edit version\b/gi, "edited copy");
                 if (next !== raw) {
                     statusEl.textContent = next;
+                    return;
+                }
+
+                const reportMatch = next.match(/Edited report:\s*(\S+)/i);
+                const reportUrl = reportMatch ? String(reportMatch[1] || "").trim() : "";
+                if (reportUrl && reportUrl !== lastReportUrlEvent) {
+                    lastReportUrlEvent = reportUrl;
+                    try {
+                        document.dispatchEvent(
+                            new CustomEvent("raga-transcription-report-regenerated", {
+                                detail: {
+                                    report_url: reportUrl,
+                                },
+                            })
+                        );
+                    } catch (_err) {
+                        // Ignore event dispatch failures.
+                    }
                 }
             };
             normalizeStatus();

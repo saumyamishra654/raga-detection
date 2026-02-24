@@ -68,6 +68,7 @@ ASSET_ATTR_RE = re.compile(r'(\b(?:src|href)\s*=\s*)(["\'])([^"\']+)(\2)', re.IG
 TRANSCRIPTION_EDIT_DIRNAME = "transcription_edits"
 TRANSCRIPTION_EDIT_MANIFEST = "manifest.json"
 TRANSCRIPTION_EDIT_SCHEMA_VERSION = 1
+TRANSCRIPTION_EDIT_SINGLE_VERSION_ID = "edited"
 
 
 def _compute_static_version() -> str:
@@ -410,6 +411,41 @@ def _default_edit_manifest(report_path: Path) -> Dict[str, Any]:
     }
 
 
+def _normalize_single_edit_manifest(manifest: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Keep transcription edits to a single editable copy alongside original.
+
+    Legacy manifests may contain multiple historical versions; preserve only the
+    latest entry and normalize its id to a stable single-copy id.
+    """
+    versions_raw = manifest.get("versions")
+    if not isinstance(versions_raw, list):
+        versions_raw = []
+
+    entries = [item for item in versions_raw if isinstance(item, dict)]
+    if not entries:
+        manifest["versions"] = []
+        manifest["default_selection"] = "original"
+        return manifest
+
+    entries.sort(
+        key=lambda item: (
+            _parse_version_number(str(item.get("version_id", ""))),
+            str(item.get("created_at", "")),
+        )
+    )
+    latest_entry = dict(entries[-1])
+    latest_entry["version_id"] = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+    manifest["versions"] = [latest_entry]
+
+    requested_default = str(manifest.get("default_selection", "original") or "").strip()
+    if requested_default and requested_default != "original":
+        manifest["default_selection"] = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+    else:
+        manifest["default_selection"] = "original"
+    return manifest
+
+
 def _load_edit_manifest(report_path: Path) -> Dict[str, Any]:
     manifest_path = _manifest_path_for_report(report_path)
     if not manifest_path.exists():
@@ -428,7 +464,7 @@ def _load_edit_manifest(report_path: Path) -> Dict[str, Any]:
     data.setdefault("source_report", report_path.name)
     data.setdefault("schema_version", TRANSCRIPTION_EDIT_SCHEMA_VERSION)
     data.setdefault("default_selection", "original")
-    return data
+    return _normalize_single_edit_manifest(data)
 
 
 def _save_edit_manifest(report_path: Path, manifest: Dict[str, Any]) -> None:
@@ -464,14 +500,11 @@ def _default_report_path(report_path: Path, manifest: Dict[str, Any]) -> Path:
         return report_path
     if not candidate.exists() or not candidate.is_file():
         return report_path
-    try:
-        # If a fresh source report was regenerated after this edited file,
-        # serve source by default to avoid stale visualizations.
-        if report_path.exists() and report_path.stat().st_mtime > candidate.stat().st_mtime:
-            return report_path
-    except OSError:
-        pass
     return candidate
+
+
+def _single_edited_report_filename(report_path: Path) -> str:
+    return f"{report_path.stem}_edited.html"
 
 
 def _parse_version_number(version_id: str) -> int:
@@ -1622,12 +1655,40 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         if report_path.suffix.lower() != ".html":
             raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
 
-        manifest = _load_edit_manifest(report_path)
+        manifest = _normalize_single_edit_manifest(_load_edit_manifest(report_path))
         requested = str(default_selection or "").strip()
         if not requested:
             raise HTTPException(status_code=400, detail="default_selection is required.")
-        if requested != "original" and _find_version_entry(manifest, requested) is None:
-            raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+
+        if requested != "original":
+            requested = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+            entry = _find_version_entry(manifest, requested)
+            if entry is None:
+                raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
+
+            report_file = str(entry.get("report_file", "")).strip()
+            report_candidate = (report_path.parent / report_file).resolve() if report_file else None
+            if report_candidate is None or not report_candidate.exists() or not report_candidate.is_file():
+                payload = _load_version_payload(report_path, entry)
+                normalized_payload = _normalize_edit_payload(payload)
+                edited_report_filename = _single_edited_report_filename(report_path)
+                context = _load_report_context(report_path)
+                try:
+                    edited_report_path = _render_edited_report(
+                        report_path=report_path,
+                        context=context,
+                        payload=normalized_payload,
+                        edited_report_filename=edited_report_filename,
+                    )
+                except HTTPException:
+                    raise
+                except Exception as exc:
+                    raise HTTPException(status_code=500, detail=f"Failed to generate edited report: {exc}") from exc
+
+                entry["report_file"] = edited_report_path.name
+                entry["note_count"] = len(normalized_payload.notes)
+                entry["phrase_count"] = len(normalized_payload.phrases)
+                entry["updated_at"] = _utc_now_iso()
 
         manifest["default_selection"] = requested
         _save_edit_manifest(report_path, manifest)
@@ -1739,38 +1800,28 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         edit_root = _edit_root_for_report(report_path)
         edit_root.mkdir(parents=True, exist_ok=True)
 
-        manifest = _load_edit_manifest(report_path)
+        manifest = _normalize_single_edit_manifest(_load_edit_manifest(report_path))
         versions_raw = manifest.get("versions", [])
         if not isinstance(versions_raw, list):
             versions_raw = []
         manifest["versions"] = versions_raw
 
-        requested_version_id = (target_version_id or "").strip() or None
-        selected_entry: Optional[Dict[str, Any]] = None
-        save_mode = "created"
+        # The API keeps a single editable copy now; legacy versioning query args
+        # are accepted for backward compatibility but intentionally ignored.
+        _ = target_version_id
+        _ = create_new_version
 
-        if create_new_version:
-            requested_version_id = None
-        elif requested_version_id:
-            selected_entry = _find_version_entry(manifest, requested_version_id)
-            if selected_entry is None:
-                raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
-        else:
-            existing_infos = _list_version_infos(report_path, manifest)
-            if existing_infos:
-                selected_entry = _find_version_entry(manifest, existing_infos[-1].version_id)
-
+        selected_entry = _find_version_entry(manifest, TRANSCRIPTION_EDIT_SINGLE_VERSION_ID)
+        save_mode = "updated" if selected_entry is not None else "created"
+        version_id = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
         if selected_entry is not None:
-            version_id = str(selected_entry.get("version_id", "")).strip() or _next_version_id(manifest)
-            json_filename = str(selected_entry.get("json_file", "")).strip() or f"transcription_{version_id}.json"
-            csv_filename = str(selected_entry.get("csv_file", "")).strip() or f"transcription_{version_id}.csv"
+            json_filename = str(selected_entry.get("json_file", "")).strip() or "transcription_edited.json"
+            csv_filename = str(selected_entry.get("csv_file", "")).strip() or "transcription_edited.csv"
             edited_report_filename = str(selected_entry.get("report_file", "")).strip()
             created_at = str(selected_entry.get("created_at", "")).strip()
-            save_mode = "updated"
         else:
-            version_id = _next_version_id(manifest)
-            json_filename = f"transcription_{version_id}.json"
-            csv_filename = f"transcription_{version_id}.csv"
+            json_filename = "transcription_edited.json"
+            csv_filename = "transcription_edited.csv"
             edited_report_filename = ""
             created_at = ""
 
@@ -1781,21 +1832,36 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         json_path.write_text(json.dumps(_model_dump(normalized_payload), indent=2), encoding="utf-8")
         _write_transcription_csv(flat_notes, csv_path)
 
+        edited_report_filename = edited_report_filename or _single_edited_report_filename(report_path)
+        context = _load_report_context(report_path)
+        try:
+            edited_report_path = _render_edited_report(
+                report_path=report_path,
+                context=context,
+                payload=normalized_payload,
+                edited_report_filename=edited_report_filename,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to generate edited report: {exc}") from exc
+
         entry = {
             "version_id": version_id,
             "created_at": created_at or timestamp,
             "updated_at": timestamp,
             "json_file": json_filename,
             "csv_file": csv_filename,
-            "report_file": edited_report_filename,
+            "report_file": edited_report_path.name,
             "note_count": len(flat_notes),
             "phrase_count": len(phrases),
         }
         if selected_entry is not None:
             selected_entry.clear()
             selected_entry.update(entry)
+            manifest["versions"] = [selected_entry]
         else:
-            versions_raw.append(entry)
+            manifest["versions"] = [entry]
         _save_edit_manifest(report_path, manifest)
 
         version_infos = _list_version_infos(report_path, manifest)
@@ -1832,7 +1898,7 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         if report_path.suffix.lower() != ".html":
             raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
 
-        manifest = _load_edit_manifest(report_path)
+        manifest = _normalize_single_edit_manifest(_load_edit_manifest(report_path))
         entry = _find_version_entry(manifest, version_id)
         if entry is None:
             raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
@@ -1843,7 +1909,7 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         if not phrases or not flat_notes:
             raise HTTPException(status_code=400, detail="Stored payload is empty and cannot be rendered.")
 
-        edited_report_filename = str(entry.get("report_file", "")).strip() or f"{report_path.stem}_edited_{version_id}.html"
+        edited_report_filename = str(entry.get("report_file", "")).strip() or _single_edited_report_filename(report_path)
         context = _load_report_context(report_path)
         try:
             edited_report_path = _render_edited_report(

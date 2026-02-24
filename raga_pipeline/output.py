@@ -4339,6 +4339,58 @@ def create_scrollable_pitch_plot_html(
             let isPointerDown = false;
             let pointerStartX = 0;
             let pointerCurrentX = 0;
+            let lastPointerEventMeta = null;
+
+            function isSelectionDebugEnabled() {{
+                try {{
+                    if (typeof window !== "undefined" && window.__RAGA_SELECTION_DEBUG__) {{
+                        return true;
+                    }}
+                }} catch (_err) {{
+                    // Ignore probe failures.
+                }}
+                try {{
+                    if (
+                        typeof window !== "undefined" &&
+                        window.localStorage &&
+                        window.localStorage.getItem("ragaSelectionDebug") === "1"
+                    ) {{
+                        return true;
+                    }}
+                }} catch (_err) {{
+                    // Ignore private/incognito storage failures.
+                }}
+                return false;
+            }}
+
+            function selectionTrace(stage, payload) {{
+                const entry = Object.assign(
+                    {{
+                        stage: stage,
+                        sourcePlotId: "{unique_id}",
+                        atMs: Date.now(),
+                    }},
+                    payload || {{}}
+                );
+                try {{
+                    const key = "__RAGA_SELECTION_TRACE__";
+                    const trace = Array.isArray(window[key]) ? window[key] : [];
+                    trace.push(entry);
+                    if (trace.length > 300) {{
+                        trace.shift();
+                    }}
+                    window[key] = trace;
+                }} catch (_err) {{
+                    // Ignore cross-realm/window storage issues.
+                }}
+                if (isSelectionDebugEnabled()) {{
+                    try {{
+                        console.log("[RAGA_SELECTION][iframe][" + stage + "]", entry);
+                    }} catch (_err) {{
+                        // Ignore console failures.
+                    }}
+                }}
+            }}
 
             const energyFrames = [];
             const frameCount = Math.min(overlayEnergyValues.length, overlayEnergyTimestamps.length);
@@ -4545,15 +4597,31 @@ def create_scrollable_pitch_plot_html(
             }}
 
             function xFromEvent(evt) {{
-                const rect = container.getBoundingClientRect();
-                const rawX = evt.clientX - rect.left + container.scrollLeft;
-                return clamp(rawX, plotStartPx, plotEndPx);
+                const containerRect = container.getBoundingClientRect();
+                const layerRect = plotLayer.getBoundingClientRect();
+                const rawXFromContainer = evt.clientX - containerRect.left + container.scrollLeft;
+                const rawXFromLayer = evt.clientX - layerRect.left;
+                const rawX = rawXFromContainer;
+                const clampedX = clamp(rawX, plotStartPx, plotEndPx);
+                lastPointerEventMeta = {{
+                    eventType: String((evt && evt.type) || ""),
+                    clientX: Number(evt && evt.clientX),
+                    clientY: Number(evt && evt.clientY),
+                    containerLeft: containerRect.left,
+                    containerScrollLeft: container.scrollLeft,
+                    layerLeft: layerRect.left,
+                    rawXFromContainer: rawXFromContainer,
+                    rawXFromLayer: rawXFromLayer,
+                    xChosen: rawX,
+                    xClamped: clampedX,
+                }};
+                return clampedX;
             }}
 
             function yFromEvent(evt) {{
-                const rect = container.getBoundingClientRect();
-                const rawY = evt.clientY - rect.top;
-                return clamp(rawY, 0, Math.max(container.clientHeight, 0));
+                const layerRect = plotLayer.getBoundingClientRect();
+                const rawY = evt.clientY - layerRect.top;
+                return clamp(rawY, 0, Math.max(plotLayer.clientHeight, 0));
             }}
 
             function hideHoverGuides() {{
@@ -4660,12 +4728,25 @@ def create_scrollable_pitch_plot_html(
 
             function emitSelectionUpdate(detail) {{
                 try {{
+                    const eventDetail = Object.assign(
+                        {{
+                            sourcePlotId: "{unique_id}",
+                            overlayLabel: overlayLabel,
+                        }},
+                        detail || {{}}
+                    );
+                    selectionTrace("iframe_emit", {{
+                        mode: eventDetail.mode || null,
+                        time: isFinite(Number(eventDetail.time)) ? Number(eventDetail.time) : null,
+                        start: isFinite(Number(eventDetail.start)) ? Number(eventDetail.start) : null,
+                        end: isFinite(Number(eventDetail.end)) ? Number(eventDetail.end) : null,
+                        noteCount: Array.isArray(eventDetail.notes) ? eventDetail.notes.length : 0,
+                        phraseCount: Array.isArray(eventDetail.phrases) ? eventDetail.phrases.length : 0,
+                        pointer: lastPointerEventMeta,
+                    }});
                     document.dispatchEvent(
                         new CustomEvent("raga-transcription-selection", {{
-                            detail: Object.assign({{
-                                sourcePlotId: "{unique_id}",
-                                overlayLabel: overlayLabel,
-                            }}, detail || {{}})
+                            detail: eventDetail
                         }})
                     );
                 }} catch (_err) {{
@@ -4977,12 +5058,7 @@ def create_scrollable_pitch_plot_html(
                 const overlapping = resolved.notes;
                 const usedNearest = resolved.usedNearest;
                 const phrases = resolvePhrasesAtTime(t);
-
-                pointMarker.style.display = "block";
-                pointMarker.style.left = x + "px";
-                rangeBand.style.display = "none";
-                renderPointSelection(t, energySample, overlapping, usedNearest);
-                emitSelectionUpdate({{
+                const pointDetail = {{
                     mode: "point",
                     time: t,
                     start: t,
@@ -4992,7 +5068,22 @@ def create_scrollable_pitch_plot_html(
                     usedNearest: usedNearest,
                     energy: energySample ? energySample.e : null,
                     energySampleTime: energySample ? energySample.t : null,
-                }});
+                    debug: {{
+                        inputPlotX: plotX,
+                        clampedPlotX: x,
+                        plotStartPx: plotStartPx,
+                        plotEndPx: plotEndPx,
+                        xStart: xStart,
+                        xEnd: xEnd,
+                        pointer: lastPointerEventMeta,
+                    }},
+                }};
+
+                pointMarker.style.display = "block";
+                pointMarker.style.left = x + "px";
+                rangeBand.style.display = "none";
+                renderPointSelection(t, energySample, overlapping, usedNearest);
+                emitSelectionUpdate(pointDetail);
 
                 if (shouldSeek && isFinite(t)) {{
                     const sourceBeforeSeek = getPlayingAudio() || activeAudio;
@@ -5032,6 +5123,17 @@ def create_scrollable_pitch_plot_html(
                     energyMin: energyStats ? energyStats.min : null,
                     energyMean: energyStats ? energyStats.mean : null,
                     energyMax: energyStats ? energyStats.max : null,
+                    debug: {{
+                        inputStartX: x0,
+                        inputEndX: x1,
+                        clampedStartX: left,
+                        clampedEndX: right,
+                        plotStartPx: plotStartPx,
+                        plotEndPx: plotEndPx,
+                        xStart: xStart,
+                        xEnd: xEnd,
+                        pointer: lastPointerEventMeta,
+                    }},
                 }});
             }}
 

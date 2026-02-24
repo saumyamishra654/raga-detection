@@ -201,6 +201,46 @@
         analyzeFrameSelectionHandlerTarget = null;
     }
 
+    function isSelectionDebugEnabled() {
+        try {
+            if (window.__RAGA_SELECTION_DEBUG__) return true;
+        } catch (_err) {
+            // Ignore probe failures.
+        }
+        try {
+            return window.localStorage && window.localStorage.getItem("ragaSelectionDebug") === "1";
+        } catch (_err) {
+            return false;
+        }
+    }
+
+    function selectionTrace(stage, payload) {
+        const entry = Object.assign(
+            {
+                stage: stage,
+                source: "analyze-frame-bridge",
+                atMs: Date.now(),
+            },
+            payload || {}
+        );
+        try {
+            const key = "__RAGA_SELECTION_TRACE__";
+            const trace = Array.isArray(window[key]) ? window[key] : [];
+            trace.push(entry);
+            if (trace.length > 400) trace.shift();
+            window[key] = trace;
+        } catch (_err) {
+            // Ignore trace persistence failures.
+        }
+        if (isSelectionDebugEnabled()) {
+            try {
+                console.log("[RAGA_SELECTION][bridge][" + stage + "]", entry);
+            } catch (_err) {
+                // Ignore console failures.
+            }
+        }
+    }
+
     function withCacheBust(url) {
         const raw = String(url || "").trim();
         if (!raw) return raw;
@@ -226,11 +266,31 @@
 
         analyzeFrameSelectionHandler = function (evt) {
             try {
+                const incomingDetail = evt && evt.detail ? evt.detail : {};
+                const bridgedDetail = Object.assign({}, incomingDetail, {
+                    bridgeReceivedAtMs: Date.now(),
+                });
+                selectionTrace("receive", {
+                    mode: String(bridgedDetail.mode || ""),
+                    time: Number.isFinite(Number(bridgedDetail.time)) ? Number(bridgedDetail.time) : null,
+                    start: Number.isFinite(Number(bridgedDetail.start)) ? Number(bridgedDetail.start) : null,
+                    end: Number.isFinite(Number(bridgedDetail.end)) ? Number(bridgedDetail.end) : null,
+                    noteCount: Array.isArray(bridgedDetail.notes) ? bridgedDetail.notes.length : 0,
+                    phraseCount: Array.isArray(bridgedDetail.phrases) ? bridgedDetail.phrases.length : 0,
+                });
                 document.dispatchEvent(
                     new CustomEvent("raga-transcription-selection", {
-                        detail: evt && evt.detail ? evt.detail : {},
+                        detail: bridgedDetail,
                     })
                 );
+                selectionTrace("dispatch", {
+                    mode: String(bridgedDetail.mode || ""),
+                    time: Number.isFinite(Number(bridgedDetail.time)) ? Number(bridgedDetail.time) : null,
+                    start: Number.isFinite(Number(bridgedDetail.start)) ? Number(bridgedDetail.start) : null,
+                    end: Number.isFinite(Number(bridgedDetail.end)) ? Number(bridgedDetail.end) : null,
+                    noteCount: Array.isArray(bridgedDetail.notes) ? bridgedDetail.notes.length : 0,
+                    phraseCount: Array.isArray(bridgedDetail.phrases) ? bridgedDetail.phrases.length : 0,
+                });
             } catch (_err) {
                 // Ignore event bridge failures.
             }

@@ -3846,6 +3846,26 @@ def plot_pitch_wide_to_base64_with_legend(
         segments.append((start_idx, end_idx))
         start_idx = end_idx
     segments.append((start_idx, len(voiced_times)))
+
+    normalized_phrase_ranges: List[Tuple[float, float]] = []
+    if phrase_ranges:
+        for start_t, end_t in phrase_ranges:
+            if not np.isfinite(start_t) or not np.isfinite(end_t):
+                continue
+            lo = float(min(start_t, end_t))
+            hi = float(max(start_t, end_t))
+            if hi <= lo:
+                continue
+            normalized_phrase_ranges.append((lo, hi))
+
+    def _shared_phrase_window(t_a: float, t_b: float) -> Optional[Tuple[float, float]]:
+        if not normalized_phrase_ranges:
+            return None
+        eps = 1e-9
+        for p_start, p_end in normalized_phrase_ranges:
+            if (p_start - eps) <= t_a <= (p_end + eps) and (p_start - eps) <= t_b <= (p_end + eps):
+                return (p_start, p_end)
+        return None
     
     # Join small gaps
     joined_segments = []
@@ -3855,7 +3875,10 @@ def plot_pitch_wide_to_base64_with_legend(
             # if gap < threshold, merge
             t_end_prev = voiced_times[curr[1]-1]
             t_start_next = voiced_times[next_seg[0]]
-            if t_start_next - t_end_prev <= join_gap_threshold:
+            gap_is_small = (t_start_next - t_end_prev) <= join_gap_threshold
+            same_phrase = _shared_phrase_window(float(t_end_prev), float(t_start_next))
+            can_merge = gap_is_small and (same_phrase is not None or not normalized_phrase_ranges)
+            if can_merge:
                 curr = (curr[0], next_seg[1])
             else:
                 joined_segments.append(curr)

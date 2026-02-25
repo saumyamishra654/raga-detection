@@ -264,6 +264,17 @@
         }
         if (!frameDoc) return;
 
+        try {
+            const inspectorNodes = frameDoc.querySelectorAll('[id$="-inspector"]');
+            inspectorNodes.forEach(function (node) {
+                if (node && node.style) {
+                    node.style.display = "none";
+                }
+            });
+        } catch (_err) {
+            // Ignore inspector-hiding failures.
+        }
+
         analyzeFrameSelectionHandler = function (evt) {
             try {
                 const incomingDetail = evt && evt.detail ? evt.detail : {};
@@ -2132,6 +2143,23 @@
             setAnalyzeWorkspaceStatus("Updated " + versionId + ". Reloaded embedded report.", false);
         } else {
             setAnalyzeWorkspaceStatus("Reloaded embedded edited report.", false);
+        }
+    });
+
+    document.addEventListener("raga-transcription-clear-selection", function () {
+        if (!isAnalyzeModeSelected()) return;
+        if (!analyzeReportFrame || !analyzeReportFrame.contentWindow) return;
+        let frameDoc = null;
+        try {
+            frameDoc = analyzeReportFrame.contentWindow.document;
+        } catch (_err) {
+            frameDoc = null;
+        }
+        if (!frameDoc) return;
+        try {
+            frameDoc.dispatchEvent(new CustomEvent("raga-scroll-selection-clear", { detail: {} }));
+        } catch (_err) {
+            // Ignore clear-selection bridge failures.
         }
     });
 

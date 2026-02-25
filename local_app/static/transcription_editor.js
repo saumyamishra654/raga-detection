@@ -149,6 +149,223 @@
                 // Ignore observer failures in restricted contexts.
             }
         }
+
+        const root = document.getElementById(sectionId);
+        const firstCard = root ? root.querySelector(".editor-grid .editor-card") : null;
+        if (firstCard && !byId("-selection-inspector")) {
+            const inspectorWrap = document.createElement("div");
+            inspectorWrap.id = sectionId + "-selection-inspector";
+            inspectorWrap.style.marginTop = "12px";
+            inspectorWrap.style.border = "1px solid #30363d";
+            inspectorWrap.style.borderRadius = "8px";
+            inspectorWrap.style.background = "#0d1117";
+            inspectorWrap.style.padding = "10px";
+            inspectorWrap.style.fontSize = "12px";
+            inspectorWrap.innerHTML =
+                '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">' +
+                    '<span><strong>Selection:</strong> <span id="' + sectionId + '-selection-type">None</span></span>' +
+                    '<button type="button" id="' + sectionId + '-selection-clear" style="padding:4px 10px; border-radius:6px; border:1px solid #30363d; background:#21262d; color:#c9d1d9; cursor:pointer;">Clear selection</button>' +
+                '</div>' +
+                '<div id="' + sectionId + '-selection-time" style="margin-top:6px; color:#8b949e;">Click for point query or drag for range query.</div>' +
+                '<div id="' + sectionId + '-selection-energy" style="margin-top:4px; color:#8b949e;">Energy (Vocals Stem RMS): unavailable</div>' +
+                '<div id="' + sectionId + '-selection-notes" style="margin-top:8px; color:#c9d1d9;">No selection.</div>';
+            firstCard.appendChild(inspectorWrap);
+
+            const selectionTypeEl = document.getElementById(sectionId + "-selection-type");
+            const selectionTimeEl = document.getElementById(sectionId + "-selection-time");
+            const selectionEnergyEl = document.getElementById(sectionId + "-selection-energy");
+            const selectionNotesEl = document.getElementById(sectionId + "-selection-notes");
+            const clearBtn = document.getElementById(sectionId + "-selection-clear");
+
+            const asNumber = (value, fallback) => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : fallback;
+            };
+            const formatSec = (value) => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed.toFixed(3) : "n/a";
+            };
+            const escapeHtml = (raw) =>
+                String(raw || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/\"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            const normalizeSargamLabel = (raw) => String(raw || "").replace(/[·'`’]+/g, "").trim();
+            const formatMaybe = (value, digits) => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed.toFixed(digits) : "n/a";
+            };
+            const formatNoteSymbol = (note) => {
+                const label = normalizeSargamLabel(note && note.sargam);
+                if (label) return label;
+                const midi = Number(note && note.pitch_midi);
+                return Number.isFinite(midi) ? midi.toFixed(2) : "?";
+            };
+            const noteKindLabel = (note) => {
+                const confidence = Number(note && note.confidence);
+                return Number.isFinite(confidence) && confidence < 0.95 ? "Inflection" : "Stationary";
+            };
+            const formatPitchDistance = (note) => {
+                const raw = Number(note && note.raw_pitch_midi);
+                const snapped = Number(note && note.snapped_pitch_midi);
+                const corrected = Number(note && note.corrected_pitch_midi);
+                if (!Number.isFinite(corrected)) return "unavailable";
+                const rawDist = Number.isFinite(raw) ? ((raw - corrected) * 100).toFixed(1) + "c" : "n/a";
+                const snappedDist = Number.isFinite(snapped) ? ((snapped - corrected) * 100).toFixed(1) + "c" : "n/a";
+                return "raw " + rawDist + " | snapped " + snappedDist + " | rendered 0.0c";
+            };
+            const formatPitchTrace = (note) => {
+                return "raw " + formatMaybe(note && note.raw_pitch_midi, 3) +
+                    " | snapped " + formatMaybe(note && note.snapped_pitch_midi, 3) +
+                    " | corrected " + formatMaybe(note && note.corrected_pitch_midi, 3) +
+                    " | rendered " + formatMaybe(note && note.rendered_pitch_midi, 3);
+            };
+            const renderNoteTable = (notes) => {
+                const rows = (Array.isArray(notes) ? notes : []).map((note) => {
+                    const start = asNumber(note && note.start, 0);
+                    const end = asNumber(note && note.end, start);
+                    const duration = Math.max(0, end - start);
+                    const noteLabel = formatNoteSymbol(note) + " (" + noteKindLabel(note) + ")";
+                    return (
+                        "<tr>" +
+                            "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + escapeHtml(noteLabel) + "</td>" +
+                            "<td style='padding:4px 6px; border-top:1px solid #30363d;'>" + formatSec(duration) + "s</td>" +
+                            "<td style='padding:4px 6px; border-top:1px solid #30363d;'>midi " + formatMaybe(note && note.pitch_midi, 2) + "</td>" +
+                            "<td style='padding:4px 6px; border-top:1px solid #30363d; color:#8b949e;'>" + escapeHtml(formatPitchDistance(note)) + "</td>" +
+                            "<td style='padding:4px 6px; border-top:1px solid #30363d; color:#8b949e;'>" + escapeHtml(formatPitchTrace(note)) + "</td>" +
+                        "</tr>"
+                    );
+                }).join("");
+                return (
+                    "<div style='margin-top:6px; max-height:182px; overflow-y:auto; border:1px solid #30363d; border-radius:6px;'>" +
+                        "<table style='width:100%; border-collapse:collapse; font-size:12px;'>" +
+                            "<thead>" +
+                                "<tr>" +
+                                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Note</th>" +
+                                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Duration</th>" +
+                                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>MIDI</th>" +
+                                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Dist to Corrected</th>" +
+                                    "<th style='text-align:left; padding:5px 6px; background:#161b22;'>Pitch Trace</th>" +
+                                "</tr>" +
+                            "</thead>" +
+                            "<tbody>" + rows + "</tbody>" +
+                        "</table>" +
+                    "</div>"
+                );
+            };
+
+            const setNone = () => {
+                if (selectionTypeEl) selectionTypeEl.textContent = "None";
+                if (selectionTimeEl) selectionTimeEl.textContent = "Click for point query or drag for range query.";
+                if (selectionEnergyEl) selectionEnergyEl.textContent = "Energy (Vocals Stem RMS): unavailable";
+                if (selectionNotesEl) selectionNotesEl.textContent = "No selection.";
+            };
+
+            const updateSelectionInspector = (detail) => {
+                const mode = String((detail && detail.mode) || "none").trim().toLowerCase();
+                const notes = Array.isArray(detail && detail.notes) ? detail.notes : [];
+                const overlayLabel = String((detail && detail.overlayLabel) || "Vocals Stem RMS");
+
+                if (mode === "none") {
+                    setNone();
+                    return;
+                }
+
+                if (selectionTypeEl) {
+                    selectionTypeEl.textContent = mode === "range" ? "Range" : "Point";
+                }
+                if (selectionTimeEl) {
+                    if (mode === "range") {
+                        const start = asNumber(detail && detail.start, NaN);
+                        const end = asNumber(detail && detail.end, NaN);
+                        const lo = Math.min(start, end);
+                        const hi = Math.max(start, end);
+                        selectionTimeEl.textContent = Number.isFinite(lo) && Number.isFinite(hi)
+                            ? ("Range: " + formatSec(lo) + "s - " + formatSec(hi) + "s (duration " + formatSec(hi - lo) + "s)")
+                            : "Range: unavailable";
+                    } else {
+                        const time = asNumber(detail && detail.time, NaN);
+                        selectionTimeEl.textContent = Number.isFinite(time)
+                            ? ("Time: t = " + formatSec(time) + "s")
+                            : "Time: unavailable";
+                    }
+                }
+                if (selectionEnergyEl) {
+                    if (mode === "range") {
+                        const minVal = Number(detail && detail.energyMin);
+                        const meanVal = Number(detail && detail.energyMean);
+                        const maxVal = Number(detail && detail.energyMax);
+                        const countVal = Number(detail && detail.energyCount);
+                        if (
+                            Number.isFinite(minVal) &&
+                            Number.isFinite(meanVal) &&
+                            Number.isFinite(maxVal) &&
+                            Number.isFinite(countVal)
+                        ) {
+                            selectionEnergyEl.textContent =
+                                "Energy (" + overlayLabel + "): min " + minVal.toFixed(4) +
+                                ", mean " + meanVal.toFixed(4) +
+                                ", max " + maxVal.toFixed(4) +
+                                " (" + Math.round(countVal) + " frames)";
+                        } else {
+                            selectionEnergyEl.textContent = "Energy (" + overlayLabel + "): unavailable in selected range";
+                        }
+                    } else {
+                        const energyVal = Number(detail && detail.energy);
+                        const energyTime = Number(detail && detail.energySampleTime);
+                        if (Number.isFinite(energyVal) && Number.isFinite(energyTime)) {
+                            selectionEnergyEl.textContent =
+                                "Energy (" + overlayLabel + "): " + energyVal.toFixed(4) + " @ " + formatSec(energyTime) + "s";
+                        } else {
+                            selectionEnergyEl.textContent = "Energy (" + overlayLabel + "): unavailable";
+                        }
+                    }
+                }
+
+                if (!selectionNotesEl) return;
+                if (!notes.length) {
+                    selectionNotesEl.innerHTML = "<strong>Transcription:</strong> No transcription notes available.";
+                    return;
+                }
+
+                const header = detail && detail.usedNearest ? "Nearest transcription note" : "Active transcription note(s)";
+                const summary = notes.map((note) => formatNoteSymbol(note)).join(" ");
+                selectionNotesEl.innerHTML =
+                    "<strong>" + escapeHtml(header) + ":</strong> " +
+                    escapeHtml(summary) +
+                    renderNoteTable(notes);
+            };
+
+            setNone();
+            clearBtn && clearBtn.addEventListener("click", () => {
+                try {
+                    document.dispatchEvent(new CustomEvent("raga-transcription-clear-selection", { detail: {} }));
+                } catch (_err) {
+                    // Ignore dispatch failures.
+                }
+                setNone();
+            });
+
+            if (window.__RAGA_EDITOR_SELECTION_PANEL_HANDLER__) {
+                try {
+                    document.removeEventListener(
+                        "raga-transcription-selection",
+                        window.__RAGA_EDITOR_SELECTION_PANEL_HANDLER__
+                    );
+                } catch (_err) {
+                    // Ignore cleanup failures.
+                }
+            }
+
+            const handler = (evt) => {
+                if (!document.getElementById(sectionId + "-selection-inspector")) return;
+                updateSelectionInspector(evt && evt.detail ? evt.detail : {});
+            };
+            window.__RAGA_EDITOR_SELECTION_PANEL_HANDLER__ = handler;
+            document.addEventListener("raga-transcription-selection", handler);
+        }
     }
 
     function mount(options) {

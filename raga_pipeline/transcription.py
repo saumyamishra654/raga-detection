@@ -56,6 +56,7 @@ def detect_stationary_events(
     snap_mode: Literal["chromatic", "raga"] = "chromatic",
     allowed_raga_notes: Optional[List[int]] = None,
     snap_tolerance_cents: float = 35.0,
+    bias_cents: float = 0.0,
 ) -> List[TranscriptionEvent]:
     """
     Main entry point for stationary point transcription.
@@ -128,6 +129,7 @@ def detect_stationary_events(
     ends = np.where(diff == -1)[0]
     
     tonic_midi_val = _resolve_tonic(tonic)
+    bias_semitones = float(bias_cents) / 100.0 if np.isfinite(bias_cents) else 0.0
     
     for start_idx, end_idx in zip(starts, ends):
         duration = timestamps[min(end_idx, len(timestamps)-1)] - timestamps[start_idx]
@@ -142,6 +144,7 @@ def detect_stationary_events(
         median_pitch = np.median(segment_pitches)
         if not np.isfinite(median_pitch):
             continue
+        median_pitch = float(median_pitch - bias_semitones)
         
         # Calculate mean energy for the segment
         mean_energy = 0.0
@@ -409,6 +412,7 @@ def transcribe_to_notes(
     allowed_raga_notes: Optional[List[int]] = None,
     snap_tolerance_cents: float = 35.0,
     transcription_min_duration: float = 0.0,  # Alias for min_event_duration if passed via explicit config
+    bias_cents: float = 0.0,
 ) -> List[Note]:
     """
     Unified entry point: Combines Stationary Events + Inflection Points.
@@ -443,6 +447,7 @@ def transcribe_to_notes(
         snap_mode=snap_mode,
         allowed_raga_notes=allowed_raga_notes,
         snap_tolerance_cents=snap_tolerance_cents,
+        bias_cents=bias_cents,
     )
     
     # 2. Inflection Points
@@ -500,9 +505,10 @@ def transcribe_to_notes(
     point_duration = 0.01 
     
     tonic_midi_val = _resolve_tonic(tonic)
+    bias_semitones = float(bias_cents) / 100.0 if np.isfinite(bias_cents) else 0.0
     
     for t, p in zip(inf_times, inf_pitches):
-        raw_pitch = float(p)
+        raw_pitch = float(p - bias_semitones)
         sampled_energy = _sample_energy_at_time(
             float(t),
             aligned_energy_values,
@@ -513,7 +519,7 @@ def transcribe_to_notes(
 
         # Still snap inflection points so they can show sargam labels.
         snapped, _, sargam, keep_note = _snap_pitch(
-            p, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
+            raw_pitch, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
         )
         if not keep_note or snapped is None:
             continue

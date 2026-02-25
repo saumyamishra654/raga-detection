@@ -734,6 +734,7 @@ def plot_pitch_with_sargam_lines(
     output_path: str,
     figsize: Tuple[int, int] = (15, 6),
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
+    bias_cents: Optional[float] = None,
 ):
     """
     Plot pitch contour with sargam lines.
@@ -741,9 +742,12 @@ def plot_pitch_with_sargam_lines(
     """
     plt.figure(figsize=figsize)
 
+    bias_semitones = (float(bias_cents) / 100.0) if bias_cents is not None else 0.0
+    pitch_plot_values = np.asarray(pitch_values, dtype=float) - bias_semitones
+
     # Phrase regions: translucent yellow blocks with clear boundaries/labels.
     if phrase_ranges:
-        y_top_for_labels = float(np.nanmax(pitch_values)) + 0.4
+        y_top_for_labels = float(np.nanmax(pitch_plot_values)) + 0.4
         for idx, (start_t, end_t) in enumerate(phrase_ranges):
             if not np.isfinite(start_t) or not np.isfinite(end_t) or end_t <= start_t:
                 continue
@@ -771,14 +775,14 @@ def plot_pitch_with_sargam_lines(
             )
 
     # Plot pitch
-    plt.plot(time_axis, pitch_values, label='Pitch', color='blue', alpha=0.6, linewidth=1, zorder=2)
+    plt.plot(time_axis, pitch_plot_values, label='Pitch', color='blue', alpha=0.6, linewidth=1, zorder=2)
     
     # Clean tonic
     tonic_val = _parse_tonic(tonic) if isinstance(tonic, str) else int(tonic)
     
     # Sargam lines
-    start_midi = int(np.nanmin(pitch_values)) - 1
-    end_midi = int(np.nanmax(pitch_values)) + 1
+    start_midi = int(np.nanmin(pitch_plot_values)) - 1
+    end_midi = int(np.nanmax(pitch_plot_values)) + 1
     
     for midi_note in range(start_midi, end_midi + 1):
         offset = (midi_note - tonic_val) % 12
@@ -3660,6 +3664,7 @@ def plot_pitch_wide_to_base64_with_legend(
     overlay_label: str = "RMS Energy",
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
     transcription_notes: Optional[List[Note]] = None,
+    bias_cents: Optional[float] = None,
 ) -> Tuple[str, str, int, float, float, float, float]:
     """
     Generate wide pitch contour and overlay sargam lines, returning base64 images.
@@ -3676,8 +3681,13 @@ def plot_pitch_wide_to_base64_with_legend(
     """
     import io
     import base64
+    import math
     import re
     from matplotlib.ticker import MultipleLocator
+
+    DEFAULT_SECONDS_AT_BASE_WIDTH = 200.0
+    MIN_PLOT_WIDTH_PX = 1200
+    TARGET_MAJOR_TICKS = 220
 
     def _hz_to_midi(values: np.ndarray) -> np.ndarray:
         safe = np.asarray(values, dtype=float)
@@ -3751,8 +3761,31 @@ def plot_pitch_wide_to_base64_with_legend(
          # Return empty placeholders
          return "", "", 100, 0.0, 1.0, 0.0, 1.0
 
-    voiced_midi = _hz_to_midi(pitch_hz[voiced_mask])
+    bias_semitones = (float(bias_cents) / 100.0) if bias_cents is not None else 0.0
+    voiced_midi = _hz_to_midi(pitch_hz[voiced_mask]) - bias_semitones
     voiced_midi_rounded = np.round(voiced_midi).astype(int)
+
+    x_axis_start = 0.0
+    x_axis_end = max(float(timestamps[-1]), 1.0)
+    duration_seconds = max(x_axis_end - x_axis_start, 1.0)
+
+    # Keep horizontal scale strictly proportional to recording length.
+    base_width_px = max(int(figsize_width * dpi), MIN_PLOT_WIDTH_PX)
+    pixels_per_second = base_width_px / DEFAULT_SECONDS_AT_BASE_WIDTH
+    pixel_width = max(int(round(duration_seconds * pixels_per_second)), MIN_PLOT_WIDTH_PX)
+    dynamic_figsize_width = pixel_width / float(dpi)
+
+    def _pick_major_tick_step(total_seconds: float) -> float:
+        candidates = [
+            2, 5, 10, 15, 20, 30,
+            60, 120, 180, 300, 600,
+            900, 1200, 1800,
+        ]
+        for step in candidates:
+            if (total_seconds / step) <= TARGET_MAJOR_TICKS:
+                return float(step)
+        coarse = max(total_seconds / TARGET_MAJOR_TICKS, 1800.0)
+        return float(math.ceil(coarse / 1800.0) * 1800.0)
     
     # Calculate range dynamically based on data min/max
     data_min = np.min(voiced_midi)
@@ -3764,7 +3797,7 @@ def plot_pitch_wide_to_base64_with_legend(
     rng = np.arange(int(np.floor(min_m)), int(np.ceil(max_m)) + 1)
     
     # --- Main Plot ---
-    fig, ax = plt.subplots(figsize=(figsize_width, figsize_height), dpi=dpi)
+    fig, ax = plt.subplots(figsize=(dynamic_figsize_width, figsize_height), dpi=dpi)
     fig.subplots_adjust(left=0.005, right=0.995, top=0.95, bottom=0.1) # Min margins
 
     # Phrase regions in yellow so phrase boundaries are visible on the scroll plot.
@@ -3945,6 +3978,7 @@ def plot_pitch_wide_to_base64_with_legend(
                 smoothing_sigma_ms=transcription_smoothing_ms,
                 derivative_threshold=transcription_derivative_threshold,
                 min_event_duration=transcription_min_duration
+                ,bias_cents=(bias_cents or 0.0)
             )
         except Exception:
             transcription_events = []
@@ -4023,12 +4057,10 @@ def plot_pitch_wide_to_base64_with_legend(
             ax.plot(e_times, scaled_e, color='darkcyan', linewidth=0.6, alpha=0.4, zorder=0)
 
     ax.set_ylim(min_m - 1, max_m + 1)
-    x_axis_start = 0.0
-    x_axis_end = max(float(timestamps[-1]), 1.0)
     ax.set_xlim(x_axis_start, x_axis_end)
     ax.set_xlabel('Time (s)')
     ax.grid(alpha=0.3)
-    ax.xaxis.set_major_locator(MultipleLocator(2)) # Tick every 2 seconds
+    ax.xaxis.set_major_locator(MultipleLocator(_pick_major_tick_step(duration_seconds)))
     ax.set_title(f"Pitch Contour Analysis ({raga_name} / {tonic_label})")
 
     # Horizontal Lines
@@ -4056,8 +4088,6 @@ def plot_pitch_wide_to_base64_with_legend(
     fig.savefig(buf, format='png', dpi=dpi, transparent=False)
     plt.close(fig)
     plot_b64 = base64.b64encode(buf.getvalue()).decode('ascii')
-    pixel_width = int(figsize_width * dpi)
-
     # --- Legend Plot (Sticky Side) ---
     legend_fig, legend_ax = plt.subplots(figsize=(2, figsize_height), dpi=dpi)
     legend_fig.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.1)
@@ -4110,6 +4140,7 @@ def create_scrollable_pitch_plot_html(
     overlay_label: str = "RMS Energy",
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
     transcription_notes: Optional[List[Note]] = None,
+    bias_cents: Optional[float] = None,
 ) -> str:
     """
     Create HTML component for scrollable pitch plot with audio sync.
@@ -4134,6 +4165,7 @@ def create_scrollable_pitch_plot_html(
         overlay_label=overlay_label,
         phrase_ranges=phrase_ranges,
         transcription_notes=transcription_notes,
+        bias_cents=bias_cents,
     )
     
     if not plot_b64:
@@ -4171,6 +4203,8 @@ def create_scrollable_pitch_plot_html(
         if np.any(valid):
             ts_valid = ts_arr[valid]
             midi_valid = 69.0 + 12.0 * np.log2(np.maximum(hz_arr[valid], 1e-6) / 440.0)
+            if bias_cents is not None:
+                midi_valid = midi_valid - (float(bias_cents) / 100.0)
             for ts_val, midi_val in zip(ts_valid.tolist(), midi_valid.tolist()):
                 safe_ts = _safe_json_float(ts_val)
                 safe_midi = _safe_json_float(midi_val)
@@ -6039,6 +6073,7 @@ def generate_analysis_report(
                         overlay_label=f"{e_label} RMS",
                         phrase_ranges=phrase_ranges,
                         transcription_notes=results.notes,
+                        bias_cents=results.gmm_bias_cents,
                     )
                 except Exception as e:
                     scroll_plot_html = (

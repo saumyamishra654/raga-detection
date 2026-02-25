@@ -689,7 +689,8 @@ def run_pipeline(
             min_event_duration=config.transcription_min_duration,
             derivative_threshold=config.transcription_derivative_threshold,
             snap_mode='chromatic', # Or 'raga' if we wanted strict snapping here
-            transcription_min_duration=config.transcription_min_duration
+            transcription_min_duration=config.transcription_min_duration,
+            bias_cents=results.gmm_bias_cents or 0.0,
         )
         print(f"  Detected {len(raw_notes)} raw notes")
 
@@ -891,6 +892,7 @@ def run_pipeline(
             raga_name,
             pp_path,
             phrase_ranges=[(phrase.start, phrase.end) for phrase in results.phrases if phrase.end > phrase.start],
+            bias_cents=results.gmm_bias_cents,
         )
         print(f"  Saved: {pp_path}")
 

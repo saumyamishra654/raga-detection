@@ -90,6 +90,9 @@ class AnalysisResults:
     phrases: List[Phrase] = field(default_factory=_new_phrases)
     phrase_clusters: Dict[int, List[Phrase]] = field(default_factory=_new_phrase_clusters)
     transition_matrix: Optional[np.ndarray] = None
+    transcription_derivative_timestamps: Optional[np.ndarray] = None
+    transcription_derivative_values: Optional[np.ndarray] = None
+    transcription_derivative_voiced_mask: Optional[np.ndarray] = None
     
     # Plot paths
     plot_paths: Dict[str, str] = field(default_factory=_new_plot_paths)
@@ -3657,7 +3660,7 @@ def plot_pitch_wide_to_base64_with_legend(
     figsize_width: int = 80, 
     figsize_height: int = 7, 
     dpi: int = 100, 
-    join_gap_threshold: float = 1.0,
+    join_gap_threshold: float = 0.3,
     show_rms_overlay: bool = True,
     overlay_energy: Optional[np.ndarray] = None,
     overlay_timestamps: Optional[np.ndarray] = None,
@@ -4141,6 +4144,9 @@ def create_scrollable_pitch_plot_html(
     phrase_ranges: Optional[List[Tuple[float, float]]] = None,
     transcription_notes: Optional[List[Note]] = None,
     bias_cents: Optional[float] = None,
+    hover_pitch_derivative_timestamps: Optional[np.ndarray] = None,
+    hover_pitch_derivative_values: Optional[np.ndarray] = None,
+    hover_pitch_derivative_voiced_mask: Optional[np.ndarray] = None,
 ) -> str:
     """
     Create HTML component for scrollable pitch plot with audio sync.
@@ -4216,6 +4222,32 @@ def create_scrollable_pitch_plot_html(
         # Hover pitch sampling is optional; fallback keeps inspector functional.
         hover_pitch_timestamps_payload = []
         hover_pitch_midi_payload = []
+
+    hover_derivative_timestamps_payload: List[float] = []
+    hover_derivative_values_payload: List[float] = []
+    try:
+        if (
+            hover_pitch_derivative_timestamps is not None
+            and hover_pitch_derivative_values is not None
+        ):
+            d_ts = np.asarray(hover_pitch_derivative_timestamps, dtype=float)
+            d_values = np.asarray(hover_pitch_derivative_values, dtype=float)
+            valid = np.isfinite(d_ts) & np.isfinite(d_values)
+            if hover_pitch_derivative_voiced_mask is not None:
+                d_voiced = np.asarray(hover_pitch_derivative_voiced_mask, dtype=bool)
+                if d_voiced.shape == valid.shape:
+                    valid = valid & d_voiced
+            if np.any(valid):
+                for ts_val, d_val in zip(d_ts[valid].tolist(), d_values[valid].tolist()):
+                    safe_ts = _safe_json_float(ts_val)
+                    safe_d = _safe_json_float(d_val)
+                    if safe_ts is None or safe_d is None:
+                        continue
+                    hover_derivative_timestamps_payload.append(safe_ts)
+                    hover_derivative_values_payload.append(safe_d)
+    except Exception:
+        hover_derivative_timestamps_payload = []
+        hover_derivative_values_payload = []
 
     try:
         tonic_pitch_class = (
@@ -4315,6 +4347,8 @@ def create_scrollable_pitch_plot_html(
         const overlayEnergyTimestamps = {json.dumps(overlay_timestamps_payload)};
         const hoverPitchTimestamps = {json.dumps(hover_pitch_timestamps_payload)};
         const hoverPitchMidi = {json.dumps(hover_pitch_midi_payload)};
+        const hoverDerivativeTimestamps = {json.dumps(hover_derivative_timestamps_payload)};
+        const hoverDerivativeValues = {json.dumps(hover_derivative_values_payload)};
         const transcriptionNotesRaw = {json.dumps(note_payload)};
         const phraseRangesRaw = {json.dumps(phrase_payload)};
         const overlayLabel = {json.dumps(overlay_label)};
@@ -4446,6 +4480,16 @@ def create_scrollable_pitch_plot_html(
                 }}
             }}
 
+            const derivativeFrames = [];
+            const derivativeFrameCount = Math.min(hoverDerivativeTimestamps.length, hoverDerivativeValues.length);
+            for (let i = 0; i < derivativeFrameCount; i += 1) {{
+                const ts = Number(hoverDerivativeTimestamps[i]);
+                const d = Number(hoverDerivativeValues[i]);
+                if (isFinite(ts) && isFinite(d)) {{
+                    derivativeFrames.push({{ t: ts, d: d }});
+                }}
+            }}
+
             const transcriptionNotes = transcriptionNotesRaw
                 .map(function(note) {{
                     const start = Number(note.start);
@@ -4558,6 +4602,49 @@ def create_scrollable_pitch_plot_html(
                     idx = idx - 1;
                 }}
                 return pitchFrames[idx];
+            }}
+
+            function nearestDerivativeSample(t) {{
+                if (!derivativeFrames.length) {{
+                    return null;
+                }}
+
+                let lo = 0;
+                let hi = derivativeFrames.length - 1;
+                while (lo < hi) {{
+                    const mid = Math.floor((lo + hi) / 2);
+                    if (derivativeFrames[mid].t < t) {{
+                        lo = mid + 1;
+                    }} else {{
+                        hi = mid;
+                    }}
+                }}
+
+                let idx = lo;
+                if (
+                    idx > 0 &&
+                    Math.abs(derivativeFrames[idx - 1].t - t) <= Math.abs(derivativeFrames[idx].t - t)
+                ) {{
+                    idx = idx - 1;
+                }}
+                return derivativeFrames[idx];
+            }}
+
+            function hoverPitchDerivativeLineHtml(derivativeSample) {{
+                if (!derivativeSample || !isFinite(derivativeSample.d)) {{
+                    return "<div style='margin-top:4px; color:#8b949e;'><strong>Pitch derivative @ t:</strong> unavailable</div>";
+                }}
+
+                const semitonesPerSec = derivativeSample.d;
+                const centsPerSec = semitonesPerSec * 100.0;
+                const semitoneText = (semitonesPerSec >= 0 ? "+" : "") + semitonesPerSec.toFixed(3);
+                const centsText = (centsPerSec >= 0 ? "+" : "") + centsPerSec.toFixed(1);
+                return (
+                    "<div style='margin-top:4px;'>" +
+                    "<strong>Pitch derivative @ t:</strong> " +
+                    "<span>" + escapeHtml(semitoneText) + " st/s (" + escapeHtml(centsText) + " c/s)</span>" +
+                    "</div>"
+                );
             }}
 
             function midiToWesternLabel(midi) {{
@@ -5027,6 +5114,7 @@ def create_scrollable_pitch_plot_html(
                 const x = clamp(plotX, plotStartPx, plotEndPx);
                 const t = xToTime(x);
                 const pitchSample = nearestPitchSample(t);
+                const derivativeSample = nearestDerivativeSample(t);
                 const resolved = resolveNotesAtTime(t);
                 const notes = resolved.notes;
 
@@ -5043,6 +5131,7 @@ def create_scrollable_pitch_plot_html(
 
                 const nearestTag = resolved.usedNearest ? " (nearest)" : "";
                 const pitchLine = hoverPitchLineHtml(pitchSample);
+                const derivativeLine = hoverPitchDerivativeLineHtml(derivativeSample);
                 let noteSection = "<div style='margin-top:4px; color:#8b949e;'><strong>Nearest transcribed note:</strong> unavailable</div>";
                 if (notes.length) {{
                     const noteHeader = resolved.usedNearest
@@ -5075,6 +5164,7 @@ def create_scrollable_pitch_plot_html(
                 hoverTooltip.innerHTML =
                     "<div><strong>t=" + escapeHtml(formatSeconds(t)) + "s" + escapeHtml(nearestTag) + "</strong></div>" +
                     pitchLine +
+                    derivativeLine +
                     noteSection;
 
                 const maxLeft = Math.max(0, pixelWidth - 340);
@@ -5875,6 +5965,11 @@ def _build_analysis_report_metadata(
             results.phrases,
             tonic_for_editor,
         ),
+        "transcription_derivative_profile": {
+            "timestamps": _to_json_compatible(results.transcription_derivative_timestamps),
+            "values": _to_json_compatible(results.transcription_derivative_values),
+            "voiced_mask": _to_json_compatible(results.transcription_derivative_voiced_mask),
+        },
     }
     return _to_json_compatible(metadata)
 
@@ -6057,6 +6152,19 @@ def generate_analysis_report(
                     continue
                 overlay_visible = (key == default_track_key and e_key == default_energy_key)
 
+                derivative_timestamps_for_plot: Optional[np.ndarray] = None
+                derivative_values_for_plot: Optional[np.ndarray] = None
+                derivative_voiced_for_plot: Optional[np.ndarray] = None
+                if (
+                    results.transcription_derivative_timestamps is not None
+                    and results.transcription_derivative_values is not None
+                    and results.pitch_data_vocals is not None
+                    and pitch_data is results.pitch_data_vocals
+                ):
+                    derivative_timestamps_for_plot = results.transcription_derivative_timestamps
+                    derivative_values_for_plot = results.transcription_derivative_values
+                    derivative_voiced_for_plot = results.transcription_derivative_voiced_mask
+
                 try:
                     scroll_plot_html = create_scrollable_pitch_plot_html(
                         pitch_data,
@@ -6074,6 +6182,9 @@ def generate_analysis_report(
                         phrase_ranges=phrase_ranges,
                         transcription_notes=results.notes,
                         bias_cents=results.gmm_bias_cents,
+                        hover_pitch_derivative_timestamps=derivative_timestamps_for_plot,
+                        hover_pitch_derivative_values=derivative_values_for_plot,
+                        hover_pitch_derivative_voiced_mask=derivative_voiced_for_plot,
                     )
                 except Exception as e:
                     scroll_plot_html = (

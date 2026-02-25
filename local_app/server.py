@@ -1198,6 +1198,18 @@ def _render_edited_report(
     results.pitch_data_vocals = results.pitch_data_stem
     results.pitch_data_accomp = _load_pitch_from_context(base_dir, context, "accompaniment")
 
+    derivative_blob = context.get("transcription_derivative_profile", {})
+    if isinstance(derivative_blob, dict):
+        ts_vals = derivative_blob.get("timestamps")
+        d_vals = derivative_blob.get("values")
+        voiced_vals = derivative_blob.get("voiced_mask")
+        if isinstance(ts_vals, list):
+            results.transcription_derivative_timestamps = ts_vals
+        if isinstance(d_vals, list):
+            results.transcription_derivative_values = d_vals
+        if isinstance(voiced_vals, list):
+            results.transcription_derivative_voiced_mask = voiced_vals
+
     plot_paths_blob = context.get("plot_paths", {})
     plot_paths: Dict[str, str] = {}
     if isinstance(plot_paths_blob, dict):

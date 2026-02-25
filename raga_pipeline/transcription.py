@@ -15,7 +15,7 @@ Key Concepts:
 """
 
 from dataclasses import dataclass
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 import math
 import numpy as np
 import librosa
@@ -57,6 +57,7 @@ def detect_stationary_events(
     allowed_raga_notes: Optional[List[int]] = None,
     snap_tolerance_cents: float = 35.0,
     bias_cents: float = 0.0,
+    derivative_profile_out: Optional[Dict[str, np.ndarray]] = None,
 ) -> List[TranscriptionEvent]:
     """
     Main entry point for stationary point transcription.
@@ -115,6 +116,10 @@ def detect_stationary_events(
     # d(pitch) / dt (semitones per second)
     # np.gradient uses central differences to keep the derivative smooth.
     d_pitch = np.gradient(smoothed_midi, timestamps)
+    if derivative_profile_out is not None:
+        derivative_profile_out["timestamps"] = np.asarray(timestamps, dtype=float).copy()
+        derivative_profile_out["values"] = np.asarray(d_pitch, dtype=float).copy()
+        derivative_profile_out["voiced_mask"] = np.asarray(voicing_mask, dtype=bool).copy()
     
     # 4. Find Stable Regions
     # Condition: Voiced AND |Derivative| < Threshold
@@ -413,6 +418,7 @@ def transcribe_to_notes(
     snap_tolerance_cents: float = 35.0,
     transcription_min_duration: float = 0.0,  # Alias for min_event_duration if passed via explicit config
     bias_cents: float = 0.0,
+    derivative_profile_out: Optional[Dict[str, np.ndarray]] = None,
 ) -> List[Note]:
     """
     Unified entry point: Combines Stationary Events + Inflection Points.
@@ -448,6 +454,7 @@ def transcribe_to_notes(
         allowed_raga_notes=allowed_raga_notes,
         snap_tolerance_cents=snap_tolerance_cents,
         bias_cents=bias_cents,
+        derivative_profile_out=derivative_profile_out,
     )
     
     # 2. Inflection Points

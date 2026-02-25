@@ -678,6 +678,7 @@ def run_pipeline(
         # Note detection
         # Note detection - Unified Transcription
         print(f"  Using Unified Transcription (Stationary + Inflection)")
+        derivative_profile = {}
         raw_notes = transcription.transcribe_to_notes(
             pitch_hz=results.pitch_data_vocals.pitch_hz,
             timestamps=results.pitch_data_vocals.timestamps,
@@ -691,7 +692,11 @@ def run_pipeline(
             snap_mode='chromatic', # Or 'raga' if we wanted strict snapping here
             transcription_min_duration=config.transcription_min_duration,
             bias_cents=results.gmm_bias_cents or 0.0,
+            derivative_profile_out=derivative_profile,
         )
+        results.transcription_derivative_timestamps = derivative_profile.get("timestamps")
+        results.transcription_derivative_values = derivative_profile.get("values")
+        results.transcription_derivative_voiced_mask = derivative_profile.get("voiced_mask")
         print(f"  Detected {len(raw_notes)} raw notes")
 
         stationary_count = sum(1 for n in raw_notes if n.confidence >= 0.99)

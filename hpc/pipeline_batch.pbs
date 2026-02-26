@@ -15,8 +15,8 @@
 PROJECT_ROOT="/storage/saumya.mishra_ug25/audio_project"
 REPO_DIR="/storage/saumya.mishra_ug25/audio_project/raga-detection"
 INPUT_DIR="${PROJECT_ROOT}/RagaDataset"
-OUTPUT_DIR="${PROJECT_ROOT}/batch_results_v2"
-GROUND_TRUTH="${INPUT_DIR}/RagaDataset_gt.csv"
+OUTPUT_DIR="${PROJECT_ROOT}/stems"
+GROUND_TRUTH="${PROJECT_ROOT}/raga-detection/main notebooks/ground truth/ground_truth_v6.csv"
 MAX_FILES_PER_RUN=300
 PYTHON_ENV_ACTIVATE="/apps/miniconda3/etc/profile.d/conda.sh"
 CONDA_ENV_NAME="raga310"

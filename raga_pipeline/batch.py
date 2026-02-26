@@ -111,14 +111,18 @@ def load_ground_truth(csv_path: str) -> Dict[str, dict]:
 
             raga_col = find_col('raga')
             tonic_col = find_col('tonic')
-            inst_col = find_col('instrument_type')
-            gender_col = find_col('vocalist_gender')
+            # Match both 'instrument_type' and bare 'instrument' column names
+            inst_col = find_col('instrument_type') or find_col('instrument')
+            # Match both 'vocalist_gender' and bare 'gender' column names
+            gender_col = find_col('vocalist_gender') or find_col('gender')
             source_col = find_col('source_type')
             melody_col = find_col('melody_source')
             
             for row in reader:
-                # clean filename (basename only)
-                fname = os.path.basename(row[name_col]).strip()
+                # clean filename (basename only, strip extension so lookup works
+                # regardless of whether audio files are .mp3/.wav/.m4a etc.)
+                raw = os.path.basename(row[name_col]).strip()
+                fname = os.path.splitext(raw)[0] if '.' in raw else raw
                 
                 entry = {}
                 if raga_col and row[raga_col]: entry['raga'] = row[raga_col].strip()
@@ -315,7 +319,9 @@ def process_directory(
         fname = os.path.basename(audio_path)
         print(f"\n[{i+1}/{len(tasks_to_run)}] Processing: {fname}")
 
-        gt_info = gt_data.get(fname, {})
+        # GT keys are stored without extension; try stem name if full name not found
+        fname_stem = os.path.splitext(fname)[0]
+        gt_info = gt_data.get(fname, gt_data.get(fname_stem, {}))
         cmd, effective_mode = _build_pipeline_cmd(
             audio_path=audio_path,
             output_dir=output_dir,

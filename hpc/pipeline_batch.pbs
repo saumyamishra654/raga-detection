@@ -18,7 +18,8 @@ INPUT_DIR="${PROJECT_ROOT}/RagaDataset"
 OUTPUT_DIR="${PROJECT_ROOT}/batch_results_v2"
 GROUND_TRUTH="${INPUT_DIR}/RagaDataset_gt.csv"
 MAX_FILES_PER_RUN=300
-PYTHON_ENV_ACTIVATE="/storage/saumya.mishra_ug25/audio_project/demucs_env/bin/activate"
+PYTHON_ENV_ACTIVATE="/apps/miniconda3/etc/profile.d/conda.sh"
+CONDA_ENV_NAME="raga310"
 FFMPEG_BIN_DIR="/storage/saumya.mishra_ug25/audio_project/ffmpeg_tools/bin"
 SELF_PBS_PATH="${REPO_DIR}/hpc/pipeline_batch.pbs"
 QUEUE_SUBMIT_CMD="qsub"
@@ -26,8 +27,9 @@ QUEUE_SUBMIT_CMD="qsub"
 # Always run from repository root so `python -m raga_pipeline.batch` resolves.
 cd "$REPO_DIR" || exit 1
 
-# Activate Python environment
+# Activate conda environment
 source "$PYTHON_ENV_ACTIVATE" || exit 1
+conda activate "$CONDA_ENV_NAME" || exit 1
 
 # Optional ffmpeg path injection (enabled by default, safe if already on PATH)
 if [ -d "$FFMPEG_BIN_DIR" ]; then

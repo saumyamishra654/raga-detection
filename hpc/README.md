@@ -26,7 +26,8 @@ Specifically: explicit env activation, optional ffmpeg PATH injection, exit-code
 
 - Current default requests one GPU:
 	- `#PBS -q gpu`
-	- `#PBS -l select=1:ncpus=4:ngpus=1:mem=24gb`
+	- `#PBS -l select=1:ncpus=4:gpus=1:mem=24gb`
+	  (Adjust the `gpus` resource name if your scheduler exposes it differently; consult `qstat -Q` or `pbsnodes -a` to list available feature names.)
 
 3. Submit:
 

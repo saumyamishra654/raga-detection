@@ -1,32 +1,51 @@
 #!/bin/bash
 #PBS -N raga_batch
 #PBS -q gpu
-#PBS -l select=1:ncpus=4:mem=24gb
+#PBS -l select=1:ncpus=4:ngpus=1:mem=24gb
 #PBS -l walltime=24:00:00
 #PBS -o logs/
 #PBS -e logs/
 
-# Example PBS wrapper for chunked + resumable batch runs.
-# It uses raga_pipeline.batch checkpointing and exits with 99 when work remains.
+# ==========================================
+# Configuration (legacy-wrap compatible)
+# ==========================================
+# Keep these variables aligned with your older scripts in
+# capstone misc/scripts/wrap.pbs and f0shell.pbs.
 
 PROJECT_ROOT="/storage/saumya.mishra_ug25/audio_project"
 REPO_DIR="/storage/saumya.mishra_ug25/audio_project/raga-detection"
 INPUT_DIR="${PROJECT_ROOT}/RagaDataset"
-OUTPUT_DIR="${PROJECT_ROOT}/batch_results"
+OUTPUT_DIR="${PROJECT_ROOT}/batch_results_v2"
 GROUND_TRUTH="${INPUT_DIR}/RagaDataset_gt.csv"
 MAX_FILES_PER_RUN=300
 PYTHON_ENV_ACTIVATE="/storage/saumya.mishra_ug25/audio_project/demucs_env/bin/activate"
-SELF_PBS_PATH="hpc/pipeline_batch.pbs"
+FFMPEG_BIN_DIR="/storage/saumya.mishra_ug25/audio_project/ffmpeg_tools/bin"
+SELF_PBS_PATH="${REPO_DIR}/hpc/pipeline_batch.pbs"
+QUEUE_SUBMIT_CMD="qsub"
 
+# Always run from repository root so `python -m raga_pipeline.batch` resolves.
 cd "$REPO_DIR" || exit 1
-source "$PYTHON_ENV_ACTIVATE"
 
-# Optional: if ffmpeg is not globally available on the cluster
-# export PATH="/storage/saumya.mishra_ug25/audio_project/ffmpeg_tools/bin:$PATH"
+# Activate Python environment
+source "$PYTHON_ENV_ACTIVATE" || exit 1
+
+# Optional ffmpeg path injection (enabled by default, safe if already on PATH)
+if [ -d "$FFMPEG_BIN_DIR" ]; then
+  export PATH="$FFMPEG_BIN_DIR:$PATH"
+fi
 
 mkdir -p logs
 echo "Job ID: $PBS_JOBID"
 echo "Node: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Python: $(command -v python3)"
+
+# Optional GPU visibility check (legacy script parity)
+if command -v nvidia-smi >/dev/null 2>&1; then
+  echo "--- GPU STATUS ---"
+  nvidia-smi || true
+  echo "------------------"
+fi
 
 python3 -m raga_pipeline.batch \
   "$INPUT_DIR" \
@@ -39,9 +58,12 @@ python3 -m raga_pipeline.batch \
 EXIT_CODE=$?
 echo "Batch run exited with code: $EXIT_CODE"
 
+# ==========================================
+# Resubmission Logic
+# ==========================================
 if [ $EXIT_CODE -eq 99 ]; then
   echo "Work remains; resubmitting."
-  qsub "$SELF_PBS_PATH"
+  $QUEUE_SUBMIT_CMD "$SELF_PBS_PATH"
 elif [ $EXIT_CODE -eq 0 ]; then
   echo "All files processed."
 else

@@ -24,10 +24,10 @@ Specifically: explicit env activation, optional ffmpeg PATH injection, exit-code
 
 2. Confirm GPU resource line in `hpc/pipeline_batch.pbs` matches your need:
 
-- Current default requests one GPU:
+- Current default requests the GPU queue:
 	- `#PBS -q gpu`
-	- `#PBS -l select=1:ncpus=4:gpus=1:mem=24gb`
-	  (Adjust the `gpus` resource name if your scheduler exposes it differently; consult `qstat -Q` or `pbsnodes -a` to list available feature names.)
+	- `#PBS -l select=1:ncpus=4:mem=24gb`
+	  (GPU allocation is controlled by the queue policy, not a `gpus=` chunk resource. The Ashoka `gpu` queue assigns GPU nodes automatically.)
 
 3. Submit:
 

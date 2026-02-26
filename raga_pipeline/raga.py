@@ -18,7 +18,7 @@ import re
 import numpy as np
 import pandas as pd
 import librosa
-from .sequence import Note
+from .sequence import Note, midi_to_sargam
 
 from .config import PipelineConfig
 from .audio import PitchData
@@ -773,68 +773,115 @@ def snap_to_raga_notes(
     """
     Snap MIDI notes to the nearest valid raga notes.
     """
-    corrected_midi = []
-    correction_info = []
-    
+    corrected_midi: List[float] = []
+    correction_info: List[dict] = []
+    valid_pcs_sorted = sorted({int(pc) % 12 for pc in valid_pcs})
+
+    if not valid_pcs_sorted:
+        for original_midi in midi_notes:
+            if np.isnan(original_midi):
+                corrected_midi.append(float("nan"))
+                correction_info.append({
+                    'original_midi': float("nan"),
+                    'action': 'discarded'
+                })
+                continue
+            corrected_midi.append(float(original_midi))
+            correction_info.append(
+                {
+                    'original_midi': float(original_midi),
+                    'corrected_midi': float(original_midi),
+                    'distance': 0.0,
+                    'action': 'unchanged_far',
+                    'closest_pc': int(round(float(original_midi))) % 12,
+                }
+            )
+        return np.array(corrected_midi), correction_info
+
+    prev_corrected: Optional[float] = None
+    eps = 1e-9
+
     for original_midi in midi_notes:
         if np.isnan(original_midi):
-            continue
-            
-        original_pc = int(round(original_midi)) % 12
-        octave = int(round(original_midi)) // 12
-        
-        # Find closest valid PC
-        distances = []
-        for valid_pc in valid_pcs:
-            dist1 = abs(original_pc - valid_pc)
-            dist2 = 12 - dist1
-            min_dist = min(dist1, dist2)
-            distances.append((min_dist, valid_pc))
-        
-        min_distance, closest_pc = min(distances, key=lambda x: x[0])
-        
-        # Discard if too far
-        if discard_far and min_distance > max_distance:
+            corrected_midi.append(float("nan"))
             correction_info.append({
-                'original_midi': original_midi,
+                'original_midi': float("nan"),
                 'action': 'discarded'
             })
             continue
-            
-        # Correct logic
-        if min_distance <= max_distance:
-            # Reconstruct MIDI note in correct octave
-            # We want closest MIDI note to original_midi that has pitch class closest_pc
-            # Easy way: round original to nearest (octave*12 + closest_pc) equivalents
-            
-            # Candidates: (octave-1), octave, (octave+1)
-            candidates = [
-                (octave - 1) * 12 + closest_pc,
-                octave * 12 + closest_pc,
-                (octave + 1) * 12 + closest_pc
+
+        original_midi_f = float(original_midi)
+        center_oct = int(round(original_midi_f)) // 12
+
+        candidates: List[Tuple[float, int]] = []
+        for oct_shift in (-1, 0, 1):
+            octave = center_oct + oct_shift
+            for pc in valid_pcs_sorted:
+                candidate_midi = float(octave * 12 + pc)
+                candidates.append((candidate_midi, pc))
+
+        if not candidates:
+            # Defensive fallback; practically unreachable with non-empty valid_pcs_sorted.
+            corrected_midi.append(original_midi_f)
+            correction_info.append(
+                {
+                    'original_midi': original_midi_f,
+                    'corrected_midi': original_midi_f,
+                    'distance': 0.0,
+                    'action': 'unchanged_far',
+                    'closest_pc': int(round(original_midi_f)) % 12,
+                }
+            )
+            continue
+
+        # 1) Primary key: nearest by continuous MIDI distance.
+        dist_candidates = [
+            (abs(candidate_midi - original_midi_f), candidate_midi, pc)
+            for candidate_midi, pc in candidates
+        ]
+        min_dist = min(item[0] for item in dist_candidates)
+        nearest = [item for item in dist_candidates if abs(item[0] - min_dist) <= eps]
+
+        # 2) Tie-breaker: melodic continuity to previous accepted correction.
+        if len(nearest) > 1 and prev_corrected is not None:
+            continuity_dist = [abs(item[1] - prev_corrected) for item in nearest]
+            min_cont = min(continuity_dist)
+            nearest = [
+                item for item in nearest
+                if abs(abs(item[1] - prev_corrected) - min_cont) <= eps
             ]
-            
-            corrected_midi_note = min(candidates, key=lambda x: abs(x - original_midi))
-            
-            action = 'corrected' if min_distance > 0 else 'unchanged'
-            corrected_midi.append(corrected_midi_note)
+
+        # 3) Final tie-breaker: prefer higher note.
+        best_dist, best_midi, best_pc = max(nearest, key=lambda item: item[1])
+
+        if discard_far and best_dist > max_distance:
             correction_info.append({
-                'original_midi': original_midi,
-                'corrected_midi': corrected_midi_note,
-                'distance': min_distance,
-                'action': action,
-                'closest_pc': closest_pc
+                'original_midi': original_midi_f,
+                'action': 'discarded'
             })
-        else:
-            # Keep original if not discarding but too far to snap (fallback)
-            corrected_midi.append(original_midi)
+            continue
+
+        if best_dist <= max_distance:
+            action = 'corrected' if best_dist > eps else 'unchanged'
+            corrected_midi.append(best_midi)
             correction_info.append({
-                'original_midi': original_midi,
-                'corrected_midi': original_midi,
-                'distance': min_distance,
+                'original_midi': original_midi_f,
+                'corrected_midi': best_midi,
+                'distance': float(best_dist),
+                'action': action,
+                'closest_pc': int(best_pc) % 12
+            })
+            prev_corrected = best_midi
+        else:
+            corrected_midi.append(original_midi_f)
+            correction_info.append({
+                'original_midi': original_midi_f,
+                'corrected_midi': original_midi_f,
+                'distance': float(best_dist),
                 'action': 'unchanged_far'
             })
-            
+            prev_corrected = original_midi_f
+
     return np.array(corrected_midi), correction_info
 
 
@@ -862,23 +909,70 @@ def apply_raga_correction_to_notes(
         'discarded': 0,
         'valid_pcs': valid_pcs
     }
-    
-    for note in note_sequence:
-        midi_val = note.pitch_midi
-        
-        # Use snap logic on single note
-        _, info_list = snap_to_raga_notes(
-            np.array([midi_val], dtype=float),
-            valid_pcs,
-            max_distance,
-            discard_far=not keep_impure
+
+    def _annotate_pitch_trace(
+        note: Note,
+        raw_pitch_midi: float,
+        snapped_pitch_midi: float,
+        corrected_pitch_midi: float,
+    ) -> Note:
+        note.raw_pitch_midi = float(raw_pitch_midi)
+        note.raw_pitch_hz = float(440.0 * (2.0 ** ((float(raw_pitch_midi) - 69.0) / 12.0)))
+        note.snapped_pitch_midi = float(snapped_pitch_midi)
+        note.corrected_pitch_midi = float(corrected_pitch_midi)
+        note.rendered_pitch_midi = float(getattr(note, "pitch_midi", corrected_pitch_midi))
+        return note
+
+    def _note_with_pitch(
+        note: Note,
+        pitch_midi: float,
+        raw_pitch_midi: float,
+        snapped_pitch_midi: float,
+    ) -> Note:
+        pitch_class = int(round(pitch_midi)) % 12
+        try:
+            sargam = midi_to_sargam(pitch_midi, tonic)
+        except Exception:
+            sargam = note.sargam
+        pitch_hz = float(440.0 * (2.0 ** ((float(pitch_midi) - 69.0) / 12.0)))
+        out_note = Note(
+            start=note.start,
+            end=note.end,
+            pitch_midi=pitch_midi,
+            pitch_hz=pitch_hz,
+            confidence=note.confidence,
+            energy=note.energy,
+            sargam=sargam,
+            pitch_class=pitch_class,
         )
-        if not info_list:
-            # Implicitly discarded if logic returned nothing
-            stats['discarded'] += 1
-            continue
-             
-        info = info_list[0]
+        return _annotate_pitch_trace(
+            out_note,
+            raw_pitch_midi=raw_pitch_midi,
+            snapped_pitch_midi=snapped_pitch_midi,
+            corrected_pitch_midi=pitch_midi,
+        )
+
+    source_midi_vals: List[float] = []
+    for note in note_sequence:
+        raw_pitch = getattr(note, "raw_pitch_midi", None)
+        if raw_pitch is None or not np.isfinite(raw_pitch):
+            raw_pitch = getattr(note, "pitch_midi", np.nan)
+        source_midi_vals.append(float(raw_pitch))
+
+    midi_vals = np.array(source_midi_vals, dtype=float)
+    _, info_by_note = snap_to_raga_notes(
+        midi_vals,
+        valid_pcs,
+        max_distance,
+        discard_far=not keep_impure
+    )
+    if len(info_by_note) != len(note_sequence):
+        # Defensive fallback: preserve prior strict behavior.
+        info_by_note = [{'original_midi': float("nan"), 'action': 'discarded'} for _ in note_sequence]
+
+    for note, info, raw_midi in zip(note_sequence, info_by_note, source_midi_vals):
+        midi_val = float(raw_midi)
+        snapped_pitch = float(getattr(note, "pitch_midi", midi_val))
         all_corrections.append(info)
         
         action = info['action']
@@ -886,25 +980,40 @@ def apply_raga_correction_to_notes(
         if action == 'discarded':
             stats['discarded'] += 1
             continue
-            
-        elif action == 'unchanged' or action == 'unchanged_far':
+
+        if action in ('unchanged', 'unchanged_far'):
             stats['unchanged'] += 1
-            corrected_sequence.append(note)
-             
         elif action == 'corrected':
-            new_pitch = float(info['corrected_midi'])
             stats['corrected'] += 1
-            new_note = Note(
-                start=note.start,
-                end=note.end,
-                pitch_midi=new_pitch,
-                pitch_hz=float(librosa.midi_to_hz(new_pitch)),
-                confidence=note.confidence,
-                energy=note.energy,
-                sargam=note.sargam,
-                pitch_class=int(round(new_pitch)) % 12,
+        else:
+            stats['unchanged'] += 1
+
+        corrected_pitch = float(info.get('corrected_midi', snapped_pitch))
+
+        # Always keep the snapped/rounded pitch for accepted notes so
+        # microtonal values do not leak past raga correction.
+        if (
+            not np.isclose(corrected_pitch, snapped_pitch, atol=1e-9)
+            or note.pitch_class != int(round(corrected_pitch)) % 12
+            or not note.sargam
+        ):
+            corrected_sequence.append(
+                _note_with_pitch(
+                    note,
+                    corrected_pitch,
+                    midi_val,
+                    snapped_pitch,
+                )
             )
-            corrected_sequence.append(new_note)
+        else:
+            corrected_sequence.append(
+                _annotate_pitch_trace(
+                    note,
+                    raw_pitch_midi=midi_val,
+                    snapped_pitch_midi=snapped_pitch,
+                    corrected_pitch_midi=corrected_pitch,
+                )
+            )
                  
     stats['remaining'] = len(corrected_sequence)
     return corrected_sequence, stats, all_corrections

@@ -31,6 +31,7 @@
 - [ ] Tune gating for different instrument types (sitar vs vocal)
 - [ ] Refactor and clean up redundancies in `raga_pipeline/sequence.py` (legacy transition matrices, overlapping note detection methods, duplicate sargam logic)
 - [ ] Implement sequence mining for raga identification (see `sequence-mining-plan.md`)
+- [ ] Make pitch-class guide lines and snapping center on detected histogram peak locations (instead of fixed semitone centers)
 
 ## Future Ideas
 

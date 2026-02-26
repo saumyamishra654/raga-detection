@@ -15,7 +15,7 @@ Key Concepts:
 """
 
 from dataclasses import dataclass
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 import math
 import numpy as np
 import librosa
@@ -56,6 +56,8 @@ def detect_stationary_events(
     snap_mode: Literal["chromatic", "raga"] = "chromatic",
     allowed_raga_notes: Optional[List[int]] = None,
     snap_tolerance_cents: float = 35.0,
+    bias_cents: float = 0.0,
+    derivative_profile_out: Optional[Dict[str, np.ndarray]] = None,
 ) -> List[TranscriptionEvent]:
     """
     Main entry point for stationary point transcription.
@@ -114,6 +116,10 @@ def detect_stationary_events(
     # d(pitch) / dt (semitones per second)
     # np.gradient uses central differences to keep the derivative smooth.
     d_pitch = np.gradient(smoothed_midi, timestamps)
+    if derivative_profile_out is not None:
+        derivative_profile_out["timestamps"] = np.asarray(timestamps, dtype=float).copy()
+        derivative_profile_out["values"] = np.asarray(d_pitch, dtype=float).copy()
+        derivative_profile_out["voiced_mask"] = np.asarray(voicing_mask, dtype=bool).copy()
     
     # 4. Find Stable Regions
     # Condition: Voiced AND |Derivative| < Threshold
@@ -128,6 +134,7 @@ def detect_stationary_events(
     ends = np.where(diff == -1)[0]
     
     tonic_midi_val = _resolve_tonic(tonic)
+    bias_semitones = float(bias_cents) / 100.0 if np.isfinite(bias_cents) else 0.0
     
     for start_idx, end_idx in zip(starts, ends):
         duration = timestamps[min(end_idx, len(timestamps)-1)] - timestamps[start_idx]
@@ -142,6 +149,7 @@ def detect_stationary_events(
         median_pitch = np.median(segment_pitches)
         if not np.isfinite(median_pitch):
             continue
+        median_pitch = float(median_pitch - bias_semitones)
         
         # Calculate mean energy for the segment
         mean_energy = 0.0
@@ -263,6 +271,40 @@ def _smooth_pitch_contour(
     return smoothed
 
 
+def _sample_energy_at_time(
+    time_s: float,
+    energy_values: Optional[np.ndarray],
+    energy_times: Optional[np.ndarray],
+) -> float:
+    """
+    Sample the nearest frame energy for a timestamp.
+
+    energy_values and energy_times should already be length-aligned.
+    """
+    if (
+        energy_values is None
+        or energy_times is None
+        or energy_values.size == 0
+        or energy_times.size == 0
+        or not np.isfinite(time_s)
+    ):
+        return 0.0
+
+    idx = int(np.searchsorted(energy_times, time_s))
+    if idx <= 0:
+        nearest_idx = 0
+    elif idx >= energy_times.size:
+        nearest_idx = int(energy_times.size - 1)
+    else:
+        prev_idx = idx - 1
+        nearest_idx = idx if abs(energy_times[idx] - time_s) < abs(energy_times[prev_idx] - time_s) else prev_idx
+
+    sampled = float(energy_values[nearest_idx])
+    if not np.isfinite(sampled):
+        return 0.0
+    return sampled
+
+
 def _snap_pitch(
     pitch: float,
     tonic_midi: float,
@@ -295,18 +337,33 @@ def _snap_pitch(
     error_closest = (pitch - closest_pitch) * 100
 
     if mode == "raga" and allowed_pcs:
-        if closest_pc in allowed_pcs:
-            return closest_pitch, error_closest, _get_sargam_label(closest_pitch, tonic_midi), True
+        allowed_sorted = sorted({int(pc) % 12 for pc in allowed_pcs})
+        if not allowed_sorted:
+            return None, 0.0, "", False
 
-        if len(candidate_offsets) > 1:
-            second_offset = candidate_offsets[1]
-            second_pitch = tonic_midi + second_offset
-            second_pc = int(second_offset % 12)
-            error_second = (pitch - second_pitch) * 100
-            if second_pc in allowed_pcs:
-                return second_pitch, error_second, _get_sargam_label(second_pitch, tonic_midi), True
+        center_oct = int(round(semitone_offset)) // 12
+        candidates: List[float] = []
+        for oct_shift in (-1, 0, 1):
+            octave = center_oct + oct_shift
+            for pc in allowed_sorted:
+                offset = (octave * 12) + pc
+                candidates.append(float(tonic_midi + offset))
 
-        return None, 0.0, "", False
+        if not candidates:
+            return None, 0.0, "", False
+
+        eps = 1e-9
+        dist_candidates = [(abs(c - pitch), c) for c in candidates]
+        min_dist = min(item[0] for item in dist_candidates)
+        nearest = [item for item in dist_candidates if abs(item[0] - min_dist) <= eps]
+
+        # Deterministic tie-break: prefer higher candidate.
+        best_dist, best_pitch = max(nearest, key=lambda item: item[1])
+        if best_dist > 1.0 + eps:
+            return None, 0.0, "", False
+
+        error_best = (pitch - best_pitch) * 100
+        return best_pitch, error_best, _get_sargam_label(best_pitch, tonic_midi), True
 
     return closest_pitch, error_closest, _get_sargam_label(closest_pitch, tonic_midi), True
 
@@ -360,6 +417,8 @@ def transcribe_to_notes(
     allowed_raga_notes: Optional[List[int]] = None,
     snap_tolerance_cents: float = 35.0,
     transcription_min_duration: float = 0.0,  # Alias for min_event_duration if passed via explicit config
+    bias_cents: float = 0.0,
+    derivative_profile_out: Optional[Dict[str, np.ndarray]] = None,
 ) -> List[Note]:
     """
     Unified entry point: Combines Stationary Events + Inflection Points.
@@ -371,6 +430,13 @@ def transcribe_to_notes(
     """
     if transcription_min_duration > 0:
         min_event_duration = transcription_min_duration
+
+    aligned_energy_values: Optional[np.ndarray] = None
+    aligned_energy_times: Optional[np.ndarray] = None
+    if energy is not None and len(energy) > 0 and len(timestamps) > 0:
+        aligned_len = min(len(energy), len(timestamps))
+        aligned_energy_values = np.asarray(energy[:aligned_len], dtype=float)
+        aligned_energy_times = np.asarray(timestamps[:aligned_len], dtype=float)
     
     # 1. Stationary Events
     events = detect_stationary_events(
@@ -387,6 +453,8 @@ def transcribe_to_notes(
         snap_mode=snap_mode,
         allowed_raga_notes=allowed_raga_notes,
         snap_tolerance_cents=snap_tolerance_cents,
+        bias_cents=bias_cents,
+        derivative_profile_out=derivative_profile_out,
     )
     
     # 2. Inflection Points
@@ -414,17 +482,28 @@ def transcribe_to_notes(
     
     # Add Stationary Notes
     for evt in events:
+        raw_pitch = float(evt.pitch_midi)
+        snapped_pitch = float(evt.snapped_midi)
         n = Note(
             start=evt.start,
             end=evt.end,
-            pitch_midi=evt.pitch_midi,
-            pitch_hz=float(librosa.midi_to_hz(evt.pitch_midi)),
+            # Use snapped pitch as canonical note pitch so downstream correction
+            # and phrase logic operate on the same values shown in overlays.
+            pitch_midi=snapped_pitch,
+            pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
             confidence=1.0, 
             sargam=evt.sargam, # Pre-calculated
             energy=evt.energy
         )
+        # Preserve raw pitch so downstream raga correction can use continuous
+        # distance against the original contour instead of pre-quantized values.
+        n.raw_pitch_midi = raw_pitch
+        n.raw_pitch_hz = float(librosa.midi_to_hz(raw_pitch))
+        n.snapped_pitch_midi = snapped_pitch
+        n.corrected_pitch_midi = snapped_pitch
+        n.rendered_pitch_midi = snapped_pitch
         # Keep pitch class handy for downstream analysis.
-        n.pitch_class = int(round(evt.snapped_midi)) % 12
+        n.pitch_class = int(round(snapped_pitch)) % 12
         final_notes.append(n)
         
     # Add Inflection Notes
@@ -433,24 +512,41 @@ def transcribe_to_notes(
     point_duration = 0.01 
     
     tonic_midi_val = _resolve_tonic(tonic)
+    bias_semitones = float(bias_cents) / 100.0 if np.isfinite(bias_cents) else 0.0
     
     for t, p in zip(inf_times, inf_pitches):
+        raw_pitch = float(p - bias_semitones)
+        sampled_energy = _sample_energy_at_time(
+            float(t),
+            aligned_energy_values,
+            aligned_energy_times,
+        )
+        if energy is not None and energy_threshold > 0 and sampled_energy < energy_threshold:
+            continue
+
         # Still snap inflection points so they can show sargam labels.
         snapped, _, sargam, keep_note = _snap_pitch(
-            p, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
+            raw_pitch, tonic_midi_val, snap_mode, allowed_raga_notes, snap_tolerance_cents
         )
         if not keep_note or snapped is None:
             continue
+        snapped_pitch = float(snapped)
         
         n = Note(
             start=t,
             end=t + point_duration,
-            pitch_midi=p,
-            pitch_hz=float(librosa.midi_to_hz(p)),
+            pitch_midi=snapped_pitch,
+            pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
             confidence=0.8, # Lower confidence for transient points
+            energy=sampled_energy,
             sargam=sargam,
-            pitch_class=int(round(snapped)) % 12
+            pitch_class=int(round(snapped_pitch)) % 12
         )
+        n.raw_pitch_midi = raw_pitch
+        n.raw_pitch_hz = float(librosa.midi_to_hz(raw_pitch))
+        n.snapped_pitch_midi = snapped_pitch
+        n.corrected_pitch_midi = snapped_pitch
+        n.rendered_pitch_midi = snapped_pitch
         final_notes.append(n)
         
     # 5. Sort by start time

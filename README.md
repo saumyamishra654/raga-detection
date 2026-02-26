@@ -69,6 +69,8 @@ What it provides:
 - Auto-prefill of the next mode from printed pipeline suggestions (`preprocess -> detect`, `detect -> analyze`).
 - Optional fields support blank input (parser defaults apply), and dependent fields only appear when relevant (e.g., `vocalist_gender` only when `source_type=vocal`).
 - Drag-and-drop upload for the `--audio` field (detect/analyze): dropped files are uploaded to local app storage and the resolved path is auto-filled.
+- Preprocess recording support via backend `ffmpeg` microphone capture with Start/Stop controls (same ingest path as CLI recording).
+- Tanpura-assisted preprocess recording mode: choose a tanpura track (`A`..`Ab`), play it in-app while recording, and carry that tonic into the suggested detect command.
 - Audio browser for `--audio`: defaults to `../audio_test_files`, lets you pick a custom directory, and shows a song dropdown from that directory.
 - Selected audio directory is persisted locally in the browser and reused on next load.
 - Batch trigger for the selected audio directory (`raga_pipeline.batch` in `auto` mode from the local app).
@@ -77,29 +79,54 @@ What it provides:
 
 ### Mode 0: Preprocess (`preprocess`)
 
-Downloads audio from YouTube and saves it locally as an MP3 so it can be used by `detect` and `analyze`.
+Preprocess now supports two ingest paths:
+- `--ingest youtube` (default): download from YouTube.
+- `--ingest record`: ingest recorded audio (from browser upload/local file) or live CLI microphone recording.
+
+Both paths save an MP3 locally so it can be used by `detect` and `analyze`.
 
 ```bash
+# YouTube ingest (default)
 ./run_pipeline.sh preprocess \
+    --ingest youtube \
     --yt "https://www.youtube.com/watch?v=..." \
     --filename "my_song_name" \
     --start-time "0:30" \
     --end-time "2:00"
+
+# Record ingest using an existing recorded file (local app upload path or local file)
+./run_pipeline.sh preprocess \
+    --ingest record \
+    --record-mode song \
+    --recorded-audio "/absolute/path/to/recording.webm" \
+    --filename "my_recording"
+
+# Tanpura-assisted vocal recording ingest
+./run_pipeline.sh preprocess \
+    --ingest record \
+    --record-mode tanpura_vocal \
+    --tanpura-key "A" \
+    --recorded-audio "/absolute/path/to/recording.webm" \
+    --filename "a_tanpura_take"
 ```
 
 `--audio-dir` defaults to `../audio_test_files` (you can override it when needed).
 
-`--start-time` and `--end-time` are optional. If omitted, preprocess defaults to full track (`0:00` to track end). Time format supports `SS`, `MM:SS`, or `HH:MM:SS`.
+`--start-time` and `--end-time` are optional and only apply to `--ingest youtube`. If omitted, preprocess defaults to full track (`0:00` to track end). Time format supports `SS`, `MM:SS`, or `HH:MM:SS`.
 
 Prerequisites:
 - `ffmpeg` and `ffprobe` available in `PATH`
 - Python package `yt-dlp` installed (imported as `yt_dlp`)
+- `ffplay` available in `PATH` for CLI tanpura playback
 
 Validation rules:
-- `start-time < end-time`
-- both times must be within track duration
+- `--ingest youtube` requires `--yt`
+- `--start-time`/`--end-time` are valid only for `--ingest youtube`
+- `--record-mode tanpura_vocal` requires `--tanpura-key`
+- `--recorded-audio`, when provided, must exist
+- YouTube trim checks: `start-time < end-time` and both times within track duration
 
-This mode saves `../audio_test_files/my_song_name.mp3` by default and prints a copyable `detect` command for the next step.
+For tanpura-vocal record mode, preprocess prints the next-step detect command with `--tonic "<tanpura-key>"` prefilled.
 
 ### Phase 1: Detection (`detect`)
 
@@ -135,6 +162,7 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 *   `--raga-db`: Override path to the raga database CSV.
 *   `--tonic`: Constrain scoring to one or more tonics (comma-separated, e.g. `C,D#`).
 *   `--raga`: Constrain scoring to a specific raga name.
+*   `--skip-separation`: Detect-only fast path that skips stem separation and analyzes melody from the original mix. Requires `--tonic` and auto-forces `--melody-source composite`.
 
 **Output:**
 *   Written under `<output>/<demucs-model>/<song_name>/` (or `<output>/spleeter/<song_name>/`):
@@ -143,7 +171,7 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
     *   `histogram_melody.png`, `histogram_accompaniment.png`: Pitch distribution histograms.
     *   `stationary_note_histogram_duration_weighted.png` and `stationary_note_histogram_duration_weighted.csv`: Duration-weighted stationary-note distribution (12 fixed pitch classes, octave-wrapped).
     *   Cached pitch CSVs (e.g. `composite_pitch_data.csv`, `melody_pitch_data.csv` or `vocals_pitch_data.csv`, `accompaniment_pitch_data.csv`).
-    *   Stems (`vocals.mp3`, `accompaniment.mp3`).
+    *   Stems (`vocals.mp3`, `accompaniment.mp3`) when separation is enabled.
 
 ### Phase 2: Analysis (`analyze`)
 
@@ -169,15 +197,17 @@ Important:
 
 **Analyze Options:**
 *   `--keep-impure-notes`: Keep notes not in the raga (default behavior is to discard them during correction).
+*   `--strict-raga-35c-filter`: Enable strict raga filtering by nearest-note distance (when enabled, `--keep-impure-notes` is ignored).
+*   `--strict-raga-max-cents`: Maximum allowed nearest-note distance in cents for strict filtering (default: `35`).
 *   `--transcription-smoothing-ms`: Transcription smoothing sigma (ms). Use `0` to disable.
 *   `--transcription-min-duration`: Minimum duration (s) for a transcribed note (default: `0.02`).
 *   `--transcription-stability-threshold`: Max pitch change (semitones/sec) to be considered stable (default: `4.0`).
 *   `--energy-metric`: `rms` (peak-normalized, default) or `log_amp` (dBFS with percentile normalization).
-*   `--energy-threshold`: Energy gate (0-1) for removing low-energy notes. Default: 0.0.
+*   `--energy-threshold`: Per-track normalized energy gate (0-1) for transcription note gating. This is relative to the selected melody track (not absolute loudness). Typical RMS tuning range: `0.03-0.12`. Default: `0.0`.
 *   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10 (set `0` to disable).
 *   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases. Default: 0.25.
-*   `--phrase-min-duration`: Exclude phrases shorter than this duration (seconds). Default: 1.0.
-*   `--phrase-min-notes`: Exclude phrases with fewer notes than this count. Default: 0 (disabled).
+*   `--phrase-min-duration`: Exclude phrases shorter than this duration (seconds). Default: `0.2`.
+*   `--phrase-min-notes`: Exclude phrases with fewer notes than this count. Default: `1`.
 *   `--no-rms-overlay`: Disable the energy overlay on pitch plots in the HTML report.
 *   `--no-smoothing`: Force transcription smoothing off (equivalent to `--transcription-smoothing-ms 0`).
 *   Snapping behavior: Transcription uses chromatic snapping internally; raga correction then removes or keeps non-raga notes depending on `--keep-impure-notes`.

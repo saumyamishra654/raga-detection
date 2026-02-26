@@ -638,7 +638,13 @@ def filter_notes_by_octave_range(
 # =============================================================================
 
 
-def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tolerance: float = 0.6) -> List[Note]:
+def merge_consecutive_notes(
+    notes: List[Note],
+    max_gap: float = 0.05,
+    pitch_tolerance: float = 0.6,
+    max_dropout_gap: float = 0.18,
+    dropout_fragment_duration: float = 0.12,
+) -> List[Note]:
     """
     Merge consecutive notes that have similar pitch and small gaps.
     
@@ -646,6 +652,8 @@ def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tole
         notes: List of Note objects, sorted by start time.
         max_gap: Maximum time gap (seconds) between notes to consider for merging.
         pitch_tolerance: Maximum pitch difference (semitones) to consider equal.
+        max_dropout_gap: Extended gap allowed for short-fragment dropout healing.
+        dropout_fragment_duration: Notes shorter than this are treated as fragments.
         
     Returns:
         List of merged Note objects.
@@ -653,8 +661,20 @@ def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tole
     if not notes:
         return []
     
-    merged = []
-    current_note = notes[0]
+    merged: List[Note] = []
+    current_note = Note(
+        start=notes[0].start,
+        end=notes[0].end,
+        pitch_midi=notes[0].pitch_midi,
+        pitch_hz=notes[0].pitch_hz,
+        confidence=notes[0].confidence,
+        energy=notes[0].energy,
+        sargam=notes[0].sargam,
+        pitch_class=notes[0].pitch_class,
+    )
+
+    def _duration(note: Note) -> float:
+        return max(0.0, float(note.end - note.start))
     
     for i in range(1, len(notes)):
         next_note = notes[i]
@@ -662,17 +682,59 @@ def merge_consecutive_notes(notes: List[Note], max_gap: float = 0.05, pitch_tole
         # Check for same pitch (pitch_midi) and small gap
         # We assume notes are sorted by start time
         gap = next_note.start - current_note.end
+        pitch_close = abs(next_note.pitch_midi - current_note.pitch_midi) < pitch_tolerance
+        fragment_pair = (
+            _duration(current_note) <= dropout_fragment_duration
+            or _duration(next_note) <= dropout_fragment_duration
+        )
+        regular_close = gap <= max_gap + 1e-9
+        dropout_close = gap <= max_dropout_gap + 1e-9
         
-        # Merge if similar pitch and close enough
-        if (abs(next_note.pitch_midi - current_note.pitch_midi) < pitch_tolerance and 
-            gap <= max_gap):
-            
-            # Extend current note
-            current_note.end = next_note.end
-            # Keep the original pitch so the held note stays stable.
+        # Merge if similar pitch and either:
+        # 1) regular gap threshold is met, or
+        # 2) gap is moderately larger but one side is a short dropout fragment.
+        should_merge = pitch_close and (
+            regular_close or (dropout_close and fragment_pair)
+        )
+
+        if should_merge:
+            prev_dur = _duration(current_note)
+            next_dur = _duration(next_note)
+            total_dur = prev_dur + next_dur
+            if total_dur > 0:
+                merged_energy = (
+                    (current_note.energy * prev_dur) + (next_note.energy * next_dur)
+                ) / total_dur
+                merged_confidence = (
+                    (current_note.confidence * prev_dur) + (next_note.confidence * next_dur)
+                ) / total_dur
+            else:
+                merged_energy = max(current_note.energy, next_note.energy)
+                merged_confidence = max(current_note.confidence, next_note.confidence)
+
+            # Keep the representative pitch stable (current note anchor).
+            current_note = Note(
+                start=current_note.start,
+                end=next_note.end,
+                pitch_midi=current_note.pitch_midi,
+                pitch_hz=current_note.pitch_hz,
+                confidence=merged_confidence,
+                energy=merged_energy,
+                sargam=current_note.sargam,
+                pitch_class=current_note.pitch_class,
+            )
         else:
             merged.append(current_note)
-            current_note = next_note
+            current_note = Note(
+                start=next_note.start,
+                end=next_note.end,
+                pitch_midi=next_note.pitch_midi,
+                pitch_hz=next_note.pitch_hz,
+                confidence=next_note.confidence,
+                energy=next_note.energy,
+                sargam=next_note.sargam,
+                pitch_class=next_note.pitch_class,
+            )
             
     merged.append(current_note)
     return merged

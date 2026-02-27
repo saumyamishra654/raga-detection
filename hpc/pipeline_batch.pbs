@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N raga_batch
-#PBS -q gpu
-#PBS -l select=1:ncpus=4:mem=24gb
+#PBS -q cpu
+#PBS -l select=1:ncpus=8:mem=32gb
 #PBS -l walltime=24:00:00
 #PBS -o logs/
 #PBS -e logs/
@@ -42,12 +42,10 @@ echo "Node: $(hostname)"
 echo "Working dir: $(pwd)"
 echo "Python: $(command -v python3)"
 
-# Optional GPU visibility check (legacy script parity)
-if command -v nvidia-smi >/dev/null 2>&1; then
-  echo "--- GPU STATUS ---"
-  nvidia-smi || true
-  echo "------------------"
-fi
+# Optional sanity check for CPU-only runs
+echo "--- CPU NODE INFO ---"
+lscpu || true
+echo "---------------------"
 
 python3 -m raga_pipeline.batch \
   "$INPUT_DIR" \

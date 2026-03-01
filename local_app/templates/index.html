@@ -32,7 +32,12 @@
 
     <main>
         <section class="panel">
-            <h2>Run Pipeline</h2>
+            <div class="panel-title-row">
+                <h2>Run Pipeline</h2>
+                <div id="job-progress-widget" class="job-progress-widget idle" title="Idle">
+                    <span id="job-progress-percent">0%</span>
+                </div>
+            </div>
             <div class="actions">
                 <button id="run-btn">Run</button>
                 <button id="next-btn" type="button" disabled>Next</button>

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import ast
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +15,7 @@ try:
         AnalysisResults,
         AnalysisStats,
         _build_analysis_report_metadata,
+        _generate_transcription_editor_section,
         generate_analysis_report,
     )
     from raga_pipeline.sequence import Note, Phrase
@@ -153,6 +156,51 @@ class TranscriptionEditorMetadataTests(unittest.TestCase):
             encoded = json.dumps(metadata, allow_nan=False)
             self.assertTrue(encoded)
             self.assertIn("transcription_edit_payload", metadata)
+
+    def test_embedded_editor_merge_uses_note_bounds_and_timeline_insert(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            results, _stats = self._make_results(root)
+            html = _generate_transcription_editor_section(
+                notes=results.notes,
+                phrases=results.phrases,
+                tonic=results.detected_tonic or 0,
+            )
+            merge_match = re.search(
+                r"function handleMergePhrases\(\) \{.*?function handleSplitPhrase\(\) \{",
+                html,
+                flags=re.DOTALL,
+            )
+            self.assertIsNotNone(merge_match)
+            merge_block = merge_match.group(0)
+            self.assertIn("next.phrases.splice(insertIndex, 0", merge_block)
+            self.assertIn("start: mergedStart", merge_block)
+            self.assertIn("end: mergedEnd", merge_block)
+            self.assertNotIn("start: 0", merge_block)
+            self.assertNotIn("end: 0", merge_block)
+
+    def test_local_app_editor_merge_template_uses_note_bounds(self) -> None:
+        static_js = (Path(__file__).resolve().parent.parent / "local_app" / "static" / "transcription_editor.js")
+        text = static_js.read_text(encoding="utf-8")
+        literal_match = re.search(
+            r'const EDITOR_SCRIPT_TEMPLATE\s*=\s*"(.*?)";\n\n\s*function resolveContext',
+            text,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(literal_match)
+        decoded = ast.literal_eval('"' + literal_match.group(1) + '"')
+        merge_match = re.search(
+            r"function handleMergePhrases\(\) \{.*?function handleSplitPhrase\(\) \{",
+            decoded,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(merge_match)
+        merge_block = merge_match.group(0)
+        self.assertIn("next.phrases.splice(insertIndex, 0", merge_block)
+        self.assertIn("start: mergedStart", merge_block)
+        self.assertIn("end: mergedEnd", merge_block)
+        self.assertNotIn("start: 0", merge_block)
+        self.assertNotIn("end: 0", merge_block)
 
 
 if __name__ == "__main__":

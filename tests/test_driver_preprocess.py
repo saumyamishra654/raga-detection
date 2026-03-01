@@ -22,14 +22,14 @@ class DriverPreprocessTests(unittest.TestCase):
             "mode": "preprocess",
             "audio_dir": tmpdir,
             "filename_override": "demo_song",
-            "preprocess_ingest": "youtube",
+            "preprocess_ingest": "yt",
             "yt_url": "https://example.com/watch?v=test",
         }
         kwargs.update(overrides)
         return PipelineConfig(**kwargs)
 
     @patch("driver.download_youtube_audio")
-    def test_preprocess_youtube_suggests_detect_without_tonic(self, mock_download: "patch") -> None:
+    def test_preprocess_yt_suggests_detect_without_tonic(self, mock_download: "patch") -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = str((Path(tmpdir) / "demo_song.mp3").resolve())
             mock_download.return_value = output_path
@@ -55,8 +55,7 @@ class DriverPreprocessTests(unittest.TestCase):
 
             config = self._base_preprocess_config(
                 tmpdir,
-                preprocess_ingest="record",
-                preprocess_record_mode="song",
+                preprocess_ingest="recording",
                 preprocess_recorded_audio=str(recorded_source),
                 yt_url=None,
             )
@@ -72,7 +71,7 @@ class DriverPreprocessTests(unittest.TestCase):
 
     @patch("driver.get_tonic_from_tanpura_key")
     @patch("driver.ingest_recorded_audio_file")
-    def test_preprocess_tanpura_vocal_suggests_detect_with_tonic(
+    def test_preprocess_tanpura_recording_suggests_detect_with_tonic(
         self,
         mock_ingest: "patch",
         mock_get_tonic: "patch",
@@ -86,8 +85,7 @@ class DriverPreprocessTests(unittest.TestCase):
 
             config = self._base_preprocess_config(
                 tmpdir,
-                preprocess_ingest="record",
-                preprocess_record_mode="tanpura_vocal",
+                preprocess_ingest="tanpura_recording",
                 preprocess_tanpura_key="A",
                 preprocess_recorded_audio=str(recorded_source),
                 yt_url=None,

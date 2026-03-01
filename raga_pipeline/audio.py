@@ -868,6 +868,7 @@ def separate_stems(
     engine: str = "demucs",
     model: str = "htdemucs",
     device: Optional[str] = None,
+    force_recompute: bool = False,
 ) -> Tuple[str, str]:
     """
     Separate audio into vocals and accompaniment stems.
@@ -878,6 +879,7 @@ def separate_stems(
         engine: 'demucs' or 'spleeter'
         model: Demucs model name (ignored for spleeter)
         device: 'cuda', 'cpu', or None (auto-detect)
+        force_recompute: When True, bypass cached stems and recompute separation.
 
     Returns:
         Tuple of (vocals_path, accompaniment_path)
@@ -896,15 +898,18 @@ def separate_stems(
     legacy_accomp_path = os.path.join(stem_dir, "accompaniment.wav")
 
     # Check cache
-    if os.path.isfile(vocals_path) and os.path.isfile(accompaniment_path):
-        print(f"[CACHE] Stems already exist in '{stem_dir}'")
-        return vocals_path, accompaniment_path
+    if not force_recompute:
+        if os.path.isfile(vocals_path) and os.path.isfile(accompaniment_path):
+            print(f"[CACHE] Stems already exist in '{stem_dir}'")
+            return vocals_path, accompaniment_path
 
-    if os.path.isfile(legacy_vocals_path) and os.path.isfile(legacy_accomp_path):
-        print(f"[CACHE] Found legacy WAV stems in '{stem_dir}', converting to MP3")
-        _convert_wav_to_mp3(legacy_vocals_path, vocals_path)
-        _convert_wav_to_mp3(legacy_accomp_path, accompaniment_path)
-        return vocals_path, accompaniment_path
+        if os.path.isfile(legacy_vocals_path) and os.path.isfile(legacy_accomp_path):
+            print(f"[CACHE] Found legacy WAV stems in '{stem_dir}', converting to MP3")
+            _convert_wav_to_mp3(legacy_vocals_path, vocals_path)
+            _convert_wav_to_mp3(legacy_accomp_path, accompaniment_path)
+            return vocals_path, accompaniment_path
+    else:
+        print(f"[FORCE] Recomputing stems in '{stem_dir}' (cache bypassed)")
 
     os.makedirs(stem_dir, exist_ok=True)
 
@@ -912,6 +917,110 @@ def separate_stems(
         return _separate_spleeter(audio_path, stem_dir, vocals_path, accompaniment_path)
     else:
         return _separate_demucs(audio_path, stem_dir, vocals_path, accompaniment_path, model, device)
+
+
+def _probe_torch_bool(probe: Any) -> bool:
+    """Safely evaluate torch backend availability probes."""
+    try:
+        return bool(probe())
+    except Exception:
+        return False
+
+
+def _resolve_demucs_device(requested: Optional[str], torch_module: Any) -> str:
+    """Resolve effective Demucs device from requested mode and backend availability."""
+    requested_mode = str(requested or "auto").strip().lower() or "auto"
+    cuda_available = _probe_torch_bool(torch_module.cuda.is_available)
+    has_mps_backend = hasattr(torch_module.backends, "mps")
+    mps_built = _probe_torch_bool(getattr(torch_module.backends.mps, "is_built")) if has_mps_backend else False
+    mps_available = _probe_torch_bool(getattr(torch_module.backends.mps, "is_available")) if has_mps_backend else False
+
+    if requested_mode == "cuda":
+        selected = "cuda" if cuda_available else ("mps" if mps_available else "cpu")
+        if selected != "cuda":
+            print(
+                f"[DEMUCS] Requested CUDA but CUDA is unavailable; "
+                f"falling back to {selected.upper()}."
+            )
+    elif requested_mode == "mps":
+        selected = "mps" if mps_available else "cpu"
+        if selected != "mps":
+            print(
+                "[DEMUCS] Requested MPS but MPS is unavailable on this runtime; "
+                "falling back to CPU."
+            )
+    elif requested_mode == "cpu":
+        selected = "cpu"
+    elif requested_mode == "auto":
+        if cuda_available:
+            selected = "cuda"
+        elif mps_available:
+            selected = "mps"
+        else:
+            selected = "cpu"
+    else:
+        print(f"[DEMUCS] Unknown device '{requested_mode}', using auto selection.")
+        if cuda_available:
+            selected = "cuda"
+        elif mps_available:
+            selected = "mps"
+        else:
+            selected = "cpu"
+
+    if selected == "mps":
+        # Unsupported MPS ops can transparently execute on CPU with this flag.
+        os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+        fallback_env = os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK", "0")
+        print(
+            f"[DEMUCS] MPS fallback env: PYTORCH_ENABLE_MPS_FALLBACK={fallback_env}. "
+            "Unsupported kernels may still execute on CPU."
+        )
+
+    print(
+        "[DEMUCS] Device selection: "
+        f"requested={requested_mode}, selected={selected}, "
+        f"cuda_available={cuda_available}, mps_built={mps_built}, mps_available={mps_available}"
+    )
+    return selected
+
+
+def _run_demucs_apply(
+    *,
+    apply_model_fn: Any,
+    model: Any,
+    wav: Any,
+    device: str,
+    torch_module: Any,
+) -> Tuple[Any, str]:
+    """
+    Run Demucs apply_model and retry once on CPU if MPS execution fails.
+    """
+    try:
+        with torch_module.no_grad():
+            sources = apply_model_fn(
+                model,
+                wav.unsqueeze(0).to(device),
+                device=device,
+                progress=True,
+            )[0]
+        return sources, device
+    except Exception as exc:
+        if device != "mps":
+            raise
+        print(
+            "[DEMUCS] MPS execution failed; retrying separation on CPU. "
+            f"Original error: {exc}"
+        )
+        model = model.to("cpu")
+        with torch_module.no_grad():
+            sources = apply_model_fn(
+                model,
+                wav.unsqueeze(0).to("cpu"),
+                device="cpu",
+                progress=True,
+            )[0]
+        print("[DEMUCS] CPU retry succeeded after MPS failure.")
+        return sources, "cpu"
 
 
 def _separate_demucs(
@@ -930,15 +1039,7 @@ def _separate_demucs(
     from demucs.audio import AudioFile
     import scipy.io.wavfile as wavfile
 
-    if device is None:
-        if torch.cuda.is_available():
-            device = "cuda"
-        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            # MPS kernels are still incomplete for some ops; allow transparent CPU fallback.
-            os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
-            device = "mps"
-        else:
-            device = "cpu"
+    device = _resolve_demucs_device(device, torch)
     print(f"[DEMUCS] Using device: {device}")
 
     print(f"[DEMUCS] Loading model: {model_name}...")
@@ -960,15 +1061,16 @@ def _separate_demucs(
     ref = wav.mean(0)
     wav = (wav - ref.mean()) / ref.std()
 
-    with torch.no_grad():
-        sources = apply_model(
-            model,
-            wav.unsqueeze(0).to(device),
-            device=device,
-            progress=True,
-        )[0]
+    sources, effective_device = _run_demucs_apply(
+        apply_model_fn=apply_model,
+        model=model,
+        wav=wav,
+        device=device,
+        torch_module=torch,
+    )
 
     sources = sources * ref.std() + ref.mean()
+    print(f"[DEMUCS] Effective execution device: {effective_device}")
 
     # Extract vocals and accompaniment
     stem_names = model.sources

@@ -193,7 +193,7 @@ class ApiTests(unittest.TestCase):
                 json={
                     "audio_dir": str(Path(self.tmp.name) / "recordings"),
                     "filename": "take",
-                    "record_mode": "tanpura_vocal",
+                    "ingest": "tanpura_recording",
                     "tanpura_key": "C",
                 },
             )
@@ -219,11 +219,44 @@ class ApiTests(unittest.TestCase):
             json={
                 "audio_dir": self.tmp.name,
                 "filename": "take",
-                "record_mode": "tanpura_vocal",
+                "ingest": "tanpura_recording",
             },
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("tanpura_key", response.json().get("detail", ""))
+
+    def test_preprocess_record_start_rejects_non_recording_ingest(self) -> None:
+        response = self.client.post(
+            "/api/preprocess-record/start",
+            json={
+                "audio_dir": self.tmp.name,
+                "filename": "take",
+                "ingest": "yt",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("recording", response.json().get("detail", ""))
+
+    def test_preprocess_record_start_accepts_legacy_record_mode_alias(self) -> None:
+        target_path = Path(self.tmp.name) / "recordings" / "legacy_take.mp3"
+        captured = {}
+
+        def fake_start(audio_dir: str, filename_base: str, tanpura_key: str | None = None) -> _FakeRecordingSession:
+            captured["tanpura_key"] = tanpura_key
+            return _FakeRecordingSession(str(target_path), tanpura_key=tanpura_key)
+
+        with patch("local_app.server.start_microphone_recording_session", side_effect=fake_start):
+            response = self.client.post(
+                "/api/preprocess-record/start",
+                json={
+                    "audio_dir": self.tmp.name,
+                    "filename": "legacy_take",
+                    "record_mode": "tanpura_vocal",
+                    "tanpura_key": "D",
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(captured["tanpura_key"], "D")
 
     def test_audio_files_endpoint_lists_supported_audio(self) -> None:
         audio_dir = Path(self.tmp.name) / "audio_dir"
@@ -271,11 +304,33 @@ class ApiTests(unittest.TestCase):
             json={
                 "mode": "preprocess",
                 "params": {
+                    "ingest": "recording",
+                    "recorded_audio": str(recorded_path),
+                    "audio_dir": self.tmp.name,
+                    "filename": "my_take",
+                    "output": "batch_results",
+                },
+                "extra_args": [],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["mode"], "preprocess")
+        self.assertIn(payload["status"], {"queued", "running", "completed"})
+
+    def test_preprocess_job_accepts_legacy_record_mode_payload(self) -> None:
+        recorded_path = Path(self.tmp.name) / "recorded_legacy.webm"
+        recorded_path.write_bytes(b"legacy")
+        response = self.client.post(
+            "/api/jobs",
+            json={
+                "mode": "preprocess",
+                "params": {
                     "ingest": "record",
                     "record_mode": "song",
                     "recorded_audio": str(recorded_path),
                     "audio_dir": self.tmp.name,
-                    "filename": "my_take",
+                    "filename": "legacy_take",
                     "output": "batch_results",
                 },
                 "extra_args": [],
@@ -380,6 +435,61 @@ class ApiTests(unittest.TestCase):
                 fetched = True
                 break
         self.assertTrue(fetched)
+
+    def test_local_report_skips_ambiguous_basename_audio_fallback(self) -> None:
+        output_root = Path(self.tmp.name) / "batch_results"
+        stem_dir = output_root / "htdemucs" / "dup_song"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+
+        audio_a = Path(self.tmp.name) / "audio_a" / "dup_song.mp3"
+        audio_b = Path(self.tmp.name) / "audio_b" / "dup_song.mp3"
+        audio_a.parent.mkdir(parents=True, exist_ok=True)
+        audio_b.parent.mkdir(parents=True, exist_ok=True)
+        audio_a.write_bytes(b"aaa")
+        audio_b.write_bytes(b"bbb")
+
+        report_path = stem_dir / "detection_report.html"
+        report_path.write_text(
+            """
+            <html><body>
+              <audio controls>
+                <source src="dup_song.mp3" type="audio/mpeg">
+                <source src="../../../audio_a/dup_song.mp3" type="audio/mpeg">
+                <source src="../../../audio_b/dup_song.mp3" type="audio/mpeg">
+              </audio>
+            </body></html>
+            """,
+            encoding="utf-8",
+        )
+
+        response = self.client.get(
+            "/api/audio-artifacts",
+            params={
+                "audio_path": str(audio_a),
+                "output_dir": str(output_root),
+                "separator": "demucs",
+                "demucs_model": "htdemucs",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["found"])
+
+        report_url = payload["detect_report_url"]
+        self.assertTrue(report_url)
+
+        html_resp = self.client.get(report_url)
+        self.assertEqual(html_resp.status_code, 200)
+        html = html_resp.text
+
+        # Ambiguous basename fallback should not rewrite the unresolved sibling path.
+        self.assertIn('src="dup_song.mp3"', html)
+
+        rewritten_links = re.findall(r'(/local-files/[^"\'> ]+)', html)
+        self.assertGreaterEqual(len(rewritten_links), 2)
+        resolved_payloads = {self.client.get(link).content for link in rewritten_links}
+        self.assertIn(b"aaa", resolved_payloads)
+        self.assertIn(b"bbb", resolved_payloads)
 
     def test_create_batch_job_endpoint(self) -> None:
         response = self.client.post(

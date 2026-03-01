@@ -139,7 +139,7 @@ def _local_report_url(path: Path) -> Optional[str]:
 
 def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
     report_dir = report_path.parent.resolve()
-    basename_fallbacks: Dict[str, Path] = {}
+    basename_fallbacks: Dict[str, List[Path]] = {}
 
     # Build a lookup of any resolvable local assets referenced in the report.
     # This lets us rewrite missing sibling paths (for example "song.mp3")
@@ -164,7 +164,10 @@ def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
         else:
             resolved = (report_dir / decoded).resolve()
         if resolved.exists() and resolved.is_file():
-            basename_fallbacks.setdefault(resolved.name.lower(), resolved)
+            key = resolved.name.lower()
+            paths = basename_fallbacks.setdefault(key, [])
+            if all(str(existing) != str(resolved) for existing in paths):
+                paths.append(resolved)
 
     def _replace(match: re.Match[str]) -> str:
         prefix, q1, raw_value, q2 = match.groups()
@@ -201,9 +204,9 @@ def _rewrite_report_asset_urls(html: str, report_path: Path) -> str:
 
         new_url = _local_file_url(abs_target)
         if not new_url:
-            fallback_target = basename_fallbacks.get(Path(decoded).name.lower())
-            if fallback_target is not None:
-                new_url = _local_file_url(fallback_target)
+            fallback_targets = basename_fallbacks.get(Path(decoded).name.lower(), [])
+            if len(fallback_targets) == 1:
+                new_url = _local_file_url(fallback_targets[0])
         if not new_url:
             return match.group(0)
 
@@ -2042,17 +2045,33 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
     def api_preprocess_record_start(payload: Dict[str, Any]) -> Dict[str, Any]:
         audio_dir = str(payload.get("audio_dir") or DEFAULT_AUDIO_DIR_REL).strip() or DEFAULT_AUDIO_DIR_REL
         filename = str(payload.get("filename") or "").strip()
-        record_mode = str(payload.get("record_mode") or "song").strip() or "song"
+        ingest_raw = str(payload.get("ingest") or "").strip()
+        if not ingest_raw:
+            legacy_record_mode = str(payload.get("record_mode") or "").strip()
+            if legacy_record_mode == "tanpura_vocal":
+                ingest_raw = "tanpura_recording"
+            elif legacy_record_mode == "song":
+                ingest_raw = "recording"
+        ingest_aliases = {
+            "youtube": "yt",
+            "record": "recording",
+        }
+        ingest = ingest_aliases.get(ingest_raw, ingest_raw)
         tanpura_key_raw = str(payload.get("tanpura_key") or "").strip()
         tanpura_key = tanpura_key_raw or None
 
         if not filename:
             raise HTTPException(status_code=400, detail="filename is required.")
-        if record_mode not in {"song", "tanpura_vocal"}:
-            raise HTTPException(status_code=400, detail="record_mode must be 'song' or 'tanpura_vocal'.")
-        if record_mode == "tanpura_vocal" and not tanpura_key:
-            raise HTTPException(status_code=400, detail="tanpura_key is required for tanpura_vocal mode.")
-        if record_mode != "tanpura_vocal":
+        if not ingest:
+            raise HTTPException(status_code=400, detail="ingest is required.")
+        if ingest not in {"recording", "tanpura_recording"}:
+            raise HTTPException(
+                status_code=400,
+                detail="ingest must be 'recording' or 'tanpura_recording' for this endpoint.",
+            )
+        if ingest == "tanpura_recording" and not tanpura_key:
+            raise HTTPException(status_code=400, detail="tanpura_key is required for tanpura_recording ingest.")
+        if ingest != "tanpura_recording":
             tanpura_key = None
 
         with app.state.preprocess_recording_lock:

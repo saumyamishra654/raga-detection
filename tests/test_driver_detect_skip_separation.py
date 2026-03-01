@@ -99,6 +99,13 @@ class DriverDetectSkipSeparationTests(unittest.TestCase):
         with (
             patch("driver.extract_pitch", side_effect=fake_extract_pitch),
             patch("driver.separate_stems", mock_separate),
+            patch(
+                "driver.librosa",
+                new=types.SimpleNamespace(
+                    note_to_hz=lambda _note: 220.0,
+                    get_duration=lambda path: 0.0,
+                ),
+            ),
             patch("driver.compute_cent_histograms_from_config", return_value=dummy_hist),
             patch("driver.detect_peaks_from_config", return_value=dummy_peaks),
             patch("driver.fit_gmm_to_peaks", return_value=[]),
@@ -139,8 +146,25 @@ class DriverDetectSkipSeparationTests(unittest.TestCase):
             results = self._run_detect_with_mocks(config, mock_separate)
 
             mock_separate.assert_called_once()
+            self.assertFalse(bool(mock_separate.call_args.kwargs.get("force_recompute")))
             self.assertIsNotNone(results.pitch_data_stem)
             self.assertIsNotNone(results.pitch_data_composite)
+
+    def test_detect_force_stem_recompute_passed_to_separation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fake_vocals = str((Path(tmpdir) / "vocals.mp3").resolve())
+            fake_accomp = str((Path(tmpdir) / "accompaniment.mp3").resolve())
+            config = self._build_detect_config(
+                tmpdir,
+                force_recompute=True,
+                force_stem_recompute=True,
+            )
+            mock_separate = unittest.mock.Mock(return_value=(fake_vocals, fake_accomp))
+
+            _ = self._run_detect_with_mocks(config, mock_separate)
+
+            mock_separate.assert_called_once()
+            self.assertTrue(bool(mock_separate.call_args.kwargs.get("force_recompute")))
 
 
 if __name__ == "__main__":

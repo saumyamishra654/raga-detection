@@ -9,14 +9,22 @@ Provides:
 import argparse
 import math
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
 
 
 VALID_MODES = {"preprocess", "detect", "analyze"}
-VALID_PREPROCESS_INGESTS = {"youtube", "record"}
-VALID_PREPROCESS_RECORD_MODES = {"song", "tanpura_vocal"}
+VALID_PREPROCESS_INGESTS = {"yt", "recording", "tanpura_recording"}
+LEGACY_PREPROCESS_INGEST_ALIASES = {
+    "youtube": "yt",
+    "record": "recording",
+}
+LEGACY_RECORD_MODE_TO_INGEST = {
+    "song": "recording",
+    "tanpura_vocal": "tanpura_recording",
+}
 TANPURA_KEYS = ["A", "Bb", "B", "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab"]
 
 
@@ -42,8 +50,7 @@ class PipelineConfig:
     filename_override: Optional[str] = None
     preprocess_start_time: Optional[str] = None
     preprocess_end_time: Optional[str] = None
-    preprocess_ingest: str = "youtube"  # "youtube" or "record"
-    preprocess_record_mode: str = "song"  # "song" or "tanpura_vocal"
+    preprocess_ingest: Optional[str] = None  # "yt", "recording", or "tanpura_recording"
     preprocess_tanpura_key: Optional[str] = None
     preprocess_recorded_audio: Optional[str] = None
 
@@ -68,12 +75,12 @@ class PipelineConfig:
     skip_separation_forced_composite: bool = False
 
     # pitch extraction confidence thresholds
-    vocal_confidence: float = 0.98
+    vocal_confidence: float = 0.95
     accomp_confidence: float = 0.80
 
     # Pitch range (MIDI notes)
     fmin_note: str = "G1"   # ~49 Hz (notebook default)
-    fmax_note: str = "C6"   # Covers typical vocal/instrumental upper range
+    fmax_note: str = "D6"   # Extended upper range for taans/small movements
 
     # Histogram parameters
     histogram_bins_high: int = 100   # High-res: 100 bins
@@ -124,6 +131,7 @@ class PipelineConfig:
 
     # processing options
     force_recompute: bool = False         # Force pitch extraction only (stems reused if present)
+    force_stem_recompute: bool = False    # Detect only: force stem separation recomputation
     save_intermediates: bool = True       # Save CSVs, plots, etc.
 
     # GMM parameters
@@ -145,6 +153,7 @@ class PipelineConfig:
         self.yt_url = _clean_optional_str(self.yt_url)
         self.audio_dir = _clean_optional_str(self.audio_dir)
         self.filename_override = _clean_optional_str(self.filename_override)
+        self.preprocess_ingest = _clean_optional_str(self.preprocess_ingest)
         self.preprocess_tanpura_key = _clean_optional_str(self.preprocess_tanpura_key)
         self.preprocess_recorded_audio = _clean_optional_str(self.preprocess_recorded_audio)
         self.tonic_override = _clean_optional_str(self.tonic_override)
@@ -161,30 +170,30 @@ class PipelineConfig:
                 raise ValueError("Preprocess mode requires --audio-dir")
             if not self.filename_override:
                 raise ValueError("Preprocess mode requires --filename")
+            if not self.preprocess_ingest:
+                raise ValueError("Preprocess mode requires --ingest")
             if self.preprocess_ingest not in VALID_PREPROCESS_INGESTS:
                 raise ValueError(
                     f"Invalid preprocess ingest '{self.preprocess_ingest}'. "
                     f"Expected one of: {sorted(VALID_PREPROCESS_INGESTS)}"
-                )
-            if self.preprocess_record_mode not in VALID_PREPROCESS_RECORD_MODES:
-                raise ValueError(
-                    f"Invalid preprocess record mode '{self.preprocess_record_mode}'. "
-                    f"Expected one of: {sorted(VALID_PREPROCESS_RECORD_MODES)}"
                 )
 
             self.audio_dir = os.path.abspath(self.audio_dir)
             os.makedirs(self.audio_dir, exist_ok=True)
             self.audio_path = os.path.join(self.audio_dir, f"{self.filename_override}.mp3")
 
-            if self.preprocess_ingest == "youtube":
+            if self.preprocess_ingest == "yt":
                 if not self.yt_url:
-                    raise ValueError("Preprocess mode with --ingest youtube requires --yt")
+                    raise ValueError("Preprocess mode with --ingest yt requires --yt")
             else:
                 if self.preprocess_start_time or self.preprocess_end_time:
-                    raise ValueError("--start-time and --end-time are only valid when --ingest youtube.")
-                if self.preprocess_record_mode == "tanpura_vocal" and not self.preprocess_tanpura_key:
+                    raise ValueError("--start-time and --end-time are only valid when --ingest yt.")
+                if (
+                    self.preprocess_ingest == "tanpura_recording"
+                    and not self.preprocess_tanpura_key
+                ):
                     raise ValueError(
-                        "Preprocess mode with --record-mode tanpura_vocal requires --tanpura-key."
+                        "Preprocess mode with --ingest tanpura_recording requires --tanpura-key."
                     )
                 if self.preprocess_tanpura_key and self.preprocess_tanpura_key not in TANPURA_KEYS:
                     raise ValueError(
@@ -204,6 +213,9 @@ class PipelineConfig:
 
             if not os.path.isfile(self.audio_path):
                 raise FileNotFoundError(f"Audio file not found: {self.audio_path}")
+
+        if self.mode == "detect" and self.force_stem_recompute and not self.force_recompute:
+            raise ValueError("Detect mode with --force-stems requires --force.")
 
         if self.mode == "detect" and self.skip_separation:
             tonic_tokens = [
@@ -311,9 +323,31 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
     )
 
     # Pitch Extraction settings
-    parser.add_argument("--fmin-note", default="G1", help="Minimum note for pitch extraction (e.g., G1)")
-    parser.add_argument("--fmax-note", default="C6", help="Maximum note for pitch extraction (e.g., C6)")
-    parser.add_argument("--vocal-confidence", type=float, default=0.98, help="Confidence threshold (0-1) for melody pitch data")
+    parser.add_argument(
+        "--fmin-note",
+        default="G1",
+        help=(
+            "Minimum note for pitch extraction (e.g., G1). "
+            "For taan-heavy recordings, raise to A1/B1 to reduce low-frequency noise."
+        ),
+    )
+    parser.add_argument(
+        "--fmax-note",
+        default="D6",
+        help=(
+            "Maximum note for pitch extraction (e.g., D6). "
+            "Raise for fast high taans; lower if octave-jump false positives appear."
+        ),
+    )
+    parser.add_argument(
+        "--vocal-confidence",
+        type=float,
+        default=0.95,
+        help=(
+            "Confidence threshold (0-1) for melody pitch data. "
+            "Lower (0.90-0.95) to retain subtle taans; raise to suppress noisy transients."
+        ),
+    )
     parser.add_argument("--accomp-confidence", type=float, default=0.80, help="Confidence threshold (0-1) for accompaniment pitch data")
 
     # Peak Detection settings
@@ -336,6 +370,74 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
     parser.add_argument("--raga-db", help="Override path to raga database CSV")
 
 
+def _normalize_preprocess_argv_aliases(argv: Sequence[str]) -> List[str]:
+    """Normalize legacy preprocess ingest flags/values to canonical tokens."""
+    normalized: List[str] = []
+    pending_record_mode_ingest: Optional[str] = None
+    ingest_value_index: Optional[int] = None
+    idx = 0
+
+    while idx < len(argv):
+        token = str(argv[idx])
+
+        if token == "--record-mode":
+            if idx + 1 < len(argv):
+                record_mode_value = str(argv[idx + 1]).strip()
+                pending_record_mode_ingest = LEGACY_RECORD_MODE_TO_INGEST.get(
+                    record_mode_value,
+                    record_mode_value,
+                )
+                idx += 2
+            else:
+                idx += 1
+            continue
+
+        if token.startswith("--record-mode="):
+            record_mode_value = token.split("=", 1)[1].strip()
+            pending_record_mode_ingest = LEGACY_RECORD_MODE_TO_INGEST.get(
+                record_mode_value,
+                record_mode_value,
+            )
+            idx += 1
+            continue
+
+        if token == "--ingest":
+            normalized.append(token)
+            if idx + 1 < len(argv):
+                raw_value = str(argv[idx + 1]).strip()
+                mapped_value = LEGACY_PREPROCESS_INGEST_ALIASES.get(raw_value, raw_value)
+                normalized.append(mapped_value)
+                ingest_value_index = len(normalized) - 1
+                idx += 2
+            else:
+                idx += 1
+            continue
+
+        if token.startswith("--ingest="):
+            raw_value = token.split("=", 1)[1].strip()
+            mapped_value = LEGACY_PREPROCESS_INGEST_ALIASES.get(raw_value, raw_value)
+            normalized.append(f"--ingest={mapped_value}")
+            ingest_value_index = len(normalized) - 1
+            idx += 1
+            continue
+
+        normalized.append(token)
+        idx += 1
+
+    is_preprocess = any(token == "preprocess" for token in normalized)
+    if pending_record_mode_ingest and is_preprocess:
+        if ingest_value_index is not None:
+            ingest_token = normalized[ingest_value_index]
+            if ingest_token.startswith("--ingest="):
+                normalized[ingest_value_index] = f"--ingest={pending_record_mode_ingest}"
+            else:
+                normalized[ingest_value_index] = pending_record_mode_ingest
+        else:
+            normalized.extend(["--ingest", pending_record_mode_ingest])
+
+    return normalized
+
+
 def build_cli_parser() -> argparse.ArgumentParser:
     """Create and return the canonical CLI parser for the pipeline."""
     parser = argparse.ArgumentParser(
@@ -351,6 +453,12 @@ def build_cli_parser() -> argparse.ArgumentParser:
     _add_common_args(detect_parser, required=True)
     detect_parser.add_argument("--tonic", help="Force tonic (comma-separated allowed, e.g. C,D#)")
     detect_parser.add_argument("--raga", help="Force raga name")
+    detect_parser.add_argument(
+        "--force-stems",
+        dest="force_stem_recompute",
+        action="store_true",
+        help="Detect mode only: requires --force and also forces stem-separation recomputation.",
+    )
 
     # --- Analyze Mode ---
     analyze_parser = subparsers.add_parser("analyze", help="Phase 2: Analysis only")
@@ -379,14 +487,28 @@ def build_cli_parser() -> argparse.ArgumentParser:
         "--transcription-smoothing-ms",
         type=float,
         default=0.0,
-        help="Smoothing sigma (ms) for transcription. Set to 0 to disable.",
+        help=(
+            "Smoothing sigma (ms) for transcription. Set to 0 to disable. "
+            "Keep low (0-20ms) for taans; higher values can blur small movements."
+        ),
     )
-    analyze_parser.add_argument("--transcription-min-duration", type=float, default=0.02, help="Minimum duration (s) for a transcribed note.")
+    analyze_parser.add_argument(
+        "--transcription-min-duration",
+        type=float,
+        default=0.02,
+        help=(
+            "Minimum duration (s) for a transcribed note. "
+            "Use 0.01-0.03 for short taan fragments."
+        ),
+    )
     analyze_parser.add_argument(
         "--transcription-stability-threshold",
         type=float,
         default=4.0,
-        help="Max pitch change (semitones/sec) to be considered stable.",
+        help=(
+            "Max pitch change (semitones/sec) to be considered stable. "
+            "Increase to capture faster note motions in taans."
+        ),
     )
     analyze_parser.add_argument(
         "--energy-threshold",
@@ -395,7 +517,8 @@ def build_cli_parser() -> argparse.ArgumentParser:
         help=(
             "Per-track normalized energy threshold (0.0-1.0) for transcription note gating. "
             "This is relative to the selected melody track (not absolute loudness); "
-            "typical RMS range is ~0.03 to 0.12."
+            "typical RMS range is ~0.03 to 0.12. "
+            "For soft taans, keep this low (0.0-0.05)."
         ),
     )
     analyze_parser.add_argument(
@@ -424,11 +547,11 @@ def build_cli_parser() -> argparse.ArgumentParser:
     )
     preprocess_parser.add_argument(
         "--ingest",
-        choices=["youtube", "record"],
-        default="youtube",
-        help="Preprocess ingest path: download from YouTube or record/upload audio",
+        choices=["yt", "recording", "tanpura_recording"],
+        required=True,
+        help="Preprocess ingest path: yt, recording, or tanpura_recording",
     )
-    preprocess_parser.add_argument("--yt", help="YouTube URL to download (required when --ingest youtube)")
+    preprocess_parser.add_argument("--yt", help="YouTube URL to download (required when --ingest yt)")
     preprocess_parser.add_argument("--audio-dir", default="../audio_test_files", help="Directory where downloaded MP3 should be saved")
     preprocess_parser.add_argument(
         "--filename",
@@ -436,20 +559,14 @@ def build_cli_parser() -> argparse.ArgumentParser:
         help="Output filename base (without extension); saved as <filename>.mp3",
     )
     preprocess_parser.add_argument(
-        "--record-mode",
-        choices=["song", "tanpura_vocal"],
-        default="song",
-        help="Recording mode for --ingest record",
-    )
-    preprocess_parser.add_argument(
         "--tanpura-key",
         choices=TANPURA_KEYS,
-        help="Tanpura key/tonic for tanpura_vocal recording mode",
+        help="Tanpura key/tonic for tanpura recording ingest",
     )
     preprocess_parser.add_argument(
         "--recorded-audio",
         help="Existing recorded audio path (used by local app uploads). "
-        "If omitted with --ingest record, CLI uses live microphone capture.",
+        "If omitted with recording/tanpura_recording ingest, CLI uses live microphone capture.",
     )
     preprocess_parser.add_argument("--start-time", help="Optional trim start time (SS, MM:SS, or HH:MM:SS)")
     preprocess_parser.add_argument("--end-time", help="Optional trim end time (SS, MM:SS, or HH:MM:SS)")
@@ -464,6 +581,12 @@ def build_cli_parser() -> argparse.ArgumentParser:
     _add_common_args(parser, required=False)
     parser.add_argument("--tonic", help="Force tonic (comma-separated allowed, e.g. C,D#)")
     parser.add_argument("--raga", help="Force raga")
+    parser.add_argument(
+        "--force-stems",
+        dest="force_stem_recompute",
+        action="store_true",
+        help="Detect mode only: requires --force and also forces stem-separation recomputation.",
+    )
 
     return parser
 
@@ -488,8 +611,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         filename_override=getattr(args, 'filename', None),
         preprocess_start_time=getattr(args, 'start_time', None),
         preprocess_end_time=getattr(args, 'end_time', None),
-        preprocess_ingest=getattr(args, 'ingest', 'youtube'),
-        preprocess_record_mode=getattr(args, 'record_mode', 'song'),
+        preprocess_ingest=getattr(args, 'ingest', None),
         preprocess_tanpura_key=getattr(args, 'tanpura_key', None),
         preprocess_recorded_audio=getattr(args, 'recorded_audio', None),
         separator_engine=getattr(args, 'separator', 'demucs'),
@@ -498,9 +620,10 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         vocalist_gender=getattr(args, 'vocalist_gender', None),
         instrument_type=getattr(args, 'instrument_type', 'autodetect'),
         skip_separation=getattr(args, 'skip_separation', False),
-        vocal_confidence=getattr(args, 'vocal_confidence', 0.98),
+        vocal_confidence=getattr(args, 'vocal_confidence', 0.95),
         accomp_confidence=getattr(args, 'accomp_confidence', 0.80),
         force_recompute=getattr(args, 'force', False),
+        force_stem_recompute=getattr(args, 'force_stem_recompute', False),
         raga_db_path=getattr(args, 'raga_db', None),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
@@ -520,7 +643,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         show_rms_overlay=not getattr(args, 'no_rms_overlay', False),
         melody_source=getattr(args, 'melody_source', "separated"),
         fmin_note=getattr(args, 'fmin_note', "G1"),
-        fmax_note=getattr(args, 'fmax_note', "C6"),
+        fmax_note=getattr(args, 'fmax_note', "D6"),
         prominence_high_factor=getattr(args, 'prominence_high', 0.01),
         prominence_low_factor=getattr(args, 'prominence_low', 0.03),
         bias_rotation=getattr(args, 'bias_rotation', True),
@@ -535,14 +658,16 @@ def parse_config_from_argv(argv: Sequence[str]) -> PipelineConfig:
         argv: Command-line style arguments, excluding executable name.
     """
     parser = build_cli_parser()
-    args = parser.parse_args(list(argv))
+    normalized_argv = _normalize_preprocess_argv_aliases(list(argv))
+    args = parser.parse_args(normalized_argv)
     return _config_from_parsed_args(args, parser)
 
 
 def load_config_from_cli() -> PipelineConfig:
     """Parse command-line arguments from sys.argv and return configuration."""
     parser = build_cli_parser()
-    args = parser.parse_args()
+    normalized_argv = _normalize_preprocess_argv_aliases(sys.argv[1:])
+    args = parser.parse_args(normalized_argv)
     return _config_from_parsed_args(args, parser)
 
 

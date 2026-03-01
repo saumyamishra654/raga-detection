@@ -27,6 +27,7 @@ ADVANCED_DESTS: Set[str] = {
     "prominence_low",
     "bias_rotation",
     "force",
+    "force_stem_recompute",
     "skip_separation",
     "raga_db",
 }
@@ -158,4 +159,3 @@ def get_mode_schema(mode: str) -> Dict[str, Any]:
         "required": required,
         "groups": ["common", "mode", "advanced"],
     }
-

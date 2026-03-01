@@ -54,11 +54,14 @@ class ConfigSchemaTests(unittest.TestCase):
         schema = get_mode_schema("preprocess")
         by_name = {field["name"]: field for field in schema["fields"]}
         self.assertIn("ingest", by_name)
-        self.assertIn("record_mode", by_name)
+        self.assertNotIn("record_mode", by_name)
         self.assertIn("tanpura_key", by_name)
         self.assertIn("recorded_audio", by_name)
-        self.assertEqual(by_name["ingest"]["default"], "youtube")
-        self.assertEqual(by_name["record_mode"]["default"], "song")
+        self.assertTrue(by_name["ingest"]["required"])
+        self.assertEqual(
+            by_name["ingest"]["choices"],
+            ["yt", "recording", "tanpura_recording"],
+        )
 
     def test_params_to_argv_roundtrip_shape(self) -> None:
         argv = params_to_argv(
@@ -82,12 +85,11 @@ class ConfigSchemaTests(unittest.TestCase):
         self.assertIn("--bias-rotation", argv)
         self.assertIn("--force", argv)
 
-    def test_params_to_argv_preprocess_record_mode(self) -> None:
+    def test_params_to_argv_preprocess_ingest_modes(self) -> None:
         argv = params_to_argv(
             "preprocess",
             params={
-                "ingest": "record",
-                "record_mode": "tanpura_vocal",
+                "ingest": "tanpura_recording",
                 "tanpura_key": "A",
                 "audio_dir": "/tmp/audio",
                 "filename": "take_1",
@@ -97,9 +99,8 @@ class ConfigSchemaTests(unittest.TestCase):
         )
         self.assertEqual(argv[0], "preprocess")
         self.assertIn("--ingest", argv)
-        self.assertIn("record", argv)
-        self.assertIn("--record-mode", argv)
-        self.assertIn("tanpura_vocal", argv)
+        self.assertIn("tanpura_recording", argv)
+        self.assertNotIn("--record-mode", argv)
         self.assertIn("--tanpura-key", argv)
         self.assertIn("A", argv)
         self.assertIn("--recorded-audio", argv)
@@ -109,6 +110,13 @@ class ConfigSchemaTests(unittest.TestCase):
         by_name = {field["name"]: field for field in schema["fields"]}
         self.assertEqual(by_name["phrase_min_duration"]["default"], 0.2)
         self.assertEqual(by_name["phrase_min_notes"]["default"], 1)
+
+    def test_pitch_defaults_tuned_for_taans(self) -> None:
+        schema = get_mode_schema("detect")
+        by_name = {field["name"]: field for field in schema["fields"]}
+        self.assertEqual(by_name["fmax_note"]["default"], "D6")
+        self.assertEqual(by_name["vocal_confidence"]["default"], 0.95)
+        self.assertIn("force_stem_recompute", by_name)
 
     def test_parse_config_analyze_uses_new_phrase_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -151,12 +159,27 @@ class ConfigSchemaTests(unittest.TestCase):
             self.assertTrue(config.strict_raga_35c_filter)
             self.assertEqual(config.strict_raga_max_cents, 42.0)
 
-    def test_preprocess_youtube_requires_yt(self) -> None:
+    def test_preprocess_requires_ingest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaises(SystemExit):
+                parse_config_from_argv(
+                    [
+                        "preprocess",
+                        "--audio-dir",
+                        tmpdir,
+                        "--filename",
+                        "demo",
+                    ]
+                )
+
+    def test_preprocess_yt_requires_yt(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with self.assertRaisesRegex(ValueError, "requires --yt"):
                 parse_config_from_argv(
                     [
                         "preprocess",
+                        "--ingest",
+                        "yt",
                         "--audio-dir",
                         tmpdir,
                         "--filename",
@@ -172,9 +195,7 @@ class ConfigSchemaTests(unittest.TestCase):
                 [
                     "preprocess",
                     "--ingest",
-                    "record",
-                    "--record-mode",
-                    "song",
+                    "recording",
                     "--recorded-audio",
                     str(recorded_path),
                     "--audio-dir",
@@ -184,20 +205,17 @@ class ConfigSchemaTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(config.mode, "preprocess")
-            self.assertEqual(config.preprocess_ingest, "record")
-            self.assertEqual(config.preprocess_record_mode, "song")
+            self.assertEqual(config.preprocess_ingest, "recording")
             self.assertEqual(config.preprocess_recorded_audio, os.path.abspath(str(recorded_path)))
 
-    def test_tanpura_vocal_requires_tanpura_key(self) -> None:
+    def test_tanpura_recording_requires_tanpura_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with self.assertRaisesRegex(ValueError, "requires --tanpura-key"):
                 parse_config_from_argv(
                     [
                         "preprocess",
                         "--ingest",
-                        "record",
-                        "--record-mode",
-                        "tanpura_vocal",
+                        "tanpura_recording",
                         "--audio-dir",
                         tmpdir,
                         "--filename",
@@ -213,7 +231,7 @@ class ConfigSchemaTests(unittest.TestCase):
                     [
                         "preprocess",
                         "--ingest",
-                        "record",
+                        "recording",
                         "--recorded-audio",
                         str(missing_path),
                         "--audio-dir",
@@ -230,9 +248,7 @@ class ConfigSchemaTests(unittest.TestCase):
                     [
                         "preprocess",
                         "--ingest",
-                        "record",
-                        "--record-mode",
-                        "tanpura_vocal",
+                        "tanpura_recording",
                         "--tanpura-key",
                         "C#",
                         "--audio-dir",
@@ -241,6 +257,30 @@ class ConfigSchemaTests(unittest.TestCase):
                         "demo",
                     ]
                 )
+
+    def test_legacy_preprocess_aliases_are_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            recorded_path = Path(tmpdir) / "recorded.wav"
+            recorded_path.write_bytes(b"RIFF")
+            config = parse_config_from_argv(
+                [
+                    "preprocess",
+                    "--ingest",
+                    "record",
+                    "--record-mode",
+                    "tanpura_vocal",
+                    "--tanpura-key",
+                    "A",
+                    "--recorded-audio",
+                    str(recorded_path),
+                    "--audio-dir",
+                    tmpdir,
+                    "--filename",
+                    "demo",
+                ]
+            )
+            self.assertEqual(config.preprocess_ingest, "tanpura_recording")
+            self.assertEqual(config.preprocess_tanpura_key, "A")
 
     def test_detect_skip_separation_requires_tonic(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -292,6 +332,36 @@ class ConfigSchemaTests(unittest.TestCase):
             )
             self.assertEqual(config.melody_source, "composite")
             self.assertTrue(config.skip_separation_forced_composite)
+
+    def test_detect_force_stems_requires_force(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "demo.wav"
+            audio_path.write_bytes(b"RIFF")
+            with self.assertRaisesRegex(ValueError, "requires --force"):
+                parse_config_from_argv(
+                    [
+                        "detect",
+                        "--audio",
+                        str(audio_path),
+                        "--force-stems",
+                    ]
+                )
+
+    def test_detect_force_stems_with_force_is_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "demo.wav"
+            audio_path.write_bytes(b"RIFF")
+            config = parse_config_from_argv(
+                [
+                    "detect",
+                    "--audio",
+                    str(audio_path),
+                    "--force",
+                    "--force-stems",
+                ]
+            )
+            self.assertTrue(config.force_recompute)
+            self.assertTrue(config.force_stem_recompute)
 
 
 if __name__ == "__main__":

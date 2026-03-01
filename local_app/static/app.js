@@ -10,6 +10,8 @@
     const logsEl = document.getElementById("logs");
     const artifactListEl = document.getElementById("artifact-list");
     const jobArgvEl = document.getElementById("job-argv");
+    const jobProgressWidget = document.getElementById("job-progress-widget");
+    const jobProgressPercent = document.getElementById("job-progress-percent");
     const openDetectReportBtn = document.getElementById("open-detect-report-btn");
     const openAnalyzeReportBtn = document.getElementById("open-analyze-report-btn");
     const runBatchBtn = document.getElementById("run-batch-btn");
@@ -47,12 +49,12 @@
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
         instrument_type: { field: "source_type", equals: "instrumental" },
-        yt: { field: "ingest", equals: "youtube" },
-        start_time: { field: "ingest", equals: "youtube" },
-        end_time: { field: "ingest", equals: "youtube" },
-        record_mode: { field: "ingest", equals: "record" },
-        recorded_audio: { field: "ingest", equals: "record" },
-        tanpura_key: { field: "record_mode", equals: "tanpura_vocal" }
+        yt: { field: "ingest", equals: "yt" },
+        start_time: { field: "ingest", equals: "yt" },
+        end_time: { field: "ingest", equals: "yt" },
+        recorded_audio: { field: "ingest", equalsAny: ["recording", "tanpura_recording"] },
+        tanpura_key: { field: "ingest", equals: "tanpura_recording" },
+        force_stem_recompute: { field: "force", sourceType: "checkbox", equals: true }
     };
     selectedAudioDirectory = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
 
@@ -535,6 +537,17 @@
         return String(input.value || "").trim();
     }
 
+    function normalizeIngestValue(rawValue) {
+        const value = String(rawValue || "").trim();
+        if (value === "youtube") return "yt";
+        if (value === "record") return "recording";
+        return value;
+    }
+
+    function isRecordingIngest(ingestValue) {
+        return ingestValue === "recording" || ingestValue === "tanpura_recording";
+    }
+
     function composePreprocessOutputAudioPath() {
         const audioDir = getFieldValue("audio_dir") || getFieldDefault("audio_dir", DEFAULT_AUDIO_DIR_REL) || "";
         const filename = getFieldValue("filename");
@@ -549,8 +562,8 @@
 
     function buildRecordDetectSuggestion() {
         if (modeSelect.value !== "preprocess") return null;
-        const ingest = getFieldValue("ingest") || "youtube";
-        if (ingest !== "record") return null;
+        const ingest = normalizeIngestValue(getFieldValue("ingest"));
+        if (!isRecordingIngest(ingest)) return null;
 
         const recordedPath = getFieldValue("recorded_audio");
         const outputAudioPath = recordedPath || composePreprocessOutputAudioPath();
@@ -567,8 +580,7 @@
             consumedFlags.push("--output");
         }
 
-        const recordMode = getFieldValue("record_mode") || "song";
-        if (recordMode === "tanpura_vocal") {
+        if (ingest === "tanpura_recording") {
             const tanpuraKey = getFieldValue("tanpura_key");
             if (tanpuraKey) {
                 paramsByFlag["--tonic"] = tanpuraKey;
@@ -586,9 +598,9 @@
             return "Recording controls are available only in preprocess mode.";
         }
 
-        const ingest = getFieldValue("ingest");
-        if (ingest !== "record") {
-            return "Set --ingest to 'record' to use microphone recording.";
+        const ingest = normalizeIngestValue(getFieldValue("ingest"));
+        if (!isRecordingIngest(ingest)) {
+            return "Set --ingest to 'recording' or 'tanpura_recording' to use microphone recording.";
         }
 
         const filename = getFieldValue("filename");
@@ -596,8 +608,7 @@
             return "Fill --filename before starting recording.";
         }
 
-        const recordMode = getFieldValue("record_mode") || "song";
-        if (recordMode === "tanpura_vocal") {
+        if (ingest === "tanpura_recording") {
             const selectedTanpura = String(
                 (tanpuraSelect && tanpuraSelect.value) || getFieldValue("tanpura_key") || ""
             ).trim();
@@ -637,11 +648,20 @@
         }
 
         if (mode !== "preprocess") return;
-        const ingest = String(params.ingest || getFieldValue("ingest") || "youtube").trim();
-        if (ingest === "youtube") {
+        const ingest = normalizeIngestValue(params.ingest || getFieldValue("ingest"));
+        if (!ingest) {
+            throw new Error("Missing required field: --ingest.");
+        }
+        if (ingest === "yt") {
             const ytUrl = String(params.yt || getFieldValue("yt") || "").trim();
             if (!ytUrl) {
-                throw new Error("Missing required field: --yt (required when --ingest is youtube).");
+                throw new Error("Missing required field: --yt (required when --ingest is yt).");
+            }
+        }
+        if (ingest === "tanpura_recording") {
+            const tanpuraKey = String(params.tanpura_key || getFieldValue("tanpura_key") || "").trim();
+            if (!tanpuraKey) {
+                throw new Error("Missing required field: --tanpura-key (required when --ingest is tanpura_recording).");
             }
         }
     }
@@ -733,7 +753,7 @@
 
         const tanpuraLabel = document.createElement("div");
         tanpuraLabel.className = "hint";
-        tanpuraLabel.textContent = "Tanpura (for tanpura_vocal mode):";
+        tanpuraLabel.textContent = "Tanpura (for tanpura_recording ingest):";
         tanpuraWrap.appendChild(tanpuraLabel);
 
         const tanpuraControls = document.createElement("div");
@@ -812,9 +832,8 @@
         }
 
         function setTanpuraVisibility() {
-            const ingest = getFieldValue("ingest");
-            const recordMode = getFieldValue("record_mode") || "song";
-            const shouldShow = ingest === "record" && recordMode === "tanpura_vocal";
+            const ingest = normalizeIngestValue(getFieldValue("ingest"));
+            const shouldShow = ingest === "tanpura_recording";
             tanpuraWrap.style.display = shouldShow ? "grid" : "none";
             if (!shouldShow) {
                 stopTanpuraPreview();
@@ -905,7 +924,7 @@
             });
         }
 
-        ["ingest", "record_mode"].forEach(function (name) {
+        ["ingest"].forEach(function (name) {
             const input = getFieldInput(name);
             if (!input) return;
             input.addEventListener("change", function () {
@@ -931,9 +950,9 @@
                 return;
             }
 
-            const recordMode = getFieldValue("record_mode") || "song";
+            const ingest = normalizeIngestValue(getFieldValue("ingest"));
             let tanpuraKey = null;
-            if (recordMode === "tanpura_vocal") {
+            if (ingest === "tanpura_recording") {
                 tanpuraKey = String(tanpuraSelect.value || getFieldValue("tanpura_key") || "").trim() || null;
             }
             if (tanpuraFieldInput) {
@@ -949,7 +968,7 @@
                 const payload = await startBackendRecording({
                     audio_dir: getFieldValue("audio_dir") || getFieldDefault("audio_dir", DEFAULT_AUDIO_DIR_REL),
                     filename: getFieldValue("filename"),
-                    record_mode: recordMode,
+                    ingest: ingest,
                     tanpura_key: tanpuraKey,
                 });
                 if (tanpuraFieldInput && payload && payload.tonic) {
@@ -1406,12 +1425,16 @@
 
         if (field.choices && field.choices.length > 0) {
             input = document.createElement("select");
-            if (!field.required) {
+            const hasDefault = field.default !== null && field.default !== undefined && field.default !== "";
+            if (!field.required || !hasDefault) {
                 const blank = document.createElement("option");
                 blank.value = "";
-                blank.textContent = field.default !== null && field.default !== undefined
+                blank.textContent = !field.required && field.default !== null && field.default !== undefined
                     ? "(none: use default " + String(field.default) + ")"
-                    : "(none)";
+                    : "(select one)";
+                if (field.required) {
+                    blank.disabled = true;
+                }
                 blank.selected = true;
                 input.appendChild(blank);
             }
@@ -1419,7 +1442,7 @@
                 const option = document.createElement("option");
                 option.value = String(choice);
                 option.textContent = String(choice);
-                if (field.required && field.default !== null && String(field.default) === String(choice)) {
+                if (hasDefault && String(field.default) === String(choice)) {
                     option.selected = true;
                 }
                 input.appendChild(option);
@@ -1446,11 +1469,11 @@
             } else if (!field.required && field.default !== null && field.default !== undefined) {
                 input.placeholder = "Default: " + String(field.default);
             }
-            if (field.required) {
-                input.required = true;
-            }
         }
 
+        if (field.required && field.value_type !== "bool") {
+            input.required = true;
+        }
         input.id = id;
         input.dataset.fieldName = field.name;
         if (field.name === "audio" || field.name === "recorded_audio") {
@@ -1461,6 +1484,38 @@
 
     function renderSchema(schema) {
         clearChildren(schemaForms);
+
+        function appendFieldRow(field, containerEl) {
+            const row = document.createElement("div");
+            row.className = "row";
+            row.dataset.fieldName = field.name;
+
+            const label = document.createElement("label");
+            label.htmlFor = fieldInputId(field.name);
+            label.textContent = field.flag + (field.required ? " *" : "");
+            row.appendChild(label);
+
+            const input = createInput(field);
+            row.appendChild(input);
+
+            const hint = document.createElement("div");
+            hint.className = "hint";
+            hint.textContent = field.help || "";
+            row.appendChild(hint);
+
+            if (field.name === "audio") {
+                attachAudioDirectoryPicker(row, input);
+                attachAudioDropzone(row, input);
+            }
+            if (field.name === "recorded_audio") {
+                attachPreprocessRecordingControls(row, input);
+            }
+            if (field.name === "raga") {
+                attachRagaAutocomplete(row, input);
+            }
+
+            containerEl.appendChild(row);
+        }
 
         const groups = ["common", "mode", "advanced"];
         groups.forEach(function (group) {
@@ -1476,37 +1531,29 @@
             title.textContent = group === "mode" ? (schema.mode + " parameters") : group;
             section.appendChild(title);
 
-            fields.forEach(function (field) {
-                const row = document.createElement("div");
-                row.className = "row";
-                row.dataset.fieldName = field.name;
+            const requiredFields = fields.filter(function (field) { return !!field.required; });
+            const optionalFields = fields.filter(function (field) { return !field.required; });
 
-                const label = document.createElement("label");
-                label.htmlFor = fieldInputId(field.name);
-                label.textContent = field.flag + (field.required ? " *" : "");
-                row.appendChild(label);
-
-                const input = createInput(field);
-                row.appendChild(input);
-
-                const hint = document.createElement("div");
-                hint.className = "hint";
-                hint.textContent = field.help || "";
-                row.appendChild(hint);
-
-                if (field.name === "audio") {
-                    attachAudioDirectoryPicker(row, input);
-                    attachAudioDropzone(row, input);
-                }
-                if (field.name === "recorded_audio") {
-                    attachPreprocessRecordingControls(row, input);
-                }
-                if (field.name === "raga") {
-                    attachRagaAutocomplete(row, input);
-                }
-
-                section.appendChild(row);
+            requiredFields.forEach(function (field) {
+                appendFieldRow(field, section);
             });
+
+            if (optionalFields.length > 0) {
+                const details = document.createElement("details");
+                details.className = "optional-fields";
+
+                const summary = document.createElement("summary");
+                summary.textContent = "Optional parameters (" + optionalFields.length + ")";
+                details.appendChild(summary);
+
+                const body = document.createElement("div");
+                body.className = "optional-fields-body";
+                optionalFields.forEach(function (field) {
+                    appendFieldRow(field, body);
+                });
+                details.appendChild(body);
+                section.appendChild(details);
+            }
 
             schemaForms.appendChild(section);
         });
@@ -1516,7 +1563,7 @@
     }
 
     function bindConditionalVisibilityHandlers() {
-        ["source_type", "ingest", "record_mode"].forEach(function (name) {
+        ["source_type", "ingest", "force"].forEach(function (name) {
             const input = document.getElementById(fieldInputId(name));
             if (!input) return;
             input.addEventListener("change", function () {
@@ -1582,7 +1629,20 @@
 
             const dep = FIELD_DEPENDENCIES[targetField];
             const sourceInput = document.getElementById(fieldInputId(dep.field));
-            const shouldShow = Boolean(sourceInput) && sourceInput.value === dep.equals;
+            let shouldShow = false;
+            if (sourceInput) {
+                let sourceValue = dep.sourceType === "checkbox"
+                    ? Boolean(sourceInput.checked)
+                    : String(sourceInput.value || "").trim();
+                if (dep.field === "ingest" && typeof sourceValue === "string") {
+                    sourceValue = normalizeIngestValue(sourceValue);
+                }
+                if (Array.isArray(dep.equalsAny)) {
+                    shouldShow = dep.equalsAny.indexOf(sourceValue) >= 0;
+                } else {
+                    shouldShow = sourceValue === dep.equals;
+                }
+            }
             row.style.display = shouldShow ? "grid" : "none";
             if (!shouldShow) {
                 resetHiddenField(targetField);
@@ -1843,6 +1903,56 @@
         statusLine.textContent = text;
     }
 
+    function updateJobProgressWidget(status, progress, message) {
+        if (!jobProgressWidget || !jobProgressPercent) return;
+        const normalizedProgress = Number.isFinite(Number(progress)) ? Number(progress) : 0;
+        const boundedProgress = Math.max(0, Math.min(1, normalizedProgress));
+        const percent = Math.round(boundedProgress * 100);
+
+        let visualState = "idle";
+        if (status === "queued" || status === "running") {
+            visualState = "running";
+        } else if (status === "completed") {
+            visualState = "completed";
+        } else if (status === "failed") {
+            visualState = "failed";
+        } else if (status === "cancelled") {
+            visualState = "cancelled";
+        }
+
+        const colorByState = {
+            idle: "#8c5a2b",
+            running: "#8f4316",
+            completed: "#2f7a32",
+            failed: "#a6401b",
+            cancelled: "#a6401b",
+        };
+        const progressColor = colorByState[visualState] || colorByState.idle;
+
+        // Inline fallback styling prevents raw "0%" rendering when CSS cache is stale.
+        jobProgressWidget.style.width = "44px";
+        jobProgressWidget.style.height = "44px";
+        jobProgressWidget.style.borderRadius = "50%";
+        jobProgressWidget.style.display = "grid";
+        jobProgressWidget.style.placeItems = "center";
+        jobProgressWidget.style.border = "1px solid #8c5a2b";
+        jobProgressWidget.style.boxShadow = "inset 0 1px 2px rgba(0,0,0,0.16)";
+        jobProgressWidget.style.background =
+            "conic-gradient(" + progressColor + " " + (boundedProgress * 360) + "deg, rgba(143,67,22,0.18) 0deg)";
+
+        jobProgressWidget.style.setProperty("--job-progress", String(boundedProgress));
+        jobProgressWidget.classList.remove("idle", "running", "completed", "failed", "cancelled");
+        jobProgressWidget.classList.add(visualState);
+        jobProgressPercent.textContent = percent + "%";
+        jobProgressPercent.style.fontSize = "10px";
+        jobProgressPercent.style.fontWeight = "700";
+        jobProgressPercent.style.color = "#160f08";
+        jobProgressPercent.style.position = "relative";
+        jobProgressPercent.style.zIndex = "1";
+        const detail = message ? (String(status) + " - " + String(message)) : String(status || "idle");
+        jobProgressWidget.title = detail;
+    }
+
     function setBusy(busy) {
         isBusy = Boolean(busy);
         runBtn.disabled = isBusy;
@@ -1909,6 +2019,7 @@
             }
             setBusy(false);
             setStatus("Previous job session was not found. Start a new run.");
+            updateJobProgressWidget("idle", 0, "Idle");
             return;
         }
         if (!jobRes.ok || !logRes.ok) {
@@ -1921,12 +2032,8 @@
         const isRunning = job.status === "queued" || job.status === "running";
 
         setStatus(job.status + " - " + (job.message || ""));
-        if (!isRunning) {
-            progressEl.value = Number(job.progress || 0);
-        } else if (Number(progressEl.value || 0) <= 0) {
-            // Set once on run start; avoid live snapping on every progress update.
-            progressEl.value = Number(job.progress || 0);
-        }
+        progressEl.value = Number(job.progress || 0);
+        updateJobProgressWidget(job.status, progressEl.value, job.message || "");
         logsEl.textContent = logLines.join("\n");
         jobArgvEl.textContent = job.argv && job.argv.length ? ("argv: " + job.argv.join(" ")) : "";
         const shouldRefreshArtifacts = Boolean(opts.refreshArtifacts) || !isRunning;
@@ -2011,6 +2118,7 @@
             setBusy(true);
             setStatus("Submitted: " + job.job_id);
             progressEl.value = 0;
+            updateJobProgressWidget("queued", 0, "Submitted");
             logsEl.textContent = "";
             artifactListEl.textContent = "";
             applyReportLinks(null, null, null);
@@ -2091,6 +2199,7 @@
                 setBusy(true);
                 setStatus("Batch submitted: " + job.job_id);
                 progressEl.value = 0;
+                updateJobProgressWidget("queued", 0, "Batch submitted");
                 logsEl.textContent = "";
                 artifactListEl.textContent = "";
                 applyReportLinks(null, null, null);
@@ -2181,6 +2290,7 @@
     });
 
     clearAnalyzeWorkspace();
+    updateJobProgressWidget("idle", 0, "Idle");
     loadSchema(modeSelect.value).catch(function (err) {
         setStatus("Schema load error: " + err.message);
     });

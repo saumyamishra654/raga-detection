@@ -2934,24 +2934,64 @@ def _generate_transcription_editor_section(
                     return;
                 }
                 commitMutation("Merged selected phrases", function(next) {
-                    var selected = next.phrases.filter(function(phrase) { return ids.indexOf(phrase.id) >= 0; });
+                    var noteById = {};
+                    next.notes.forEach(function(note) {
+                        noteById[note.id] = note;
+                    });
+
+                    var selected = [];
+                    next.phrases.forEach(function(phrase, idx) {
+                        if (ids.indexOf(phrase.id) >= 0) {
+                            selected.push({ phrase: phrase, index: idx });
+                        }
+                    });
                     if (selected.length < 2) return;
-                    selected.sort(function(a, b) { return a.start - b.start; });
+
+                    selected.sort(function(a, b) {
+                        if (a.phrase.start !== b.phrase.start) return a.phrase.start - b.phrase.start;
+                        if (a.phrase.end !== b.phrase.end) return a.phrase.end - b.phrase.end;
+                        return a.index - b.index;
+                    });
+
                     var mergedNoteIds = [];
                     var seen = {};
-                    selected.forEach(function(phrase) {
-                        phrase.note_ids.forEach(function(noteId) {
+                    selected.forEach(function(item) {
+                        item.phrase.note_ids.forEach(function(noteId) {
                             if (seen[noteId]) return;
+                            if (!noteById[noteId]) return;
                             seen[noteId] = true;
                             mergedNoteIds.push(noteId);
                         });
                     });
-                    var keepId = selected[0].id;
+                    if (!mergedNoteIds.length) return;
+
+                    mergedNoteIds.sort(function(a, b) {
+                        var noteA = noteById[a];
+                        var noteB = noteById[b];
+                        if (noteA.start !== noteB.start) return noteA.start - noteB.start;
+                        if (noteA.end !== noteB.end) return noteA.end - noteB.end;
+                        return a.localeCompare(b);
+                    });
+
+                    var mergedStart = noteById[mergedNoteIds[0]].start;
+                    var mergedEnd = noteById[mergedNoteIds[0]].end;
+                    mergedNoteIds.forEach(function(noteId) {
+                        mergedStart = Math.min(mergedStart, noteById[noteId].start);
+                        mergedEnd = Math.max(mergedEnd, noteById[noteId].end);
+                    });
+
+                    var keepId = selected[0].phrase.id;
+                    var insertIndex = selected[0].index;
+                    for (var i = 1; i < selected.length; i += 1) {
+                        insertIndex = Math.min(insertIndex, selected[i].index);
+                    }
                     next.phrases = next.phrases.filter(function(phrase) { return ids.indexOf(phrase.id) < 0; });
-                    next.phrases.push({
+                    if (insertIndex < 0) insertIndex = 0;
+                    if (insertIndex > next.phrases.length) insertIndex = next.phrases.length;
+                    next.phrases.splice(insertIndex, 0, {
                         id: keepId,
-                        start: 0,
-                        end: 0,
+                        start: mergedStart,
+                        end: mergedEnd,
                         note_ids: mergedNoteIds
                     });
                     selectedPhraseId = keepId;
@@ -5513,6 +5553,7 @@ def _generate_karaoke_section(
             padding: 2px 6px;
             border-radius: 6px;
             border: 1px solid transparent;
+            color: #79c0ff;
             transition: all 0.16s ease;
         }}
         #{uid}-lyrics .karaoke-phrase-note.sung {{

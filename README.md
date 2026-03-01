@@ -75,16 +75,17 @@ What it provides:
 
 ### Mode 0: Preprocess (`preprocess`)
 
-Preprocess now supports two ingest paths:
-- `--ingest youtube` (default): download from YouTube.
-- `--ingest record`: ingest recorded audio (from browser upload/local file) or live CLI microphone recording.
+Preprocess now supports three ingest paths:
+- `--ingest yt`: download from YouTube.
+- `--ingest recording`: ingest recorded audio (from browser upload/local file) or live CLI microphone recording.
+- `--ingest tanpura_recording`: recording ingest with mandatory tanpura key/tonic.
 
 Both paths save an MP3 locally so it can be used by `detect` and `analyze`.
 
 ```bash
-# YouTube ingest (default)
+# YouTube ingest
 ./run_pipeline.sh preprocess \
-    --ingest youtube \
+    --ingest yt \
     --yt "https://www.youtube.com/watch?v=..." \
     --filename "my_song_name" \
     --start-time "0:30" \
@@ -92,15 +93,13 @@ Both paths save an MP3 locally so it can be used by `detect` and `analyze`.
 
 # Record ingest using an existing recorded file (local app upload path or local file)
 ./run_pipeline.sh preprocess \
-    --ingest record \
-    --record-mode song \
+    --ingest recording \
     --recorded-audio "/absolute/path/to/recording.webm" \
     --filename "my_recording"
 
 # Tanpura-assisted vocal recording ingest
 ./run_pipeline.sh preprocess \
-    --ingest record \
-    --record-mode tanpura_vocal \
+    --ingest tanpura_recording \
     --tanpura-key "A" \
     --recorded-audio "/absolute/path/to/recording.webm" \
     --filename "a_tanpura_take"
@@ -108,21 +107,23 @@ Both paths save an MP3 locally so it can be used by `detect` and `analyze`.
 
 `--audio-dir` defaults to `../audio_test_files` (you can override it when needed).
 
-`--start-time` and `--end-time` are optional and only apply to `--ingest youtube`. If omitted, preprocess defaults to full track (`0:00` to track end). Time format supports `SS`, `MM:SS`, or `HH:MM:SS`.
+`--start-time` and `--end-time` are optional and only apply to `--ingest yt`. If omitted, preprocess defaults to full track (`0:00` to track end). Time format supports `SS`, `MM:SS`, or `HH:MM:SS`.
 
 Prerequisites:
 - `ffmpeg` and `ffprobe` available in `PATH`
-- Python package `yt-dlp` installed (imported as `yt_dlp`)
+- Python package `yt-dlp` installed (imported as `yt_dlp`; required for `--ingest yt`)
 - `ffplay` available in `PATH` for CLI tanpura playback
 
 Validation rules:
-- `--ingest youtube` requires `--yt`
-- `--start-time`/`--end-time` are valid only for `--ingest youtube`
-- `--record-mode tanpura_vocal` requires `--tanpura-key`
+- `--ingest` is mandatory (`yt`, `recording`, `tanpura_recording`)
+- `--ingest yt` requires `--yt`
+- `--start-time`/`--end-time` are valid only for `--ingest yt`
+- `--ingest tanpura_recording` requires `--tanpura-key`
 - `--recorded-audio`, when provided, must exist
 - YouTube trim checks: `start-time < end-time` and both times within track duration
 
-For tanpura-vocal record mode, preprocess prints the next-step detect command with `--tonic "<tanpura-key>"` prefilled.
+For tanpura recording ingest, preprocess prints the next-step detect command with `--tonic "<tanpura-key>"` prefilled.
+Legacy compatibility: older CLI forms (`--ingest youtube|record` and `--record-mode song|tanpura_vocal`) are still accepted and normalized internally.
 
 ### Phase 1: Detection (`detect`)
 
@@ -150,11 +151,14 @@ Runs stem separation, pitch extraction, and attempts to identify the Raga and To
 *   `--instrument-type`: Instrument type hint for tonic biasing in instrumental mode (default: `autodetect`).
 *   `--separator`: `demucs` (default) or `spleeter`.
 *   `--demucs-model`: Demucs model name (default: `htdemucs`).
-*   `--fmin-note` / `--fmax-note`: Override default pitch extraction range (e.g. `G1` to `C6`).
+*   `--fmin-note` / `--fmax-note`: Override pitch extraction range (defaults: `G1` to `D6`).
+    - For taan-heavy passages, increase `--fmax-note` if high runs are clipped.
 *   `--vocal-confidence` / `--accomp-confidence`: Confidence thresholds (0-1) for pitch extraction.
+    - Melody default is `0.95` to retain softer/faster note movements; raise it for noisier tracks.
 *   `--prominence-high` / `--prominence-low`: Fine-tune peak detection sensitivity (factors applied to prominence thresholds).
 *   `--bias-rotation`: Disable histogram bias rotation (bias rotation is enabled by default).
 *   `--force` / `-f`: Force pitch recomputation (stems are reused if present).
+*   `--force-stems`: Detect-only. Requires `--force`; recomputes stems even when cached.
 *   `--raga-db`: Override path to the raga database CSV.
 *   `--tonic`: Constrain scoring to one or more tonics (comma-separated, e.g. `C,D#`).
 *   `--raga`: Constrain scoring to a specific raga name.
@@ -196,10 +200,14 @@ Important:
 *   `--strict-raga-35c-filter`: Enable strict raga filtering by nearest-note distance (when enabled, `--keep-impure-notes` is ignored).
 *   `--strict-raga-max-cents`: Maximum allowed nearest-note distance in cents for strict filtering (default: `35`).
 *   `--transcription-smoothing-ms`: Transcription smoothing sigma (ms). Use `0` to disable.
+    - For taans/small movements, keep this low (`0-20ms`) to avoid over-smoothing.
 *   `--transcription-min-duration`: Minimum duration (s) for a transcribed note (default: `0.02`).
+    - For faster taans, try `0.01-0.03`.
 *   `--transcription-stability-threshold`: Max pitch change (semitones/sec) to be considered stable (default: `4.0`).
+    - Increase this to keep faster pitch transitions classified as stable notes.
 *   `--energy-metric`: `rms` (peak-normalized, default) or `log_amp` (dBFS with percentile normalization).
 *   `--energy-threshold`: Per-track normalized energy gate (0-1) for transcription note gating. This is relative to the selected melody track (not absolute loudness). Typical RMS tuning range: `0.03-0.12`. Default: `0.0`.
+    - Keep near `0.0-0.05` for soft taans so low-energy ornaments are not dropped.
 *   `--silence-threshold`: Energy threshold (0-1) to split phrases on sustained silence. Default: 0.10 (set `0` to disable).
 *   `--silence-min-duration`: Minimum silence duration (seconds) required to split phrases. Default: 0.25.
 *   `--phrase-min-duration`: Exclude phrases shorter than this duration (seconds). Default: `0.2`.

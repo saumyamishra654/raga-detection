@@ -44,6 +44,61 @@ header {
     flex-wrap: wrap;
 }
 
+.header-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.job-progress-widget {
+    --job-progress: 0;
+    --progress-color: var(--line-strong);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(
+        var(--progress-color) calc(var(--job-progress) * 1turn),
+        rgba(143, 67, 22, 0.18) 0
+    );
+    border: 1px solid var(--line-strong);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.16);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.job-progress-widget::before {
+    content: "";
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-header);
+    border: 1px solid rgba(143, 67, 22, 0.34);
+    position: absolute;
+}
+
+.job-progress-widget span {
+    position: relative;
+    z-index: 1;
+    font-size: 10px;
+    font-weight: 700;
+    color: #160f08;
+}
+
+.job-progress-widget.running {
+    --progress-color: var(--accent-strong);
+}
+
+.job-progress-widget.completed {
+    --progress-color: #2f7a32;
+}
+
+.job-progress-widget.failed,
+.job-progress-widget.cancelled {
+    --progress-color: var(--warning);
+}
+
 .header-actions {
     display: flex;
     gap: 8px;
@@ -75,6 +130,22 @@ main {
     box-shadow: 0 6px 18px rgba(76, 44, 17, 0.08);
 }
 
+.panel-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.panel-title-row h2 {
+    margin: 0;
+}
+
+.panel-title-row .job-progress-widget::before {
+    background: var(--bg-panel);
+}
+
 .subsection {
     margin-bottom: 14px;
     border: 1px solid var(--line);
@@ -87,6 +158,26 @@ main {
     margin: 0 0 8px 0;
     text-transform: capitalize;
     color: var(--accent-strong);
+}
+
+.optional-fields {
+    margin-top: 8px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: rgba(248, 236, 217, 0.55);
+}
+
+.optional-fields > summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--accent-strong);
+    font-weight: 600;
+    user-select: none;
+}
+
+.optional-fields-body {
+    margin-top: 8px;
 }
 
 .row {
@@ -334,6 +425,12 @@ progress {
 }
 
 @media (max-width: 900px) {
+    .header-title-wrap {
+        width: 100%;
+    }
+    .panel-title-row {
+        align-items: flex-start;
+    }
     .row {
         grid-template-columns: 1fr;
     }

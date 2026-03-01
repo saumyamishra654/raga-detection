@@ -156,13 +156,12 @@ def run_pipeline(
         print(f"Ingest: {config.preprocess_ingest}")
         print(f"Audio Dir: {config.audio_dir}")
         print(f"Filename: {config.filename_override}.mp3")
-        if config.preprocess_ingest == "youtube":
+        if config.preprocess_ingest == "yt":
             print(f"YouTube URL: {config.yt_url}")
             print(f"Start Time: {config.preprocess_start_time or '0:00'}")
             print(f"End Time: {config.preprocess_end_time or 'track end'}")
         else:
-            print(f"Record Mode: {config.preprocess_record_mode}")
-            if config.preprocess_record_mode == "tanpura_vocal":
+            if config.preprocess_ingest == "tanpura_recording":
                 print(f"Tanpura Key: {config.preprocess_tanpura_key}")
             print(
                 "Recorded Source: "
@@ -172,7 +171,7 @@ def run_pipeline(
 
         preprocess_tonic: str | None = None
         try:
-            if config.preprocess_ingest == "youtube":
+            if config.preprocess_ingest == "yt":
                 downloaded_audio_path = download_youtube_audio(
                     yt_url=config.yt_url or "",
                     audio_dir=config.audio_dir or "",
@@ -183,7 +182,7 @@ def run_pipeline(
             else:
                 tanpura_key = (
                     config.preprocess_tanpura_key
-                    if config.preprocess_record_mode == "tanpura_vocal"
+                    if config.preprocess_ingest == "tanpura_recording"
                     else None
                 )
                 if config.preprocess_recorded_audio:
@@ -202,7 +201,7 @@ def run_pipeline(
                     preprocess_tonic = get_tonic_from_tanpura_key(tanpura_key)
         except Exception as exc:
             print(f"[PREPROCESS] ERROR: {exc}")
-            if config.preprocess_ingest == "youtube":
+            if config.preprocess_ingest == "yt":
                 print("[PREPROCESS] Tip: try updating yt-dlp and retrying with a different/public video URL.")
             else:
                 print("[PREPROCESS] Tip: check microphone permissions, ffmpeg/ffplay availability, and tanpura key selection.")
@@ -410,6 +409,7 @@ def run_pipeline(
                 output_dir=config.output_dir,
                 engine=config.separator_engine,
                 model=config.demucs_model,
+                force_recompute=config.force_stem_recompute,
             )
         _print_timing("Step 1/7 stem preparation", perf_counter() - step1_start, audio_duration_s)
         

@@ -12,7 +12,7 @@ The HTML report includes JavaScript that synchronizes:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Set, Optional, Any, Union, Tuple, TypedDict
+from typing import List, Dict, Set, Optional, Any, Union, Tuple, TypedDict, cast
 import os
 import json
 import uuid
@@ -21,7 +21,7 @@ import base64
 from pathlib import Path
 from html import escape
 from urllib.parse import quote
-from datetime import datetime
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -34,6 +34,7 @@ from . import transcription
 from .analysis import HistogramData, PeakData, GMMResult
 from .raga import _parse_tonic
 from .sequence import Note, Phrase, OFFSET_TO_SARGAM
+from .runtime_fingerprint import get_runtime_fingerprint
 
 
 # =============================================================================
@@ -4417,6 +4418,8 @@ def create_scrollable_pitch_plot_html(
         const overlayLabel = {json.dumps(overlay_label)};
         const tonicPitchClass = {tonic_pitch_class};
         const clearSelectionEventName = "raga-scroll-selection-clear";
+        const overlayActivationEventName = "raga-scroll-overlay-activate";
+        const plotId = "{unique_id}";
         const container = document.getElementById("{unique_id}-container");
         const plotLayer = document.getElementById("{unique_id}-plot-layer");
         const plotImage = document.getElementById("{unique_id}-plot-image");
@@ -4471,6 +4474,34 @@ def create_scrollable_pitch_plot_html(
             let pointerStartX = 0;
             let pointerCurrentX = 0;
             let lastPointerEventMeta = null;
+            const overlayPanel = container.closest(".energy-overlay-panel");
+            const overlayPanelId =
+                overlayPanel && overlayPanel.id ? String(overlayPanel.id) : null;
+            const managedListenerRemovers = [];
+            let instanceRunning = false;
+            let syncRafId = null;
+            let hoverRafId = null;
+            let pendingHoverX = null;
+            let pendingHoverY = null;
+            let lastHoverRenderedTime = Number.NaN;
+            let syncLastFrameMs = null;
+            let syncFrameGapAccumMs = 0;
+            let syncFrameGapCount = 0;
+            let syncMaxFrameGapMs = 0;
+            let syncLongFrameCount = 0;
+            let syncLogLastMs = 0;
+            const longFrameThresholdMs = 34;
+            const hoverRenderTimeEpsilonSec = 0.001;
+            let latestSyncMetrics = {{
+                active: false,
+                overlayPanelId: overlayPanelId,
+                frames: 0,
+                maxFrameGapMs: 0,
+                avgFrameGapMs: 0,
+                longFrameCount: 0,
+                lastAudioTime: 0,
+                lastRenderMs: 0,
+            }};
 
             function isSelectionDebugEnabled() {{
                 try {{
@@ -4522,6 +4553,76 @@ def create_scrollable_pitch_plot_html(
                     }}
                 }}
             }}
+
+            function isSyncDebugEnabled() {{
+                try {{
+                    if (typeof window !== "undefined" && window.__RAGA_SYNC_DEBUG__) {{
+                        return true;
+                    }}
+                }} catch (_err) {{
+                    // Ignore probe failures.
+                }}
+                try {{
+                    if (
+                        typeof window !== "undefined" &&
+                        window.localStorage &&
+                        window.localStorage.getItem("ragaSyncDebug") === "1"
+                    ) {{
+                        return true;
+                    }}
+                }} catch (_err) {{
+                    // Ignore private/incognito storage failures.
+                }}
+                return false;
+            }}
+
+            function getSyncMetricsStore() {{
+                if (typeof window === "undefined") {{
+                    return {{}};
+                }}
+                if (!window.__RAGA_SYNC_METRICS__ || typeof window.__RAGA_SYNC_METRICS__ !== "object") {{
+                    window.__RAGA_SYNC_METRICS__ = {{}};
+                }}
+                return window.__RAGA_SYNC_METRICS__;
+            }}
+
+            function ensureSyncDumpHelper() {{
+                if (typeof window === "undefined") {{
+                    return;
+                }}
+                if (typeof window.__RAGA_SYNC_DUMP__ === "function") {{
+                    return;
+                }}
+                window.__RAGA_SYNC_DUMP__ = function() {{
+                    const store = getSyncMetricsStore();
+                    try {{
+                        return JSON.parse(JSON.stringify(store));
+                    }} catch (_err) {{
+                        return store;
+                    }}
+                }};
+            }}
+
+            function updateSyncMetrics(partial) {{
+                latestSyncMetrics = Object.assign({{}}, latestSyncMetrics, partial || {{}});
+                const entry = Object.assign({{}}, latestSyncMetrics, {{
+                    overlayPanelId: overlayPanelId,
+                }});
+                const store = getSyncMetricsStore();
+                store[plotId] = entry;
+                return entry;
+            }}
+
+            ensureSyncDumpHelper();
+            updateSyncMetrics({{
+                active: false,
+                frames: 0,
+                maxFrameGapMs: 0,
+                avgFrameGapMs: 0,
+                longFrameCount: 0,
+                lastAudioTime: 0,
+                lastRenderMs: 0,
+            }});
 
             const energyFrames = [];
             const frameCount = Math.min(overlayEnergyValues.length, overlayEnergyTimestamps.length);
@@ -5333,52 +5434,144 @@ def create_scrollable_pitch_plot_html(
                 pointMarker.style.display = "none";
             }}
 
-            // Sync Loop
-            function updateSync() {{
-                const src = resolveActiveAudio();
-                if (src) {{
-                    const t = src.currentTime || 0;
-                    const follow = (!src.paused && !src.ended) || (performance.now() < seekSnapUntil);
-                    renderAtTime(t, follow);
+            function addManagedListener(target, eventName, handler, options) {{
+                if (!target || !target.addEventListener) {{
+                    return;
                 }}
-                requestAnimationFrame(updateSync);
-            }}
-            updateSync();
-
-            setDefaultInspector();
-
-            [container, plotLayer, plotImage].forEach(function(target) {{
-                if (!target) return;
-                target.addEventListener("dragstart", function(e) {{
-                    e.preventDefault();
+                target.addEventListener(eventName, handler, options);
+                managedListenerRemovers.push(function() {{
+                    try {{
+                        target.removeEventListener(eventName, handler, options);
+                    }} catch (_err) {{
+                        // Ignore teardown failures.
+                    }}
                 }});
-            }});
+            }}
 
-            container.addEventListener("mousedown", function(e) {{
+            function clearManagedListeners() {{
+                while (managedListenerRemovers.length) {{
+                    const remove = managedListenerRemovers.pop();
+                    if (typeof remove === "function") {{
+                        remove();
+                    }}
+                }}
+            }}
+
+            function isElementVisible(el) {{
+                if (!el || typeof window === "undefined") {{
+                    return false;
+                }}
+                try {{
+                    const style = window.getComputedStyle(el);
+                    if (!style || style.display === "none" || style.visibility === "hidden") {{
+                        return false;
+                    }}
+                }} catch (_err) {{
+                    // Ignore style probe failures.
+                }}
+                return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+            }}
+
+            function isInstanceVisibleAndActive() {{
+                const globalActiveId = (
+                    typeof window !== "undefined" && window.__RAGA_ACTIVE_SCROLL_OVERLAY_ID__
+                )
+                    ? String(window.__RAGA_ACTIVE_SCROLL_OVERLAY_ID__)
+                    : "";
+                if (overlayPanelId && globalActiveId) {{
+                    return overlayPanelId === globalActiveId;
+                }}
+                if (overlayPanelId) {{
+                    return isElementVisible(overlayPanel);
+                }}
+                return isElementVisible(container);
+            }}
+
+            function emitSyncDebug(entry, nowMs) {{
+                if (!isSyncDebugEnabled()) {{
+                    return;
+                }}
+                const now = isFinite(Number(nowMs)) ? Number(nowMs) : performance.now();
+                if ((now - syncLogLastMs) < 2000) {{
+                    return;
+                }}
+                syncLogLastMs = now;
+                try {{
+                    console.log("[RAGA_SYNC][" + plotId + "]", entry);
+                }} catch (_err) {{
+                    // Ignore console failures.
+                }}
+            }}
+
+            function resetSyncFrameStats() {{
+                syncLastFrameMs = null;
+                syncFrameGapAccumMs = 0;
+                syncFrameGapCount = 0;
+                syncMaxFrameGapMs = 0;
+                syncLongFrameCount = 0;
+            }}
+
+            function cancelHoverRaf() {{
+                if (hoverRafId !== null) {{
+                    cancelAnimationFrame(hoverRafId);
+                    hoverRafId = null;
+                }}
+            }}
+
+            function scheduleHoverRender(plotX, pointerY) {{
+                pendingHoverX = plotX;
+                pendingHoverY = pointerY;
+                if (hoverRafId !== null) {{
+                    return;
+                }}
+                hoverRafId = requestAnimationFrame(function() {{
+                    hoverRafId = null;
+                    if (!instanceRunning || isPointerDown) {{
+                        return;
+                    }}
+                    if (!isFinite(Number(pendingHoverX)) || !isFinite(Number(pendingHoverY))) {{
+                        return;
+                    }}
+                    const hoverTime = xToTime(Number(pendingHoverX));
+                    if (
+                        isFinite(lastHoverRenderedTime) &&
+                        Math.abs(hoverTime - lastHoverRenderedTime) < hoverRenderTimeEpsilonSec
+                    ) {{
+                        return;
+                    }}
+                    renderHoverTooltip(Number(pendingHoverX), Number(pendingHoverY));
+                    lastHoverRenderedTime = hoverTime;
+                }});
+            }}
+
+            function onContainerMouseDown(e) {{
                 if (e.button !== 0) {{
                     return;
                 }}
                 e.preventDefault();
+                cancelHoverRaf();
                 hideHoverTooltip();
                 isPointerDown = true;
                 pointerStartX = xFromEvent(e);
                 pointerCurrentX = pointerStartX;
-            }});
+            }}
 
-            container.addEventListener("mousemove", function(e) {{
+            function onContainerMouseMove(e) {{
                 if (isPointerDown) {{
                     return;
                 }}
-                renderHoverTooltip(xFromEvent(e), yFromEvent(e));
-            }});
+                scheduleHoverRender(xFromEvent(e), yFromEvent(e));
+            }}
 
-            container.addEventListener("mouseleave", function() {{
-                if (!isPointerDown) {{
-                    hideHoverTooltip();
+            function onContainerMouseLeave() {{
+                if (isPointerDown) {{
+                    return;
                 }}
-            }});
+                cancelHoverRaf();
+                hideHoverTooltip();
+            }}
 
-            document.addEventListener("mousemove", function(e) {{
+            function onDocumentMouseMove(e) {{
                 if (!isPointerDown) {{
                     return;
                 }}
@@ -5386,9 +5579,9 @@ def create_scrollable_pitch_plot_html(
                 if (Math.abs(pointerCurrentX - pointerStartX) >= dragThresholdPx) {{
                     updateDragPreview(pointerStartX, pointerCurrentX);
                 }}
-            }});
+            }}
 
-            document.addEventListener("mouseup", function(e) {{
+            function onDocumentMouseUp(e) {{
                 if (!isPointerDown) {{
                     return;
                 }}
@@ -5402,53 +5595,203 @@ def create_scrollable_pitch_plot_html(
                 }} else {{
                     runPointQuery(pointerCurrentX, true);
                 }}
-            }});
+            }}
 
-            clearSelectionBtn.addEventListener("click", function() {{
-                clearSelection();
-            }});
-
-            document.addEventListener("keydown", function(e) {{
+            function onKeyDown(e) {{
                 if (e.key === "Escape") {{
                     clearSelection();
                 }}
-            }});
+            }}
 
-            document.addEventListener(clearSelectionEventName, function() {{
-                clearSelection();
-            }});
+            function onTrackPlay(el) {{
+                activeAudio = resolveActiveAudio(el);
+                renderAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0, true);
+            }}
 
-            // Keep cursor/timeline aligned immediately after native seek events too.
-            trackIds.forEach(function(id) {{
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.addEventListener('play', function() {{
+            function onTrackSeeked(el) {{
+                activeAudio = resolveActiveAudio(el);
+                const t = (activeAudio ? activeAudio.currentTime : el.currentTime) || 0;
+                renderAtTime(t, true);
+                seekSnapUntil = performance.now() + 300;
+            }}
+
+            function onTrackLoadedMetadata(el) {{
+                if (!activeAudio) {{
                     activeAudio = resolveActiveAudio(el);
-                    renderAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0, true);
+                    renderAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0, false);
+                }}
+            }}
+
+            function onTrackPauseOrEnded(el) {{
+                if (activeAudio === el) {{
+                    activeAudio = resolveActiveAudio();
+                }}
+            }}
+
+            function attachManagedListeners() {{
+                [container, plotLayer, plotImage].forEach(function(target) {{
+                    if (!target) return;
+                    addManagedListener(target, "dragstart", function(e) {{
+                        e.preventDefault();
+                    }});
                 }});
-                el.addEventListener('seeked', function() {{
-                    activeAudio = resolveActiveAudio(el);
-                    const t = (activeAudio ? activeAudio.currentTime : el.currentTime) || 0;
-                    renderAtTime(t, true);
-                    seekSnapUntil = performance.now() + 300;
+
+                addManagedListener(container, "mousedown", onContainerMouseDown);
+                addManagedListener(container, "mousemove", onContainerMouseMove);
+                addManagedListener(container, "mouseleave", onContainerMouseLeave);
+                addManagedListener(document, "mousemove", onDocumentMouseMove);
+                addManagedListener(document, "mouseup", onDocumentMouseUp);
+                addManagedListener(clearSelectionBtn, "click", clearSelection);
+                addManagedListener(document, "keydown", onKeyDown);
+                addManagedListener(document, clearSelectionEventName, clearSelection);
+
+                trackIds.forEach(function(id) {{
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    addManagedListener(el, "play", function() {{
+                        onTrackPlay(el);
+                    }});
+                    addManagedListener(el, "seeked", function() {{
+                        onTrackSeeked(el);
+                    }});
+                    addManagedListener(el, "loadedmetadata", function() {{
+                        onTrackLoadedMetadata(el);
+                    }});
+                    addManagedListener(el, "pause", function() {{
+                        onTrackPauseOrEnded(el);
+                    }});
+                    addManagedListener(el, "ended", function() {{
+                        onTrackPauseOrEnded(el);
+                    }});
                 }});
-                el.addEventListener('loadedmetadata', function() {{
-                    if (!activeAudio) {{
-                        activeAudio = resolveActiveAudio(el);
-                        renderAtTime((activeAudio ? activeAudio.currentTime : el.currentTime) || 0, false);
+            }}
+
+            function updateSyncLoop(nowMs) {{
+                if (!instanceRunning) {{
+                    return;
+                }}
+
+                const now = isFinite(Number(nowMs)) ? Number(nowMs) : performance.now();
+                if (syncLastFrameMs !== null) {{
+                    const frameGap = now - syncLastFrameMs;
+                    if (isFinite(frameGap) && frameGap >= 0) {{
+                        syncFrameGapAccumMs += frameGap;
+                        syncFrameGapCount += 1;
+                        syncMaxFrameGapMs = Math.max(syncMaxFrameGapMs, frameGap);
+                        if (frameGap > longFrameThresholdMs) {{
+                            syncLongFrameCount += 1;
+                        }}
                     }}
+                }}
+                syncLastFrameMs = now;
+
+                const src = resolveActiveAudio();
+                let audioTime = Number(latestSyncMetrics.lastAudioTime || 0);
+                if (src) {{
+                    const t = src.currentTime || 0;
+                    audioTime = t;
+                    const follow = (!src.paused && !src.ended) || (performance.now() < seekSnapUntil);
+                    renderAtTime(t, follow);
+                }}
+
+                const nextFrames = Number(latestSyncMetrics.frames || 0) + 1;
+                const avgFrameGap = syncFrameGapCount > 0 ? (syncFrameGapAccumMs / syncFrameGapCount) : 0;
+                const entry = updateSyncMetrics({{
+                    active: true,
+                    frames: nextFrames,
+                    maxFrameGapMs: syncMaxFrameGapMs,
+                    avgFrameGapMs: avgFrameGap,
+                    longFrameCount: syncLongFrameCount,
+                    lastAudioTime: audioTime,
+                    lastRenderMs: now,
                 }});
-                el.addEventListener('pause', function() {{
-                    if (activeAudio === el) {{
-                        activeAudio = resolveActiveAudio();
-                    }}
+                emitSyncDebug(entry, now);
+
+                syncRafId = requestAnimationFrame(updateSyncLoop);
+            }}
+
+            function stopSyncInstance() {{
+                if (!instanceRunning) {{
+                    updateSyncMetrics({{ active: false }});
+                    return;
+                }}
+                instanceRunning = false;
+                if (syncRafId !== null) {{
+                    cancelAnimationFrame(syncRafId);
+                    syncRafId = null;
+                }}
+                clearManagedListeners();
+                cancelHoverRaf();
+                pendingHoverX = null;
+                pendingHoverY = null;
+                isPointerDown = false;
+                pointMarker.style.display = "none";
+                rangeBand.style.display = "none";
+                hideHoverTooltip();
+                updateSyncMetrics({{
+                    active: false,
+                    lastRenderMs: performance.now(),
                 }});
-                el.addEventListener('ended', function() {{
-                    if (activeAudio === el) {{
-                        activeAudio = resolveActiveAudio();
-                    }}
+            }}
+
+            function startSyncInstance() {{
+                if (instanceRunning) {{
+                    return;
+                }}
+                if (document.hidden || !isInstanceVisibleAndActive()) {{
+                    updateSyncMetrics({{ active: false }});
+                    return;
+                }}
+
+                instanceRunning = true;
+                resetSyncFrameStats();
+                attachManagedListeners();
+                const src = resolveActiveAudio();
+                if (src) {{
+                    const t = src.currentTime || 0;
+                    const follow = (!src.paused && !src.ended) || (performance.now() < seekSnapUntil);
+                    renderAtTime(t, follow);
+                }}
+                updateSyncMetrics({{
+                    active: true,
+                    frames: Number(latestSyncMetrics.frames || 0),
+                    lastRenderMs: performance.now(),
                 }});
-            }});
+                syncRafId = requestAnimationFrame(updateSyncLoop);
+            }}
+
+            function onOverlayActivate(evt) {{
+                const detail = evt && evt.detail ? evt.detail : {{}};
+                const activeOverlayPanelId = String(detail.overlayPanelId || "").trim();
+                if (activeOverlayPanelId && typeof window !== "undefined") {{
+                    window.__RAGA_ACTIVE_SCROLL_OVERLAY_ID__ = activeOverlayPanelId;
+                }}
+                if (isInstanceVisibleAndActive() && !document.hidden) {{
+                    startSyncInstance();
+                }} else {{
+                    stopSyncInstance();
+                }}
+            }}
+
+            function onVisibilityChange() {{
+                if (document.hidden) {{
+                    stopSyncInstance();
+                    return;
+                }}
+                if (isInstanceVisibleAndActive()) {{
+                    startSyncInstance();
+                }}
+            }}
+
+            document.addEventListener(overlayActivationEventName, onOverlayActivate);
+            document.addEventListener("visibilitychange", onVisibilityChange);
+
+            setDefaultInspector();
+            if (isInstanceVisibleAndActive() && !document.hidden) {{
+                startSyncInstance();
+            }} else {{
+                stopSyncInstance();
+            }}
         }}
     }});
     </script>
@@ -5978,19 +6321,86 @@ def _to_json_compatible(value: Any) -> Any:
     return str(value)
 
 
+def _build_runtime_fingerprint_payload(
+    runtime_fingerprint: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    if runtime_fingerprint and isinstance(runtime_fingerprint, dict):
+        return cast(Dict[str, Any], _to_json_compatible(runtime_fingerprint))
+    try:
+        return cast(
+            Dict[str, Any],
+            _to_json_compatible(get_runtime_fingerprint(cache_ttl_seconds=0.0)),
+        )
+    except Exception:
+        return {}
+
+
+def _build_stage_fingerprint_payload(
+    mode: str,
+    runtime_fingerprint_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    mode_name = str(mode or "").strip().lower()
+    stage_hashes = runtime_fingerprint_payload.get("stage_hashes")
+    stage_hash = None
+    if isinstance(stage_hashes, dict):
+        candidate = stage_hashes.get(mode_name)
+        if candidate is not None:
+            stage_hash = str(candidate)
+
+    payload = {
+        "mode": mode_name,
+        "hash": stage_hash,
+        "stage_manifest_version": runtime_fingerprint_payload.get("stage_manifest_version"),
+    }
+    return cast(Dict[str, Any], _to_json_compatible(payload))
+
+
+def _build_run_identity(
+    config: PipelineConfig,
+    *,
+    mode: str,
+    detected_tonic: Optional[int] = None,
+    detected_raga: Optional[str] = None,
+) -> Dict[str, Any]:
+    return {
+        "mode": mode,
+        "audio_path": _abspath_or_raw(getattr(config, "audio_path", "")),
+        "output_dir": _abspath_or_raw(getattr(config, "output_dir", "")),
+        "separator": str(getattr(config, "separator_engine", "demucs") or "demucs"),
+        "demucs_model": str(getattr(config, "demucs_model", "htdemucs") or "htdemucs"),
+        "source_type": str(getattr(config, "source_type", "mixed") or "mixed"),
+        "melody_source": str(getattr(config, "melody_source", "separated") or "separated"),
+        "vocalist_gender": getattr(config, "vocalist_gender", None),
+        "instrument_type": str(getattr(config, "instrument_type", "autodetect") or "autodetect"),
+        "tonic": int(detected_tonic) if detected_tonic is not None else None,
+        "raga": str(detected_raga) if detected_raga else None,
+    }
+
+
 def _build_analysis_report_metadata(
     results: 'AnalysisResults',
     stats: AnalysisStats,
     output_dir: str,
     report_path: str,
+    runtime_fingerprint: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     stem_dir = os.path.abspath(output_dir)
     config = results.config
     tonic_for_editor = int(results.detected_tonic) if results.detected_tonic is not None else 0
+    runtime_fp = _build_runtime_fingerprint_payload(runtime_fingerprint)
     metadata: Dict[str, Any] = {
         "schema_version": 1,
         "report_filename": os.path.basename(report_path),
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "pipeline_mode": "analyze",
+        "runtime_fingerprint": runtime_fp,
+        "stage_fingerprint": _build_stage_fingerprint_payload("analyze", runtime_fp),
+        "run_identity": _build_run_identity(
+            config,
+            mode="analyze",
+            detected_tonic=results.detected_tonic,
+            detected_raga=results.detected_raga,
+        ),
         "config": {
             "audio_path": _abspath_or_raw(getattr(config, "audio_path", "")),
             "vocals_path": _abspath_or_raw(getattr(config, "vocals_path", "")),
@@ -6043,11 +6453,85 @@ def _write_analysis_report_metadata(
     stats: AnalysisStats,
     output_dir: str,
     report_path: str,
+    runtime_fingerprint: Optional[Dict[str, Any]] = None,
 ) -> None:
-    metadata = _build_analysis_report_metadata(results, stats, output_dir, report_path)
+    metadata = _build_analysis_report_metadata(
+        results,
+        stats,
+        output_dir,
+        report_path,
+        runtime_fingerprint=runtime_fingerprint,
+    )
     metadata_path = str(Path(report_path).with_suffix(".meta.json"))
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, allow_nan=False)
+
+
+def _build_detection_report_metadata(
+    results: 'AnalysisResults',
+    report_path: str,
+    runtime_fingerprint: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    runtime_fp = _build_runtime_fingerprint_payload(runtime_fingerprint)
+    top_raga = None
+    top_tonic = None
+    top_tonic_name = None
+    if results.candidates is not None and len(results.candidates) > 0:
+        try:
+            top = results.candidates.iloc[0]
+            top_raga = str(top.get("raga")) if top.get("raga") is not None else None
+            top_tonic_value = top.get("tonic")
+            if top_tonic_value is not None:
+                top_tonic = int(top_tonic_value)
+            tonic_name_value = top.get("tonic_name")
+            if tonic_name_value is not None:
+                top_tonic_name = str(tonic_name_value)
+        except Exception:
+            top_raga = None
+            top_tonic = None
+            top_tonic_name = None
+
+    metadata: Dict[str, Any] = {
+        "schema_version": 1,
+        "report_filename": os.path.basename(report_path),
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "pipeline_mode": "detect",
+        "runtime_fingerprint": runtime_fp,
+        "stage_fingerprint": _build_stage_fingerprint_payload(
+            "detect",
+            runtime_fp,
+        ),
+        "run_identity": _build_run_identity(
+            results.config,
+            mode="detect",
+            detected_tonic=results.detected_tonic,
+            detected_raga=results.detected_raga,
+        ),
+        "detected": {
+            "top_raga": top_raga,
+            "top_tonic": top_tonic,
+            "top_tonic_name": top_tonic_name,
+            "selected_raga": str(results.detected_raga) if results.detected_raga else None,
+            "selected_tonic": int(results.detected_tonic) if results.detected_tonic is not None else None,
+        },
+    }
+    return _to_json_compatible(metadata)
+
+
+def write_detection_report_metadata(
+    results: 'AnalysisResults',
+    report_path: str,
+    runtime_fingerprint: Optional[Dict[str, Any]] = None,
+) -> str:
+    metadata_path = str(Path(report_path).with_suffix(".meta.json"))
+    metadata = _build_detection_report_metadata(
+        results,
+        report_path,
+        runtime_fingerprint=runtime_fingerprint,
+    )
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2, allow_nan=False)
+    return metadata_path
 
 
 def generate_analysis_report(
@@ -6055,6 +6539,7 @@ def generate_analysis_report(
     stats: AnalysisStats,
     output_dir: str,
     report_filename: str = "analysis_report.html",
+    runtime_fingerprint: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Generate detailed analysis report (Phase 2).
@@ -6340,6 +6825,19 @@ def generate_analysis_report(
                     }}
                 }});
                 currentEnergy = resolvedEnergy;
+                var activeOverlayPanelId = "overlay-panel-" + trackKey + "-" + currentEnergy;
+                if (typeof window !== "undefined") {{
+                    window.__RAGA_ACTIVE_SCROLL_OVERLAY_ID__ = activeOverlayPanelId;
+                }}
+                document.dispatchEvent(
+                    new CustomEvent("raga-scroll-overlay-activate", {{
+                        detail: {{
+                            overlayPanelId: activeOverlayPanelId,
+                            trackKey: trackKey,
+                            energyKey: currentEnergy
+                        }}
+                    }})
+                );
                 setActiveEnergyButton(currentEnergy);
                 document.dispatchEvent(
                     new CustomEvent("raga-scroll-selection-clear", {{
@@ -6689,7 +7187,13 @@ def generate_analysis_report(
     with open(report_path, "w", encoding='utf-8') as f:
         f.write(html_content)
     try:
-        _write_analysis_report_metadata(results, stats, output_dir, report_path)
+        _write_analysis_report_metadata(
+            results,
+            stats,
+            output_dir,
+            report_path,
+            runtime_fingerprint=runtime_fingerprint,
+        )
     except Exception as exc:
         print(f"[WARN] Failed to write analysis report metadata: {exc}")
         

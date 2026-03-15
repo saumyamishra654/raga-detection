@@ -79,8 +79,10 @@ from raga_pipeline.output import (
     plot_pitch_with_sargam_lines,
     plot_transition_heatmap_v2,
     save_notes_to_csv,
+    write_detection_report_metadata,
 )
 from raga_pipeline import transcription
+from raga_pipeline.runtime_fingerprint import get_runtime_fingerprint
 
 
 def _format_seconds(seconds: float) -> str:
@@ -235,6 +237,11 @@ def run_pipeline(
     print(f"Output: {config.output_dir}")
     pipeline_start = perf_counter()
     audio_duration_s = _safe_get_audio_duration_seconds(config.audio_path)
+    runtime_fingerprint = None
+    try:
+        runtime_fingerprint = get_runtime_fingerprint(cache_ttl_seconds=0.0)
+    except Exception as exc:
+        print(f"[VERSION] WARN: Failed to compute runtime fingerprint: {exc}")
     if audio_duration_s is not None:
         print(f"[TIMER] Track duration: {_format_seconds(audio_duration_s)}")
     print()
@@ -637,6 +644,15 @@ def run_pipeline(
             report_path = os.path.join(stem_dir, "detection_report.html")
             generate_detection_report(results, report_path)
             print(f"  Saved: {report_path}")
+            try:
+                detection_meta_path = write_detection_report_metadata(
+                    results,
+                    report_path,
+                    runtime_fingerprint=runtime_fingerprint,
+                )
+                print(f"  Saved: {detection_meta_path}")
+            except Exception as exc:
+                print(f"  [WARN] Failed to write detection report metadata: {exc}")
             print("\n DETECTION COMPLETE")
             
             # Print suggested analyze command
@@ -965,12 +981,22 @@ def run_pipeline(
     print("\n[STEP 7/7] Generating full analysis report...")
     
     if config.mode == "analyze" and stats_obj:
-        report_path = generate_analysis_report(results, stats_obj, config.stem_dir)
+        report_path = generate_analysis_report(
+            results,
+            stats_obj,
+            config.stem_dir,
+            runtime_fingerprint=runtime_fingerprint,
+        )
     else:
         # Fallback for full mode or if somethings missing (though Full usually implies analysis)
         # If in FULL mode, we also have stats_obj from above.
         if stats_obj:
-            report_path = generate_analysis_report(results, stats_obj, config.stem_dir)
+            report_path = generate_analysis_report(
+                results,
+                stats_obj,
+                config.stem_dir,
+                runtime_fingerprint=runtime_fingerprint,
+            )
         else:
             report_path = os.path.join(config.stem_dir, "report.html")
             generate_html_report(results, report_path)

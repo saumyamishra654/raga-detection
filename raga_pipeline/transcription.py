@@ -17,8 +17,8 @@ Key Concepts:
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Optional, Tuple, Union
 import math
+import re
 import numpy as np
-import librosa
 from scipy import ndimage
 
 from .sequence import Note, tonic_to_midi_class
@@ -38,6 +38,68 @@ class TranscriptionEvent:
     @property
     def duration(self) -> float:
         return self.end - self.start
+
+
+_NOTE_RE = re.compile(
+    r"^\s*([A-Ga-g])([#b♯♭]?)(-?\d+)?\s*$"
+)
+_NOTE_BASE_PC = {
+    "C": 0,
+    "D": 2,
+    "E": 4,
+    "F": 5,
+    "G": 7,
+    "A": 9,
+    "B": 11,
+}
+
+
+def _hz_to_midi_scalar(freq_hz: float) -> float:
+    if not np.isfinite(freq_hz) or freq_hz <= 0.0:
+        return float("nan")
+    return float(69.0 + 12.0 * math.log2(float(freq_hz) / 440.0))
+
+
+def _hz_to_midi_array(freq_hz: np.ndarray) -> np.ndarray:
+    freqs = np.asarray(freq_hz, dtype=float)
+    out = np.full_like(freqs, np.nan, dtype=float)
+    valid = np.isfinite(freqs) & (freqs > 0.0)
+    if np.any(valid):
+        out[valid] = 69.0 + 12.0 * np.log2(freqs[valid] / 440.0)
+    return out
+
+
+def _midi_to_hz_scalar(midi_val: float) -> float:
+    if not np.isfinite(midi_val):
+        return float("nan")
+    return float(440.0 * (2.0 ** ((float(midi_val) - 69.0) / 12.0)))
+
+
+def _parse_note_to_midi(note: str) -> Optional[float]:
+    match = _NOTE_RE.match(str(note))
+    if not match:
+        return None
+
+    name = match.group(1).upper()
+    accidental = match.group(2)
+    octave_txt = match.group(3)
+
+    base = _NOTE_BASE_PC.get(name)
+    if base is None:
+        return None
+
+    if accidental in {"#", "♯"}:
+        base += 1
+    elif accidental in {"b", "♭"}:
+        base -= 1
+    pitch_class = base % 12
+
+    if octave_txt is None:
+        return float(60 + pitch_class)
+
+    octave = int(octave_txt)
+    midi = (octave + 1) * 12 + pitch_class
+    return float(midi)
 
 
 def detect_stationary_events(
@@ -102,7 +164,7 @@ def detect_stationary_events(
     if not np.any(voicing_mask):
         return []
     pitch_midi = np.zeros_like(pitch_hz)
-    pitch_midi[voicing_mask] = librosa.hz_to_midi(pitch_hz[voicing_mask])
+    pitch_midi[voicing_mask] = _hz_to_midi_array(pitch_hz[voicing_mask])
     
     # 2. Pre-smoothing (Vibrato Handling)
     if smoothing_sigma_ms <= 0:
@@ -205,7 +267,7 @@ def detect_pitch_inflection_points(
         return np.array([]), np.array([])
 
     pitch_midi = np.zeros_like(pitch_hz)
-    pitch_midi[voicing_mask] = librosa.hz_to_midi(pitch_hz[voicing_mask])
+    pitch_midi[voicing_mask] = _hz_to_midi_array(pitch_hz[voicing_mask])
     
     # Optional smoothing before inflection detection for vibrato reduction
     if smoothing_sigma_ms > 0:
@@ -385,17 +447,20 @@ def _resolve_tonic(tonic: Union[int, str, float]) -> float:
     """Resolve tonic to an absolute MIDI value."""
     if isinstance(tonic, (float, np.floating)) and tonic > 200:
         # Treat large float values as Hz and map them to MIDI.
-        return float(librosa.hz_to_midi(float(tonic)))
+        hz_midi = _hz_to_midi_scalar(float(tonic))
+        if np.isfinite(hz_midi):
+            return float(hz_midi)
+        return 60.0
 
     if isinstance(tonic, (int, float, np.integer, np.floating)):
         return float(tonic)
 
     if isinstance(tonic, str):
-        try:
-            return float(librosa.note_to_midi(tonic))
-        except Exception:
-            # Fall back to pitch-class parsing and anchor at octave 4.
-            return float(60 + tonic_to_midi_class(tonic))
+        parsed_note = _parse_note_to_midi(tonic)
+        if parsed_note is not None:
+            return float(parsed_note)
+        # Fall back to pitch-class parsing and anchor at octave 4.
+        return float(60 + tonic_to_midi_class(tonic))
 
     return 60.0
 
@@ -490,7 +555,7 @@ def transcribe_to_notes(
             # Use snapped pitch as canonical note pitch so downstream correction
             # and phrase logic operate on the same values shown in overlays.
             pitch_midi=snapped_pitch,
-            pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
+            pitch_hz=float(_midi_to_hz_scalar(snapped_pitch)),
             confidence=1.0, 
             sargam=evt.sargam, # Pre-calculated
             energy=evt.energy
@@ -498,7 +563,7 @@ def transcribe_to_notes(
         # Preserve raw pitch so downstream raga correction can use continuous
         # distance against the original contour instead of pre-quantized values.
         n.raw_pitch_midi = raw_pitch
-        n.raw_pitch_hz = float(librosa.midi_to_hz(raw_pitch))
+        n.raw_pitch_hz = float(_midi_to_hz_scalar(raw_pitch))
         n.snapped_pitch_midi = snapped_pitch
         n.corrected_pitch_midi = snapped_pitch
         n.rendered_pitch_midi = snapped_pitch
@@ -536,14 +601,14 @@ def transcribe_to_notes(
             start=t,
             end=t + point_duration,
             pitch_midi=snapped_pitch,
-            pitch_hz=float(librosa.midi_to_hz(snapped_pitch)),
+            pitch_hz=float(_midi_to_hz_scalar(snapped_pitch)),
             confidence=0.8, # Lower confidence for transient points
             energy=sampled_energy,
             sargam=sargam,
             pitch_class=int(round(snapped_pitch)) % 12
         )
         n.raw_pitch_midi = raw_pitch
-        n.raw_pitch_hz = float(librosa.midi_to_hz(raw_pitch))
+        n.raw_pitch_hz = float(_midi_to_hz_scalar(raw_pitch))
         n.snapped_pitch_midi = snapped_pitch
         n.corrected_pitch_midi = snapped_pitch
         n.rendered_pitch_midi = snapped_pitch

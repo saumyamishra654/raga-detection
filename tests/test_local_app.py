@@ -124,6 +124,14 @@ class ApiTests(unittest.TestCase):
         response = self.client.get("/app")
         self.assertEqual(response.status_code, 200)
         html = response.text
+        self.assertIn("view-library-btn", html)
+        self.assertIn("view-classic-btn", html)
+        self.assertIn("audio-library-panel", html)
+        self.assertIn("library-song-table-body", html)
+        self.assertIn("library-ground-truth", html)
+        self.assertIn("library-batch-mode", html)
+        self.assertIn("library-clear-all-btn", html)
+        self.assertIn("run-config-drawer", html)
         self.assertIn("analyze-workspace-panel", html)
         self.assertIn("analyze-editor-root", html)
         self.assertIn("/static/transcription_editor.js", html)
@@ -283,6 +291,391 @@ class ApiTests(unittest.TestCase):
         payload = response.json()
         self.assertFalse(payload["exists"])
         self.assertEqual(payload["files"], [])
+
+    def test_runtime_fingerprint_endpoint_returns_expected_shape(self) -> None:
+        response = self.client.get("/api/runtime-fingerprint")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("fingerprint_version", payload)
+        self.assertIn("stage_manifest_version", payload)
+        self.assertIn("stage_hashes", payload)
+        self.assertIn("detect", payload["stage_hashes"])
+        self.assertIn("analyze", payload["stage_hashes"])
+        self.assertIn("git_commit", payload)
+        self.assertIn("git_dirty", payload)
+        self.assertIn("file_hash", payload)
+        self.assertIn("source", payload)
+        self.assertIn("computed_at", payload)
+
+    def test_library_endpoint_reports_current_unknown_stale_and_missing(self) -> None:
+        audio_dir = Path(self.tmp.name) / "audio_lib"
+        output_root = Path(self.tmp.name) / "batch_results"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        for name in ["song_current.mp3", "song_unknown.mp3", "song_stale.mp3", "song_missing.mp3"]:
+            (audio_dir / name).write_bytes(b"audio")
+
+        runtime_fp_resp = self.client.get("/api/runtime-fingerprint")
+        self.assertEqual(runtime_fp_resp.status_code, 200)
+        runtime_fp = runtime_fp_resp.json()
+
+        current_dir = output_root / "htdemucs" / "song_current"
+        current_dir.mkdir(parents=True, exist_ok=True)
+        current_report = current_dir / "detection_report.html"
+        current_report.write_text("<html>detect-current</html>", encoding="utf-8")
+        current_report.with_suffix(".meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "detect",
+                    "generated_at": "2026-03-01T00:00:00+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "detect",
+                        "hash": runtime_fp.get("stage_hashes", {}).get("detect"),
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"audio_path": str((audio_dir / "song_current.mp3").resolve())},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        unknown_dir = output_root / "htdemucs" / "song_unknown"
+        unknown_dir.mkdir(parents=True, exist_ok=True)
+        (unknown_dir / "analysis_report.html").write_text("<html>analyze-unknown</html>", encoding="utf-8")
+
+        stale_dir = output_root / "htdemucs" / "song_stale"
+        stale_dir.mkdir(parents=True, exist_ok=True)
+        stale_report = stale_dir / "detection_report.html"
+        stale_report.write_text("<html>detect-stale</html>", encoding="utf-8")
+        stale_hash = "deadbeef" + str(runtime_fp.get("stage_hashes", {}).get("detect", ""))[:8]
+        stale_report.with_suffix(".meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "detect",
+                    "generated_at": "2026-03-01T00:00:00+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "detect",
+                        "hash": stale_hash,
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"audio_path": str((audio_dir / "song_stale.mp3").resolve())},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        response = self.client.get(
+            "/api/library",
+            params={
+                "audio_dir": str(audio_dir),
+                "output_dir": str(output_root),
+            },
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        songs = payload.get("songs", [])
+        self.assertEqual(len(songs), 4)
+        by_name = {item["audio_name"]: item for item in songs}
+        self.assertEqual(by_name["song_current.mp3"]["detect"]["status"], "current")
+        self.assertEqual(by_name["song_unknown.mp3"]["analyze"]["status"], "unknown")
+        self.assertEqual(by_name["song_stale.mp3"]["detect"]["status"], "stale")
+        self.assertEqual(by_name["song_missing.mp3"]["detect"]["status"], "missing")
+
+    def test_library_variants_endpoint_returns_variant_rows(self) -> None:
+        audio_dir = Path(self.tmp.name) / "audio_variants"
+        output_root = Path(self.tmp.name) / "batch_results"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        song_path = audio_dir / "raag_demo.mp3"
+        song_path.write_bytes(b"audio")
+
+        runtime_fp_resp = self.client.get("/api/runtime-fingerprint")
+        self.assertEqual(runtime_fp_resp.status_code, 200)
+        runtime_fp = runtime_fp_resp.json()
+
+        stem_a = output_root / "htdemucs" / "raag_demo"
+        stem_b = output_root / "mdx" / "raag_demo"
+        stem_a.mkdir(parents=True, exist_ok=True)
+        stem_b.mkdir(parents=True, exist_ok=True)
+
+        rep_a = stem_a / "detection_report.html"
+        rep_a.write_text("<html>a</html>", encoding="utf-8")
+        rep_a.with_suffix(".meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "detect",
+                    "generated_at": "2026-03-01T00:00:00+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "detect",
+                        "hash": runtime_fp.get("stage_hashes", {}).get("detect"),
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"separator": "demucs", "demucs_model": "htdemucs"},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        rep_b = stem_b / "analysis_report.html"
+        rep_b.write_text("<html>b</html>", encoding="utf-8")
+        rep_b.with_suffix(".meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "analyze",
+                    "generated_at": "2026-03-01T00:01:00+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "analyze",
+                        "hash": runtime_fp.get("stage_hashes", {}).get("analyze"),
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"separator": "demucs", "demucs_model": "mdx", "tonic": "C", "raga": "Yaman"},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        lib_resp = self.client.get(
+            "/api/library",
+            params={"audio_dir": str(audio_dir), "output_dir": str(output_root)},
+        )
+        self.assertEqual(lib_resp.status_code, 200, lib_resp.text)
+        songs = lib_resp.json().get("songs", [])
+        self.assertEqual(len(songs), 1)
+        song_id = songs[0]["song_id"]
+
+        variant_resp = self.client.get(
+            f"/api/library/{song_id}/variants",
+            params={"audio_dir": str(audio_dir), "output_dir": str(output_root)},
+        )
+        self.assertEqual(variant_resp.status_code, 200, variant_resp.text)
+        variants = variant_resp.json().get("variants", [])
+        self.assertEqual(len(variants), 2)
+        self.assertTrue(any(v.get("demucs_model") == "htdemucs" for v in variants))
+        self.assertTrue(any(v.get("demucs_model") == "mdx" for v in variants))
+
+    def test_library_endpoint_stage_specific_current_and_stale_are_independent(self) -> None:
+        audio_dir = Path(self.tmp.name) / "audio_stage_specific"
+        output_root = Path(self.tmp.name) / "batch_results"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        song_a = audio_dir / "song_detect_current_analyze_stale.mp3"
+        song_b = audio_dir / "song_detect_stale_analyze_current.mp3"
+        song_a.write_bytes(b"a")
+        song_b.write_bytes(b"b")
+
+        runtime_fp_resp = self.client.get("/api/runtime-fingerprint")
+        self.assertEqual(runtime_fp_resp.status_code, 200)
+        runtime_fp = runtime_fp_resp.json()
+        detect_hash = str(runtime_fp.get("stage_hashes", {}).get("detect") or "")
+        analyze_hash = str(runtime_fp.get("stage_hashes", {}).get("analyze") or "")
+        self.assertTrue(detect_hash)
+        self.assertTrue(analyze_hash)
+
+        stale_detect_hash = "stale-" + detect_hash[:12]
+        stale_analyze_hash = "stale-" + analyze_hash[:12]
+
+        stem_a = output_root / "htdemucs" / "song_detect_current_analyze_stale"
+        stem_a.mkdir(parents=True, exist_ok=True)
+        (stem_a / "detection_report.html").write_text("<html>detect-a</html>", encoding="utf-8")
+        (stem_a / "analysis_report.html").write_text("<html>analyze-a</html>", encoding="utf-8")
+        (stem_a / "detection_report.meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "detect",
+                    "generated_at": "2026-03-01T00:00:00+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "detect",
+                        "hash": detect_hash,
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"audio_path": str(song_a.resolve())},
+                }
+            ),
+            encoding="utf-8",
+        )
+        (stem_a / "analysis_report.meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "analyze",
+                    "generated_at": "2026-03-01T00:00:01+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "analyze",
+                        "hash": stale_analyze_hash,
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"audio_path": str(song_a.resolve())},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        stem_b = output_root / "htdemucs" / "song_detect_stale_analyze_current"
+        stem_b.mkdir(parents=True, exist_ok=True)
+        (stem_b / "detection_report.html").write_text("<html>detect-b</html>", encoding="utf-8")
+        (stem_b / "analysis_report.html").write_text("<html>analyze-b</html>", encoding="utf-8")
+        (stem_b / "detection_report.meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "detect",
+                    "generated_at": "2026-03-01T00:00:02+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "detect",
+                        "hash": stale_detect_hash,
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"audio_path": str(song_b.resolve())},
+                }
+            ),
+            encoding="utf-8",
+        )
+        (stem_b / "analysis_report.meta.json").write_text(
+            json.dumps(
+                {
+                    "pipeline_mode": "analyze",
+                    "generated_at": "2026-03-01T00:00:03+00:00",
+                    "runtime_fingerprint": runtime_fp,
+                    "stage_fingerprint": {
+                        "mode": "analyze",
+                        "hash": analyze_hash,
+                        "stage_manifest_version": runtime_fp.get("stage_manifest_version", 1),
+                    },
+                    "run_identity": {"audio_path": str(song_b.resolve())},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        response = self.client.get(
+            "/api/library",
+            params={"audio_dir": str(audio_dir), "output_dir": str(output_root)},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        songs = response.json().get("songs", [])
+        self.assertEqual(len(songs), 2)
+        by_name = {item["audio_name"]: item for item in songs}
+        self.assertEqual(
+            by_name["song_detect_current_analyze_stale.mp3"]["detect"]["status"],
+            "current",
+        )
+        self.assertEqual(
+            by_name["song_detect_current_analyze_stale.mp3"]["analyze"]["status"],
+            "stale",
+        )
+        self.assertEqual(
+            by_name["song_detect_stale_analyze_current.mp3"]["detect"]["status"],
+            "stale",
+        )
+        self.assertEqual(
+            by_name["song_detect_stale_analyze_current.mp3"]["analyze"]["status"],
+            "current",
+        )
+
+    def test_library_clear_song_outputs_endpoint_removes_song_variants_and_logs(self) -> None:
+        audio_dir = Path(self.tmp.name) / "audio_clear_song"
+        output_root = Path(self.tmp.name) / "batch_results"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        song_a = audio_dir / "song_to_clear.mp3"
+        song_b = audio_dir / "song_to_keep.mp3"
+        song_a.write_bytes(b"a")
+        song_b.write_bytes(b"b")
+
+        stem_a_ht = output_root / "htdemucs" / "song_to_clear"
+        stem_a_mdx = output_root / "mdx" / "song_to_clear"
+        stem_b_ht = output_root / "htdemucs" / "song_to_keep"
+        stem_a_ht.mkdir(parents=True, exist_ok=True)
+        stem_a_mdx.mkdir(parents=True, exist_ok=True)
+        stem_b_ht.mkdir(parents=True, exist_ok=True)
+        (stem_a_ht / "analysis_report.html").write_text("<html>a</html>", encoding="utf-8")
+        (stem_a_mdx / "detection_report.html").write_text("<html>b</html>", encoding="utf-8")
+        (stem_b_ht / "analysis_report.html").write_text("<html>keep</html>", encoding="utf-8")
+
+        logs_dir = output_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        log_a = logs_dir / "song_to_clear.mp3.log"
+        log_b = logs_dir / "song_to_keep.mp3.log"
+        log_a.write_text("clear me", encoding="utf-8")
+        log_b.write_text("keep me", encoding="utf-8")
+
+        lib_resp = self.client.get(
+            "/api/library",
+            params={"audio_dir": str(audio_dir), "output_dir": str(output_root)},
+        )
+        self.assertEqual(lib_resp.status_code, 200, lib_resp.text)
+        songs = lib_resp.json().get("songs", [])
+        by_name = {item["audio_name"]: item for item in songs}
+        song_id = by_name["song_to_clear.mp3"]["song_id"]
+
+        clear_resp = self.client.post(
+            f"/api/library/{song_id}/clear-outputs",
+            params={"audio_dir": str(audio_dir), "output_dir": str(output_root)},
+        )
+        self.assertEqual(clear_resp.status_code, 200, clear_resp.text)
+        payload = clear_resp.json()
+        self.assertTrue(payload.get("ok", False))
+        self.assertGreaterEqual(int(payload.get("deleted_files", 0)), 3)
+        self.assertGreaterEqual(int(payload.get("deleted_dirs", 0)), 2)
+
+        self.assertFalse(stem_a_ht.exists())
+        self.assertFalse(stem_a_mdx.exists())
+        self.assertTrue(stem_b_ht.exists())
+        self.assertFalse(log_a.exists())
+        self.assertTrue(log_b.exists())
+
+    def test_library_clear_song_outputs_endpoint_returns_404_for_unknown_song(self) -> None:
+        audio_dir = Path(self.tmp.name) / "audio_missing_song"
+        output_root = Path(self.tmp.name) / "batch_results"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        (audio_dir / "known.mp3").write_bytes(b"k")
+        output_root.mkdir(parents=True, exist_ok=True)
+
+        response = self.client.post(
+            "/api/library/not-a-real-song/clear-outputs",
+            params={"audio_dir": str(audio_dir), "output_dir": str(output_root)},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_library_clear_all_outputs_preserves_stems_and_pitch_csvs_only(self) -> None:
+        output_root = Path(self.tmp.name) / "batch_results"
+        stem_dir = output_root / "htdemucs" / "yaman_demo"
+        logs_dir = output_root / "logs"
+        stem_dir.mkdir(parents=True, exist_ok=True)
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        keep_vocals = stem_dir / "vocals.mp3"
+        keep_pitch = stem_dir / "composite_pitch_data.csv"
+        keep_root_melody = output_root / "melody.mp3"
+        drop_report = stem_dir / "analysis_report.html"
+        drop_candidates = stem_dir / "candidates.csv"
+        drop_log = logs_dir / "yaman_demo.mp3.log"
+
+        keep_vocals.write_bytes(b"vocals")
+        keep_pitch.write_text("ts,pitch\n0.0,220.0\n", encoding="utf-8")
+        keep_root_melody.write_bytes(b"melody")
+        drop_report.write_text("<html>drop</html>", encoding="utf-8")
+        drop_candidates.write_text("raga,score\nYaman,0.9\n", encoding="utf-8")
+        drop_log.write_text("drop log", encoding="utf-8")
+
+        response = self.client.post(
+            "/api/library/clear-all-outputs",
+            params={"output_dir": str(output_root)},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertTrue(payload.get("ok", False))
+        self.assertGreaterEqual(int(payload.get("deleted_files", 0)), 3)
+        self.assertGreaterEqual(int(payload.get("preserved_files", 0)), 3)
+
+        self.assertTrue(output_root.exists())
+        self.assertTrue(keep_vocals.exists())
+        self.assertTrue(keep_pitch.exists())
+        self.assertTrue(keep_root_melody.exists())
+        self.assertFalse(drop_report.exists())
+        self.assertFalse(drop_candidates.exists())
+        self.assertFalse(drop_log.exists())
 
     def test_tanpura_tracks_endpoint_returns_catalog(self) -> None:
         response = self.client.get("/api/tanpura-tracks")
@@ -491,7 +884,49 @@ class ApiTests(unittest.TestCase):
         self.assertIn(b"aaa", resolved_payloads)
         self.assertIn(b"bbb", resolved_payloads)
 
-    def test_create_batch_job_endpoint(self) -> None:
+    def test_create_batch_job_endpoint_accepts_detect_and_analyze_modes(self) -> None:
+        ground_truth_csv = Path(self.tmp.name) / "ground_truth_v6.csv"
+        ground_truth_csv.write_text("filename,raga,tonic\n", encoding="utf-8")
+
+        detect_response = self.client.post(
+            "/api/batch-jobs",
+            json={
+                "input_dir": self.tmp.name,
+                "output_dir": "batch_results",
+                "mode": "detect",
+                "silent": True,
+            },
+        )
+        self.assertEqual(detect_response.status_code, 200)
+        detect_payload = detect_response.json()
+        self.assertEqual(detect_payload["mode"], "batch")
+        self.assertIn(detect_payload["status"], {"queued", "running", "completed"})
+        job = self.manager.get(detect_payload["job_id"])
+        self.assertIsNotNone(job)
+        assert job is not None
+        self.assertEqual(job.params.get("batch_mode"), "detect")
+
+        analyze_response = self.client.post(
+            "/api/batch-jobs",
+            json={
+                "input_dir": self.tmp.name,
+                "output_dir": "batch_results",
+                "mode": "analyze",
+                "ground_truth": str(ground_truth_csv),
+                "silent": True,
+            },
+        )
+        self.assertEqual(analyze_response.status_code, 200)
+        analyze_payload = analyze_response.json()
+        self.assertEqual(analyze_payload["mode"], "batch")
+        self.assertIn(analyze_payload["status"], {"queued", "running", "completed"})
+        job = self.manager.get(analyze_payload["job_id"])
+        self.assertIsNotNone(job)
+        assert job is not None
+        self.assertEqual(job.params.get("batch_mode"), "analyze")
+        self.assertEqual(job.params.get("ground_truth"), str(ground_truth_csv))
+
+    def test_create_batch_job_endpoint_rejects_auto_mode(self) -> None:
         response = self.client.post(
             "/api/batch-jobs",
             json={
@@ -501,10 +936,21 @@ class ApiTests(unittest.TestCase):
                 "silent": True,
             },
         )
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["mode"], "batch")
-        self.assertIn(payload["status"], {"queued", "running", "completed"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detect", response.json().get("detail", ""))
+
+    def test_create_batch_job_endpoint_requires_ground_truth_for_analyze(self) -> None:
+        response = self.client.post(
+            "/api/batch-jobs",
+            json={
+                "input_dir": self.tmp.name,
+                "output_dir": "batch_results",
+                "mode": "analyze",
+                "silent": True,
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("ground_truth", response.json().get("detail", ""))
 
     def test_raga_list_endpoint_reads_names_column(self) -> None:
         csv_path = Path(self.tmp.name) / "ragas.csv"
@@ -620,13 +1066,14 @@ class ApiTests(unittest.TestCase):
         )
         self.assertEqual(save_resp.status_code, 200, save_resp.text)
         save_data = save_resp.json()
-        self.assertEqual(save_data["version"]["version_id"], "v0001")
+        self.assertEqual(save_data["version"]["version_id"], "edited")
 
         regenerate_resp = self.client.post(
             f"/api/transcription-edits/{token}/{report_name}/version/v0001/regenerate"
         )
         self.assertEqual(regenerate_resp.status_code, 200, regenerate_resp.text)
         regenerate_data = regenerate_resp.json()
+        self.assertEqual(regenerate_data["version"]["version_id"], "edited")
         report_resp = self.client.get(regenerate_data["version"]["report_url"])
         self.assertEqual(report_resp.status_code, 200)
         self.assertIn("Yaman (Tonic: C#)", report_resp.text)
@@ -803,26 +1250,27 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(save_resp.status_code, 200, save_resp.text)
         save_data = save_resp.json()
         self.assertEqual(save_data["save_mode"], "created")
-        self.assertEqual(save_data["version"]["version_id"], "v0001")
+        self.assertEqual(save_data["version"]["version_id"], "edited")
         self.assertEqual(save_data["version"]["note_count"], 2)
         self.assertEqual(save_data["version"]["phrase_count"], 1)
-        self.assertIsNone(save_data["version"]["report_url"])
+        self.assertTrue(save_data["version"]["report_url"])
         self.assertEqual(save_data["default_selection"], "original")
         self.assertTrue(save_data["default_report_url"])
 
         edit_root = stem_dir / "transcription_edits"
-        self.assertTrue((edit_root / "transcription_v0001.json").exists())
-        self.assertTrue((edit_root / "transcription_v0001.csv").exists())
-        self.assertFalse((stem_dir / "analysis_report_edited_v0001.html").exists())
+        self.assertTrue((edit_root / "transcription_edited.json").exists())
+        self.assertTrue((edit_root / "transcription_edited.csv").exists())
+        self.assertTrue((stem_dir / "analysis_report_edited.html").exists())
 
         versions_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
         self.assertEqual(versions_resp.status_code, 200)
         versions_data = versions_resp.json()
-        self.assertEqual(versions_data["latest_version_id"], "v0001")
+        self.assertEqual(versions_data["latest_version_id"], "edited")
         self.assertEqual(len(versions_data["versions"]), 1)
         self.assertEqual(versions_data["default_selection"], "original")
         self.assertTrue(versions_data["default_report_url"])
-        self.assertIsNone(versions_data["versions"][0]["report_url"])
+        self.assertEqual(versions_data["versions"][0]["version_id"], "edited")
+        self.assertTrue(versions_data["versions"][0]["report_url"])
 
         set_default_v1_resp = self.client.post(
             f"/api/transcription-edits/{token}/{report_name}/default",
@@ -830,13 +1278,13 @@ class ApiTests(unittest.TestCase):
         )
         self.assertEqual(set_default_v1_resp.status_code, 200, set_default_v1_resp.text)
         set_default_v1_data = set_default_v1_resp.json()
-        self.assertEqual(set_default_v1_data["default_selection"], "v0001")
+        self.assertEqual(set_default_v1_data["default_selection"], "edited")
         self.assertTrue(set_default_v1_data["default_report_url"])
         self.assertIn("/local-report/", set_default_v1_data["default_report_url"])
 
         defaulted_source_report_resp = self.client.get(f"/local-report/{token}/{report_name}")
         self.assertEqual(defaulted_source_report_resp.status_code, 200)
-        self.assertIn("base report", defaulted_source_report_resp.text)
+        self.assertNotIn("base report", defaulted_source_report_resp.text)
 
         set_default_original_resp = self.client.post(
             f"/api/transcription-edits/{token}/{report_name}/default",
@@ -859,7 +1307,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(update_resp.status_code, 200, update_resp.text)
         update_data = update_resp.json()
         self.assertEqual(update_data["save_mode"], "updated")
-        self.assertEqual(update_data["version"]["version_id"], "v0001")
+        self.assertEqual(update_data["version"]["version_id"], "edited")
         self.assertEqual(len(update_data["versions"]), 1)
 
         version_after_update_resp = self.client.get(
@@ -875,7 +1323,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(regenerate_resp.status_code, 200, regenerate_resp.text)
         regenerate_data = regenerate_resp.json()
         self.assertTrue(regenerate_data["has_version"])
-        self.assertEqual(regenerate_data["version"]["version_id"], "v0001")
+        self.assertEqual(regenerate_data["version"]["version_id"], "edited")
         self.assertTrue(regenerate_data["version"]["report_url"])
         self.assertEqual(regenerate_data["payload"]["notes"][0]["end"], 0.48)
         edited_report_url = regenerate_data["version"]["report_url"]
@@ -889,47 +1337,11 @@ class ApiTests(unittest.TestCase):
         self.assertIsNotNone(original_audio_block)
         self.assertIn("/local-files/", original_audio_block.group(1))
 
-        create_new_resp = self.client.post(
-            f"/api/transcription-edits/{token}/{report_name}/save",
-            params={"create_new_version": "true"},
-            json=save_payload,
-        )
-        self.assertEqual(create_new_resp.status_code, 200, create_new_resp.text)
-        create_new_data = create_new_resp.json()
-        self.assertEqual(create_new_data["save_mode"], "created")
-        self.assertEqual(create_new_data["version"]["version_id"], "v0002")
-        self.assertEqual(len(create_new_data["versions"]), 2)
-        self.assertIsNone(create_new_data["version"]["report_url"])
-
-        versions_after_new_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
-        self.assertEqual(versions_after_new_resp.status_code, 200)
-        versions_after_new = versions_after_new_resp.json()
-        self.assertEqual(versions_after_new["latest_version_id"], "v0002")
-        self.assertEqual(len(versions_after_new["versions"]), 2)
-
-        set_default_v2_resp = self.client.post(
-            f"/api/transcription-edits/{token}/{report_name}/default",
-            params={"default_selection": "v0002"},
-        )
-        self.assertEqual(set_default_v2_resp.status_code, 200, set_default_v2_resp.text)
-        self.assertEqual(set_default_v2_resp.json()["default_selection"], "v0002")
-
-        delete_v2_resp = self.client.delete(
-            f"/api/transcription-edits/{token}/{report_name}/version/v0002"
-        )
-        self.assertEqual(delete_v2_resp.status_code, 200, delete_v2_resp.text)
-        delete_v2_data = delete_v2_resp.json()
-        self.assertEqual(delete_v2_data["latest_version_id"], "v0001")
-        self.assertEqual(len(delete_v2_data["versions"]), 1)
-        self.assertEqual(delete_v2_data["default_selection"], "original")
-        self.assertFalse((edit_root / "transcription_v0002.json").exists())
-        self.assertFalse((stem_dir / "analysis_report_edited_v0002.html").exists())
-
         latest_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/latest")
         self.assertEqual(latest_resp.status_code, 200)
         latest_data = latest_resp.json()
         self.assertTrue(latest_data["has_version"])
-        self.assertEqual(latest_data["version"]["version_id"], "v0001")
+        self.assertEqual(latest_data["version"]["version_id"], "edited")
         self.assertEqual(len(latest_data["payload"]["notes"]), 2)
 
         version_resp = self.client.get(
@@ -938,7 +1350,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(version_resp.status_code, 200)
         version_data = version_resp.json()
         self.assertTrue(version_data["has_version"])
-        self.assertEqual(version_data["version"]["version_id"], "v0001")
+        self.assertEqual(version_data["version"]["version_id"], "edited")
 
         self.assertNotIn("Transcription Editor (Experimental)", regenerated_report_resp.text)
         self.assertNotIn("/api/transcription-edits/", regenerated_report_resp.text)
@@ -951,6 +1363,8 @@ class ApiTests(unittest.TestCase):
         self.assertIsNone(delete_v1_data["latest_version_id"])
         self.assertEqual(len(delete_v1_data["versions"]), 0)
         self.assertEqual(delete_v1_data["default_selection"], "original")
+        self.assertFalse((edit_root / "transcription_edited.json").exists())
+        self.assertFalse((stem_dir / "analysis_report_edited.html").exists())
 
     def test_transcription_edit_base_requires_rerun_for_legacy_report(self) -> None:
         stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "legacy_song"
@@ -989,18 +1403,22 @@ class ApiTests(unittest.TestCase):
         self.assertIsNone(payload["payload"])
         self.assertIn("Rerun analyze", payload["detail"])
 
-    def test_local_report_prefers_source_when_default_edit_is_older(self) -> None:
+    def test_local_report_keeps_edited_when_default_edit_selected(self) -> None:
         stem_dir = Path(self.tmp.name) / "batch_results" / "htdemucs" / "stale_case"
         stem_dir.mkdir(parents=True, exist_ok=True)
 
         report_path = stem_dir / "analysis_report.html"
         report_path.write_text("<html><body>source-v1</body></html>", encoding="utf-8")
 
-        edited_report = stem_dir / "analysis_report_edited_v0001.html"
+        edited_report = stem_dir / "analysis_report_edited.html"
         edited_report.write_text("<html><body>edited-v1</body></html>", encoding="utf-8")
 
         edit_root = stem_dir / "transcription_edits"
         edit_root.mkdir(parents=True, exist_ok=True)
+        (edit_root / "transcription_edited.json").write_text(
+            json.dumps({"notes": [], "phrases": []}),
+            encoding="utf-8",
+        )
         manifest = {
             "schema_version": 1,
             "source_report": "analysis_report.html",
@@ -1010,8 +1428,8 @@ class ApiTests(unittest.TestCase):
                     "version_id": "v0001",
                     "created_at": "2026-02-23T00:00:00+00:00",
                     "updated_at": "2026-02-23T00:00:00+00:00",
-                    "json_file": "transcription_v0001.json",
-                    "csv_file": "transcription_v0001.csv",
+                    "json_file": "transcription_edited.json",
+                    "csv_file": "transcription_edited.csv",
                     "report_file": edited_report.name,
                     "note_count": 1,
                     "phrase_count": 1,
@@ -1032,7 +1450,14 @@ class ApiTests(unittest.TestCase):
 
         after_refresh = self.client.get(f"/local-report/{token}/{report_name}")
         self.assertEqual(after_refresh.status_code, 200)
-        self.assertIn("source-v2", after_refresh.text)
+        self.assertIn("edited-v1", after_refresh.text)
+
+        versions_resp = self.client.get(f"/api/transcription-edits/{token}/{report_name}/versions")
+        self.assertEqual(versions_resp.status_code, 200, versions_resp.text)
+        versions_data = versions_resp.json()
+        self.assertEqual(versions_data["default_selection"], "edited")
+        self.assertEqual(versions_data["latest_version_id"], "edited")
+        self.assertEqual(versions_data["versions"][0]["version_id"], "edited")
 
 
 if __name__ == "__main__":

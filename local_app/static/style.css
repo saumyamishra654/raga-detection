@@ -105,6 +105,32 @@ header {
     flex-wrap: wrap;
 }
 
+.view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-input);
+}
+
+.view-toggle button {
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    padding: 7px 10px;
+    background: transparent;
+    font-size: 12px;
+}
+
+.view-toggle button:last-child {
+    border-right: 0;
+}
+
+.view-toggle button.active {
+    background: var(--accent);
+    color: #fff6e7;
+}
+
 header h1 {
     margin: 0 0 6px 0;
     color: #160f08;
@@ -320,6 +346,158 @@ button:disabled {
     background: var(--accent);
     color: #fff6e7;
     box-shadow: 0 0 0 1px rgba(143, 67, 22, 0.35), 0 0 14px rgba(194, 106, 43, 0.25);
+}
+
+.library-summary {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+}
+
+.library-table-wrap {
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg-input);
+}
+
+.library-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 820px;
+}
+
+.library-table th,
+.library-table td {
+    border-bottom: 1px solid var(--line);
+    padding: 8px;
+    vertical-align: top;
+    text-align: left;
+}
+
+.library-table th {
+    background: rgba(194, 106, 43, 0.08);
+    font-size: 13px;
+    color: var(--ink-muted);
+}
+
+.library-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.library-row-actions button {
+    font-size: 12px;
+    padding: 6px 8px;
+}
+
+.status-pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    text-transform: capitalize;
+}
+
+.status-pill.current {
+    background: #cdebc8;
+    border-color: #46884a;
+    color: #1d4a21;
+}
+
+.status-pill.stale {
+    background: #f7d4bf;
+    border-color: #aa5a2f;
+    color: #6a2f12;
+}
+
+.status-pill.unknown {
+    background: #e6dfd3;
+    border-color: #8e7f64;
+    color: #4f422e;
+}
+
+.status-pill.missing {
+    background: #eee4d4;
+    border-color: #b79c74;
+    color: #684f2e;
+}
+
+.library-variant-row td {
+    background: rgba(233, 184, 120, 0.15);
+}
+
+.library-variant-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-panel);
+}
+
+.library-variant-card:last-child {
+    margin-bottom: 0;
+}
+
+.library-variant-meta {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+}
+
+.run-config-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(760px, 96vw);
+    height: 100vh;
+    overflow-y: auto;
+    border-radius: 0;
+    border-left: 2px solid var(--line-strong);
+    box-shadow: -18px 0 48px rgba(26, 18, 10, 0.24);
+    z-index: 40;
+}
+
+.run-config-drawer[hidden] {
+    display: none !important;
+}
+
+body.view-classic #audio-library-panel {
+    display: none;
+}
+
+body.view-classic .run-config-drawer {
+    position: static;
+    top: auto;
+    right: auto;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    border-left: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(76, 44, 17, 0.08);
+    z-index: auto;
+}
+
+body.view-classic .run-config-drawer[hidden] {
+    display: block !important;
+}
+
+body.view-classic #drawer-close-btn {
+    display: none;
+}
+
+body.view-library .run-config-drawer {
+    border-left: 2px solid var(--line-strong);
+}
+
+.drawer-song-context {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 10px;
 }
 
 .warnings {

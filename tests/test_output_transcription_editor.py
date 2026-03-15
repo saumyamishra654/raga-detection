@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import numpy as np
 
 try:
+    from raga_pipeline.audio import PitchData
     from raga_pipeline.output import (
         AnalysisResults,
         AnalysisStats,
@@ -27,6 +28,25 @@ except Exception:
 
 @unittest.skipUnless(IMPORT_OK, "output module unavailable in current environment")
 class TranscriptionEditorMetadataTests(unittest.TestCase):
+    def _build_pitch_data(self, root: Path) -> "PitchData":
+        timestamps = np.array([0.0, 0.1, 0.2, 0.3, 0.4], dtype=float)
+        midi_vals = np.array([60.0, 60.2, 60.1, 60.3, 60.0], dtype=float)
+        pitch_hz = 440.0 * (2.0 ** ((midi_vals - 69.0) / 12.0))
+        confidence = np.full_like(timestamps, 0.95, dtype=float)
+        voicing = np.ones_like(timestamps, dtype=bool)
+        energy = np.array([0.05, 0.08, 0.12, 0.09, 0.03], dtype=float)
+        return PitchData(
+            timestamps=timestamps,
+            pitch_hz=pitch_hz,
+            confidence=confidence,
+            voicing=voicing,
+            valid_freqs=pitch_hz.copy(),
+            midi_vals=midi_vals,
+            energy=energy,
+            frame_period=0.1,
+            audio_path=str(root / "dummy.wav"),
+        )
+
     def _make_results(self, root: Path) -> tuple[AnalysisResults, AnalysisStats]:
         audio_path = root / "demo_song.mp3"
         vocals_path = root / "vocals.mp3"
@@ -82,6 +102,11 @@ class TranscriptionEditorMetadataTests(unittest.TestCase):
         results.phrases = [phrase]
         results.detected_tonic = 60
         results.detected_raga = "Bhairavi"
+        pitch_data = self._build_pitch_data(root)
+        results.pitch_data_vocals = pitch_data
+        results.pitch_data_stem = pitch_data
+        results.pitch_data_composite = pitch_data
+        results.pitch_data_accomp = pitch_data
 
         stats = AnalysisStats(
             correction_summary={},
@@ -128,6 +153,8 @@ class TranscriptionEditorMetadataTests(unittest.TestCase):
             self.assertNotIn("Transcription Editor (Experimental)", html)
             self.assertNotIn("/api/transcription-edits/", html)
             self.assertIn("Musical Transcription", html)
+            self.assertIn("raga-scroll-overlay-activate", html)
+            self.assertIn("__RAGA_ACTIVE_SCROLL_OVERLAY_ID__", html)
 
     def test_metadata_is_json_serializable_with_numpy_stats(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

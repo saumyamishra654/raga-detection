@@ -11,6 +11,10 @@
         <div class="header-row">
             <h1>Raga Local App</h1>
             <div class="header-actions">
+                <div class="view-toggle" role="group" aria-label="Interface view mode">
+                    <button id="view-library-btn" type="button">Library View</button>
+                    <button id="view-classic-btn" type="button">Classic View</button>
+                </div>
                 <button id="open-detect-report-btn" type="button" disabled>Open Detect Report</button>
                 <button id="open-analyze-report-btn" type="button" disabled>Open Analyze Report</button>
                 <button id="run-batch-btn" type="button">Run Batch (Selected Dir)</button>
@@ -31,15 +35,77 @@
     {% endif %}
 
     <main>
-        <section class="panel">
+        <section class="panel" id="audio-library-panel">
             <div class="panel-title-row">
-                <h2>Run Pipeline</h2>
-                <div id="job-progress-widget" class="job-progress-widget idle" title="Idle">
-                    <span id="job-progress-percent">0%</span>
+                <h2>Audio Library</h2>
+                <div class="header-actions">
+                    <button id="library-refresh-btn" type="button">Refresh Library</button>
+                    <button id="library-clear-all-btn" type="button">Clear All Outputs</button>
                 </div>
             </div>
+            <div class="row">
+                <label for="library-audio-dir">Audio Directory</label>
+                <input id="library-audio-dir" type="text" value="{{ default_audio_dir }}">
+            </div>
+            <div class="row">
+                <label for="library-output-dir">Output Directory</label>
+                <input id="library-output-dir" type="text" value="batch_results">
+            </div>
+            <div class="row">
+                <label for="library-ground-truth">Ground Truth CSV (Optional)</label>
+                <input id="library-ground-truth" type="text" placeholder="/path/to/ground_truth_v6.csv">
+            </div>
+            <div class="row">
+                <label for="library-batch-mode">Batch Mode</label>
+                <select id="library-batch-mode">
+                    <option value="detect" selected>detect</option>
+                    <option value="analyze">analyze</option>
+                </select>
+            </div>
+            <div class="row">
+                <label for="library-search">Search</label>
+                <input id="library-search" type="text" placeholder="Filter by song name">
+            </div>
+            <div class="row">
+                <label for="library-status-filter">Status Filter</label>
+                <select id="library-status-filter">
+                    <option value="">All</option>
+                    <option value="current">Current</option>
+                    <option value="stale">Stale</option>
+                    <option value="unknown">Unknown</option>
+                    <option value="missing">Missing</option>
+                </select>
+            </div>
+            <div id="library-summary" class="library-summary">Loading library...</div>
+            <div class="library-table-wrap">
+                <table class="library-table">
+                    <thead>
+                        <tr>
+                            <th>Song</th>
+                            <th>Detect</th>
+                            <th>Analyze</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="library-song-table-body"></tbody>
+                </table>
+            </div>
+            <div id="library-empty" class="hint"></div>
+        </section>
+
+        <section class="panel run-config-drawer" id="run-config-drawer" hidden>
+            <div class="panel-title-row">
+                <h2>Run Configuration</h2>
+                <div class="header-actions">
+                    <button id="drawer-close-btn" type="button">Close</button>
+                </div>
+            </div>
+            <div id="drawer-song-context" class="drawer-song-context">No song selected.</div>
             <div class="actions">
                 <button id="run-btn">Run</button>
+                <button id="save-song-defaults-btn" type="button">Save Song Defaults</button>
+                <button id="reset-song-defaults-btn" type="button">Reset Song Defaults</button>
                 <button id="next-btn" type="button" disabled>Next</button>
                 <button id="cancel-btn" disabled>Cancel Active</button>
             </div>
@@ -61,7 +127,12 @@
         </section>
 
         <section class="panel">
-            <h2>Job Status</h2>
+            <div class="panel-title-row">
+                <h2>Job Status</h2>
+                <div id="job-progress-widget" class="job-progress-widget idle" title="Idle">
+                    <span id="job-progress-percent">0%</span>
+                </div>
+            </div>
             <div id="status-line">Idle</div>
             <progress id="progress" max="1.0" value="0"></progress>
             <div id="job-argv"></div>

@@ -265,19 +265,18 @@ class JobManager:
         else:
             output_dir = os.path.abspath(self.repo_root / output_dir_expanded)
 
-        batch_mode = str(job.params.get("batch_mode", "auto")).strip() or "auto"
-        if batch_mode not in {"auto", "detect"}:
-            raise ValueError("batch_mode must be 'auto' or 'detect'.")
+        batch_mode = str(job.params.get("batch_mode", "detect")).strip() or "detect"
+        if batch_mode not in {"detect", "analyze"}:
+            raise ValueError("batch_mode must be 'detect' or 'analyze'.")
 
         ground_truth_raw = job.params.get("ground_truth")
         ground_truth: Optional[str]
         if isinstance(ground_truth_raw, str) and ground_truth_raw.strip():
             ground_truth = os.path.abspath(os.path.expanduser(ground_truth_raw.strip()))
-        elif batch_mode == "auto":
-            input_dir_name = os.path.basename(os.path.normpath(input_dir))
-            ground_truth = os.path.join(input_dir, f"{input_dir_name}_gt.csv")
         else:
             ground_truth = None
+        if batch_mode == "analyze" and not ground_truth:
+            raise ValueError("ground_truth is required for batch_mode='analyze'.")
 
         silent = bool(job.params.get("silent", True))
         argv = [

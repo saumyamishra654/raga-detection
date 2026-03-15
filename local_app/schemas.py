@@ -14,7 +14,7 @@ class JobCreateRequest(BaseModel):
 class BatchJobRequest(BaseModel):
     input_dir: str
     output_dir: Optional[str] = None
-    mode: str = Field(default="auto", description="auto | detect")
+    mode: str = Field(default="detect", description="detect | analyze")
     ground_truth: Optional[str] = None
     silent: bool = True
 
@@ -24,6 +24,64 @@ class ArtifactInfo(BaseModel):
     path: str
     exists: bool
     url: Optional[str] = None
+
+
+class CleanupResponse(BaseModel):
+    ok: bool = True
+    deleted_files: int = 0
+    deleted_dirs: int = 0
+    preserved_files: int = 0
+    warnings: List[str] = Field(default_factory=list)
+
+
+class RuntimeFingerprint(BaseModel):
+    fingerprint_version: int
+    stage_manifest_version: int = 1
+    stage_hashes: Dict[str, str] = Field(default_factory=dict)
+    git_commit: Optional[str] = None
+    git_dirty: bool = False
+    file_hash: str
+    source: str
+    computed_at: str
+
+
+class ReportStatus(BaseModel):
+    exists: bool
+    status: str
+    report_path: Optional[str] = None
+    report_url: Optional[str] = None
+    meta_path: Optional[str] = None
+    generated_at: Optional[str] = None
+    variant_id: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class LibrarySongRow(BaseModel):
+    song_id: str
+    audio_name: str
+    audio_path: str
+    detect: ReportStatus
+    analyze: ReportStatus
+    variant_count: int = 0
+    latest_activity_at: Optional[str] = None
+
+
+class LibraryVariantRow(BaseModel):
+    variant_id: str
+    stem_dir: str
+    separator: Optional[str] = None
+    demucs_model: Optional[str] = None
+    detect: ReportStatus
+    analyze: ReportStatus
+    run_identity: Dict[str, Any] = Field(default_factory=dict)
+
+
+class LibraryResponse(BaseModel):
+    runtime_fingerprint: RuntimeFingerprint
+    audio_dir: str
+    output_dir: str
+    songs: List[LibrarySongRow] = Field(default_factory=list)
+    counts: Dict[str, int] = Field(default_factory=dict)
 
 
 class JobStatusResponse(BaseModel):

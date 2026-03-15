@@ -3,10 +3,31 @@ import argparse
 import os
 import sys
 import subprocess
+from pathlib import Path
 from typing import Dict, Optional
 
 
 AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac"}
+VALID_SOURCE_TYPES = {"mixed", "vocal", "instrumental"}
+VALID_MELODY_SOURCES = {"separated", "composite"}
+VALID_INSTRUMENT_TYPES = {"autodetect", "sitar", "sarod", "bansuri", "slide_guitar"}
+
+GENDER_ALIASES = {
+    "m": "male",
+    "male": "male",
+    "f": "female",
+    "female": "female",
+}
+
+INSTRUMENT_ALIASES = {
+    "sitar": "sitar",
+    "sarod": "sarod",
+    "flute": "bansuri",
+    "bansuri": "bansuri",
+    "mohan veena": "slide_guitar",
+    "slide guitar": "slide_guitar",
+    "slide_guitar": "slide_guitar",
+}
 
 
 def _is_valid_audio_file(filename: str, valid_exts: set) -> bool:
@@ -30,12 +51,137 @@ def _append_metadata_args(cmd: list[str], gt_info: dict) -> None:
             cmd.extend([flag, value])
             print(f"     + {label}: {value}")
 
-def load_ground_truth(csv_path: str) -> Dict[str, dict]:
+
+def _normalize_header(value: str) -> str:
+    return "".join(ch.lower() for ch in str(value) if ch.isalnum())
+
+
+def _find_column(fieldnames: list[str], aliases: list[str]) -> Optional[str]:
+    normalized: Dict[str, str] = {}
+    for name in fieldnames:
+        key = _normalize_header(name)
+        if key and key not in normalized:
+            normalized[key] = name
+    for alias in aliases:
+        match = normalized.get(_normalize_header(alias))
+        if match is not None:
+            return match
+    return None
+
+
+def _clean_text(value: Optional[str]) -> str:
+    return str(value or "").strip()
+
+
+def _normalize_gender(value: str) -> Optional[str]:
+    if not value:
+        return None
+    return GENDER_ALIASES.get(value.strip().lower())
+
+
+def _normalize_source_type(value: str) -> Optional[str]:
+    if not value:
+        return None
+    lowered = value.strip().lower()
+    if lowered in {"voice", "vocal", "vocals"}:
+        return "vocal"
+    if lowered in {"instrument", "instrumental", "instruments"}:
+        return "instrumental"
+    if lowered in VALID_SOURCE_TYPES:
+        return lowered
+    return None
+
+
+def _normalize_melody_source(value: str) -> Optional[str]:
+    if not value:
+        return None
+    lowered = value.strip().lower()
+    if lowered in VALID_MELODY_SOURCES:
+        return lowered
+    return None
+
+
+def _normalize_instrument_type(value: str) -> Optional[str]:
+    if not value:
+        return None
+    lowered = value.strip().lower()
+    if lowered in VALID_INSTRUMENT_TYPES:
+        return lowered
+    if lowered in {"vocal", "voice", "vocals"}:
+        return None
+    if lowered in INSTRUMENT_ALIASES:
+        return INSTRUMENT_ALIASES[lowered]
+    return "autodetect"
+
+
+def _derive_source_type(source_type_value: str, instrument_value: str) -> Optional[str]:
+    explicit = _normalize_source_type(source_type_value)
+    if explicit is not None:
+        return explicit
+
+    instrument_lower = instrument_value.strip().lower()
+    if instrument_lower in {"vocal", "voice", "vocals"}:
+        return "vocal"
+    if instrument_lower:
+        return "instrumental"
+    return None
+
+
+def _build_task_lookup(tasks: list[str]) -> tuple[Dict[str, list[str]], Dict[str, list[str]]]:
+    stem_map: Dict[str, list[str]] = {}
+    basename_map: Dict[str, list[str]] = {}
+    for task in tasks:
+        abs_task = os.path.abspath(task)
+        base = os.path.basename(abs_task)
+        stem_key = Path(base).stem.lower()
+        base_key = base.lower()
+        stem_map.setdefault(stem_key, []).append(abs_task)
+        basename_map.setdefault(base_key, []).append(abs_task)
+    return stem_map, basename_map
+
+
+def _match_csv_filename_to_task(
+    csv_filename: str,
+    stem_map: Dict[str, list[str]],
+    basename_map: Dict[str, list[str]],
+) -> tuple[Optional[str], Optional[str]]:
+    token = _clean_text(csv_filename)
+    if not token:
+        return None, "empty filename token"
+
+    base = os.path.basename(token)
+    stem = Path(base).stem if Path(base).suffix else base
+    stem_key = stem.lower()
+    stem_matches = stem_map.get(stem_key, [])
+    if len(stem_matches) == 1:
+        return stem_matches[0], None
+    if len(stem_matches) > 1:
+        return None, f"ambiguous stem match '{token}' -> {len(stem_matches)} files"
+
+    base_matches = basename_map.get(base.lower(), [])
+    if len(base_matches) == 1:
+        return base_matches[0], None
+    if len(base_matches) > 1:
+        return None, f"ambiguous basename match '{token}' -> {len(base_matches)} files"
+
+    return None, f"no file match for '{token}'"
+
+
+def load_ground_truth(csv_path: str, tasks: Optional[list[str]] = None) -> Dict[str, dict]:
     """
-    load ground truth data from annotated song db
-    expected columns: filename, raga, tonic
-    optional columns: instrument_type, vocalist_gender, source_type, melody_source
-    returns dict: {filename: {data}}
+    Load ground truth data and normalize metadata columns.
+
+    Supported aliases include:
+    - filename: filename, file, name (also handles 'Filename')
+    - raga: raga
+    - tonic: tonic
+    - instrument: instrument_type or instrument
+    - gender: vocalist_gender or gender
+    - source: source_type
+    - melody: melody_source
+
+    When tasks are provided, rows are mapped to absolute audio file paths using
+    stem-first matching, then basename fallback.
     """
     ground_truth: Dict[str, Dict[str, str]] = {}
     if not os.path.exists(csv_path):
@@ -45,43 +191,75 @@ def load_ground_truth(csv_path: str) -> Dict[str, dict]:
     try:
         with open(csv_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
-            # Map robust headers to actual column names
             fieldnames = reader.fieldnames or []
             if not fieldnames:
                 print("Error: CSV has no headers.")
                 return ground_truth
 
-            name_col = next((h for h in fieldnames if 'file' in h.lower() or 'name' in h.lower()), None)
-            
+            name_col = _find_column(fieldnames, ["filename", "file", "audio", "name"])
             if not name_col:
                 print(f"Error: CSV must contain a filename column. Found: {reader.fieldnames}")
                 return ground_truth
-            
-            # Helper to find column by partial name
-            def find_col(partial_name):
-                return next((h for h in fieldnames if partial_name in h.lower()), None)
 
-            raga_col = find_col('raga')
-            tonic_col = find_col('tonic')
-            inst_col = find_col('instrument_type')
-            gender_col = find_col('vocalist_gender')
-            source_col = find_col('source_type')
-            melody_col = find_col('melody_source')
-            
-            for row in reader:
-                # clean filename (basename only)
-                fname = os.path.basename(row[name_col]).strip()
-                
-                entry = {}
-                if raga_col and row[raga_col]: entry['raga'] = row[raga_col].strip()
-                if tonic_col and row[tonic_col]: entry['tonic'] = row[tonic_col].strip()
-                if inst_col and row[inst_col]: entry['instrument_type'] = row[inst_col].strip()
-                if gender_col and row[gender_col]: entry['vocalist_gender'] = row[gender_col].strip()
-                if source_col and row[source_col]: entry['source_type'] = row[source_col].strip()
-                if melody_col and row[melody_col]: entry['melody_source'] = row[melody_col].strip()
-                
-                ground_truth[fname] = entry
-                
+            raga_col = _find_column(fieldnames, ["raga"])
+            tonic_col = _find_column(fieldnames, ["tonic"])
+            inst_col = _find_column(fieldnames, ["instrument_type", "instrument"])
+            gender_col = _find_column(fieldnames, ["vocalist_gender", "gender"])
+            source_col = _find_column(fieldnames, ["source_type", "source"])
+            melody_col = _find_column(fieldnames, ["melody_source", "melody"])
+
+            stem_map: Dict[str, list[str]] = {}
+            basename_map: Dict[str, list[str]] = {}
+            if tasks:
+                stem_map, basename_map = _build_task_lookup(tasks)
+
+            for row_idx, row in enumerate(reader, start=2):
+                filename_token = _clean_text(row.get(name_col))
+                if not filename_token:
+                    print(f"[GT] Row {row_idx}: empty filename; skipping")
+                    continue
+
+                key: Optional[str]
+                if tasks:
+                    matched, reason = _match_csv_filename_to_task(filename_token, stem_map, basename_map)
+                    if matched is None:
+                        print(f"[GT] Row {row_idx}: {reason}; skipping")
+                        continue
+                    key = matched
+                else:
+                    key = os.path.basename(filename_token).lower()
+
+                entry: Dict[str, str] = {}
+                raga = _clean_text(row.get(raga_col)) if raga_col else ""
+                tonic = _clean_text(row.get(tonic_col)) if tonic_col else ""
+                if raga:
+                    entry["raga"] = raga
+                if tonic:
+                    entry["tonic"] = tonic
+
+                instrument_value = _clean_text(row.get(inst_col)) if inst_col else ""
+                source_value = _clean_text(row.get(source_col)) if source_col else ""
+                melody_value = _clean_text(row.get(melody_col)) if melody_col else ""
+                gender_value = _clean_text(row.get(gender_col)) if gender_col else ""
+
+                source_type = _derive_source_type(source_value, instrument_value)
+                if source_type:
+                    entry["source_type"] = source_type
+
+                melody_source = _normalize_melody_source(melody_value)
+                if melody_source:
+                    entry["melody_source"] = melody_source
+
+                if source_type == "vocal":
+                    gender = _normalize_gender(gender_value)
+                    if gender:
+                        entry["vocalist_gender"] = gender
+                else:
+                    instrument_type = _normalize_instrument_type(instrument_value)
+                    if instrument_type:
+                        entry["instrument_type"] = instrument_type
+
+                ground_truth[key] = entry
     except Exception as e:
         print(f"Error reading ground truth CSV: {e}")
         
@@ -132,16 +310,15 @@ def process_directory(
     input_dir: str,
     ground_truth_path: Optional[str] = None,
     output_dir: str = "results",
-    mode: str = "auto",
+    mode: str = "detect",
     silent: bool = False,
 ) -> None:
     """Walk an input directory and run the pipeline on each audio file."""
-    gt_data: Dict[str, dict] = {}
-    if ground_truth_path:
-        gt_data = load_ground_truth(ground_truth_path)
-        print(f"Loaded {len(gt_data)} ground truth entries.")
-    elif mode == "detect":
-        print("Mode set to 'detect' with no ground truth CSV.")
+    normalized_mode = str(mode or "").strip().lower()
+    if normalized_mode not in {"detect", "analyze"}:
+        raise ValueError("mode must be 'detect' or 'analyze'.")
+    if normalized_mode == "analyze" and not str(ground_truth_path or "").strip():
+        raise ValueError("ground_truth_path is required when mode='analyze'.")
 
     tasks: list[str] = []
     for root, _dirs, files in os.walk(input_dir):
@@ -152,42 +329,52 @@ def process_directory(
 
     print(f"Found {len(tasks)} audio files to process.")
 
+    gt_data: Dict[str, dict] = {}
+    if ground_truth_path:
+        gt_data = load_ground_truth(ground_truth_path, tasks=tasks)
+        print(f"Loaded {len(gt_data)} matched ground truth entries.")
+    elif normalized_mode == "detect":
+        print("Mode set to 'detect' with no ground truth CSV.")
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(current_dir)
     pipeline_script = os.path.join(project_root, "run_pipeline.sh")
+    processed_count = 0
+    skipped_count = 0
 
     for i, audio_path in enumerate(tasks):
         fname = os.path.basename(audio_path)
+        audio_abs = os.path.abspath(audio_path)
         print(f"\n[{i+1}/{len(tasks)}] Processing: {fname}")
 
-        gt_info = gt_data.get(fname, {})
-        cmd = [pipeline_script, "detect", "--audio", audio_path, "--output", output_dir]
-
-        if mode == "auto" and gt_info:
+        gt_info = gt_data.get(audio_abs, {})
+        if normalized_mode == "detect":
+            print("  -> Running in DETECT mode")
+            cmd = [pipeline_script, "detect", "--audio", audio_path, "--output", output_dir]
+        else:
+            if not gt_info:
+                print("  -> [SKIP] No matched ground truth row for analyze mode.")
+                skipped_count += 1
+                continue
             raga = gt_info.get("raga")
             tonic = gt_info.get("tonic")
-            if raga and tonic:
-                print(f"  -> Found Ground Truth: Raga='{raga}', Tonic='{tonic}'")
-                print("  -> Running in ANALYZE mode")
-                cmd = [
-                    pipeline_script,
-                    "analyze",
-                    "--audio",
-                    audio_path,
-                    "--output",
-                    output_dir,
-                    "--raga",
-                    raga,
-                    "--tonic",
-                    tonic,
-                ]
-            else:
-                print("  -> Ground truth entry found but missing Raga/Tonic. Falling back to DETECT.")
-        elif mode == "detect":
-            print("  -> Forced DETECT mode")
-        else:
-            print("  -> No Ground Truth found")
-            print("  -> Running in DETECT mode")
+            if not raga or not tonic:
+                print("  -> [SKIP] Missing raga/tonic in ground truth for analyze mode.")
+                skipped_count += 1
+                continue
+            print(f"  -> Running in ANALYZE mode with Raga='{raga}', Tonic='{tonic}'")
+            cmd = [
+                pipeline_script,
+                "analyze",
+                "--audio",
+                audio_path,
+                "--output",
+                output_dir,
+                "--raga",
+                raga,
+                "--tonic",
+                tonic,
+            ]
 
         if gt_info:
             _append_metadata_args(cmd, gt_info)
@@ -225,10 +412,15 @@ def process_directory(
 
             if returncode == 0:
                 print(f"  [SUCCESS] Log: {log_file}")
+                processed_count += 1
             else:
                 print(f"  [FAILURE] Exit Code: {returncode}. Check Log: {log_file}")
+                skipped_count += 1
         except Exception as e:
             print(f"  [ERROR] Execution failed: {e}")
+            skipped_count += 1
+
+    print(f"\nBatch complete. Processed: {processed_count}, Skipped: {skipped_count}, Total: {len(tasks)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Batch process audio files for Raga Detection.")
@@ -238,20 +430,19 @@ if __name__ == "__main__":
     # We resolve them relative to this file's location to be robust
     
     # Current file: raga_detection/raga_pipeline/batch.py
-    # Ground truth: <input_dir>_gt.csv by default (stored alongside input_dir)
+    # Ground truth: optional for detect, required for analyze
     # Output:       raga_detection/batch_results
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(current_dir) # raga-detection/
-    default_gt = "__AUTO__"
     default_output = os.path.join(project_root, "batch_results")
 
-    parser.add_argument("--ground-truth", "-g", default=default_gt, 
-                        help=f"Path to ground truth CSV (default: {default_gt})")
+    parser.add_argument("--ground-truth", "-g", default=None,
+                        help="Path to ground truth CSV (required for mode='analyze').")
     parser.add_argument("--output", "-o", default=default_output, 
                         help=f"Output directory (default: {default_output})")
-    parser.add_argument("--mode", "-m", choices=['auto', 'detect'], default='auto',
-                        help="Processing mode: 'auto' (checks ground truth) or 'detect' (force detection)")
+    parser.add_argument("--mode", "-m", choices=['detect', 'analyze'], default='detect',
+                        help="Processing mode: 'detect' or 'analyze'.")
     parser.add_argument("--silent", "-s", action="store_true", help="Suppress output to console (log files are still saved)")
     parser.add_argument("--init-csv", action="store_true", help="Initialize a blank ground truth CSV for files in input_dir")
     
@@ -261,11 +452,17 @@ if __name__ == "__main__":
         print(f"Error: Input directory '{args.input_dir}' does not exist.")
         sys.exit(1)
         
-    if args.ground_truth == "__AUTO__":
-        input_dir_name = os.path.basename(os.path.normpath(args.input_dir))
-        args.ground_truth = os.path.join(args.input_dir, f"{input_dir_name}_gt.csv")
-
     if args.init_csv:
-        init_ground_truth_csv(args.input_dir, args.ground_truth)
+        target_csv = args.ground_truth
+        if not target_csv:
+            input_dir_name = os.path.basename(os.path.normpath(args.input_dir))
+            target_csv = os.path.join(args.input_dir, f"{input_dir_name}_gt.csv")
+            print(f"No --ground-truth provided; initializing CSV at {target_csv}")
+        assert target_csv is not None
+        init_ground_truth_csv(args.input_dir, target_csv)
     else:
-        process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent)
+        try:
+            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent)
+        except ValueError as exc:
+            print(f"Error: {exc}")
+            sys.exit(1)

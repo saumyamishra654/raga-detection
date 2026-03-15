@@ -12,9 +12,27 @@
     const jobArgvEl = document.getElementById("job-argv");
     const jobProgressWidget = document.getElementById("job-progress-widget");
     const jobProgressPercent = document.getElementById("job-progress-percent");
+    const viewLibraryBtn = document.getElementById("view-library-btn");
+    const viewClassicBtn = document.getElementById("view-classic-btn");
     const openDetectReportBtn = document.getElementById("open-detect-report-btn");
     const openAnalyzeReportBtn = document.getElementById("open-analyze-report-btn");
     const runBatchBtn = document.getElementById("run-batch-btn");
+    const libraryAudioDirEl = document.getElementById("library-audio-dir");
+    const libraryOutputDirEl = document.getElementById("library-output-dir");
+    const libraryGroundTruthEl = document.getElementById("library-ground-truth");
+    const libraryBatchModeEl = document.getElementById("library-batch-mode");
+    const librarySearchEl = document.getElementById("library-search");
+    const libraryStatusFilterEl = document.getElementById("library-status-filter");
+    const libraryRefreshBtn = document.getElementById("library-refresh-btn");
+    const libraryClearAllBtn = document.getElementById("library-clear-all-btn");
+    const librarySongTableBody = document.getElementById("library-song-table-body");
+    const librarySummaryEl = document.getElementById("library-summary");
+    const libraryEmptyEl = document.getElementById("library-empty");
+    const runConfigDrawer = document.getElementById("run-config-drawer");
+    const drawerSongContextEl = document.getElementById("drawer-song-context");
+    const drawerCloseBtn = document.getElementById("drawer-close-btn");
+    const saveSongDefaultsBtn = document.getElementById("save-song-defaults-btn");
+    const resetSongDefaultsBtn = document.getElementById("reset-song-defaults-btn");
     const analyzeWorkspacePanel = document.getElementById("analyze-workspace-panel");
     const analyzeWorkspaceStatusEl = document.getElementById("analyze-workspace-status");
     const analyzeReportFrame = document.getElementById("analyze-report-frame");
@@ -39,12 +57,29 @@
     const tanpuraTrackCache = new Map();
     let activeRecordingContext = null;
     const AUDIO_DIR_STORAGE_KEY = "ragaLocalApp.audioDirectory";
+    const SONG_MODE_DEFAULTS_KEY = "ragaLocalApp.songModeDefaults.v1";
     const DEFAULT_AUDIO_DIR_REL = (document.body && document.body.dataset && document.body.dataset.defaultAudioDir)
         ? document.body.dataset.defaultAudioDir
         : "../audio_test_files";
+    const DEFAULT_OUTPUT_DIR_REL = "batch_results";
     const DEFAULT_MODE = (document.body && document.body.dataset && document.body.dataset.defaultMode)
         ? String(document.body.dataset.defaultMode).trim()
         : "detect";
+    let currentLibrary = null;
+    const variantCacheBySong = new Map();
+    let selectedDrawerSong = null;
+    let librarySearchTimer = null;
+    const UI_VIEW_MODE_STORAGE_KEY = "ragaLocalApp.uiViewMode";
+    let currentViewMode = "library";
+    const CLEAR_ALL_PRESERVE_NAMES = [
+        "vocals.mp3",
+        "melody.mp3",
+        "accompaniment.mp3",
+        "composite_pitch_data.csv",
+        "melody_pitch_data.csv",
+        "vocals_pitch_data.csv",
+        "accompaniment_pitch_data.csv",
+    ];
 
     const FIELD_DEPENDENCIES = {
         vocalist_gender: { field: "source_type", equals: "vocal" },
@@ -57,6 +92,7 @@
         force_stem_recompute: { field: "force", sourceType: "checkbox", equals: true }
     };
     selectedAudioDirectory = getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL;
+    currentViewMode = getSavedViewMode();
 
     function clearChildren(el) {
         while (el.firstChild) {
@@ -93,6 +129,102 @@
         }
     }
 
+    function getSavedViewMode() {
+        try {
+            const raw = window.localStorage.getItem(UI_VIEW_MODE_STORAGE_KEY);
+            const mode = String(raw || "").trim().toLowerCase();
+            if (mode === "classic" || mode === "library") return mode;
+        } catch (_err) {
+            // Ignore localStorage failures for private/incognito contexts.
+        }
+        return "library";
+    }
+
+    function saveViewMode(mode) {
+        try {
+            window.localStorage.setItem(UI_VIEW_MODE_STORAGE_KEY, String(mode || "library"));
+        } catch (_err) {
+            // Ignore localStorage failures for private/incognito contexts.
+        }
+    }
+
+    function isClassicViewMode() {
+        return currentViewMode === "classic";
+    }
+
+    function syncViewToggleButtons() {
+        if (viewLibraryBtn) {
+            viewLibraryBtn.classList.toggle("active", currentViewMode === "library");
+        }
+        if (viewClassicBtn) {
+            viewClassicBtn.classList.toggle("active", currentViewMode === "classic");
+        }
+    }
+
+    function loadSongModeDefaultsMap() {
+        try {
+            const raw = window.localStorage.getItem(SONG_MODE_DEFAULTS_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== "object") return {};
+            return parsed;
+        } catch (_err) {
+            return {};
+        }
+    }
+
+    function saveSongModeDefaultsMap(payload) {
+        try {
+            window.localStorage.setItem(SONG_MODE_DEFAULTS_KEY, JSON.stringify(payload || {}));
+        } catch (_err) {
+            // Ignore localStorage failures for private/incognito contexts.
+        }
+    }
+
+    function getSongModeDefaults(songId, mode) {
+        if (!songId || !mode) return {};
+        const allDefaults = loadSongModeDefaultsMap();
+        const bySong = allDefaults[String(songId)] || {};
+        const modeDefaults = bySong[String(mode)] || {};
+        return (modeDefaults && typeof modeDefaults === "object") ? modeDefaults : {};
+    }
+
+    function setSongModeDefaults(songId, mode, params) {
+        if (!songId || !mode) return;
+        const allDefaults = loadSongModeDefaultsMap();
+        const key = String(songId);
+        const modeKey = String(mode);
+        if (!allDefaults[key] || typeof allDefaults[key] !== "object") {
+            allDefaults[key] = {};
+        }
+        allDefaults[key][modeKey] = Object.assign({}, params || {});
+        saveSongModeDefaultsMap(allDefaults);
+    }
+
+    function resetSongModeDefaults(songId, mode) {
+        if (!songId || !mode) return;
+        const allDefaults = loadSongModeDefaultsMap();
+        const key = String(songId);
+        const modeKey = String(mode);
+        if (allDefaults[key] && typeof allDefaults[key] === "object") {
+            delete allDefaults[key][modeKey];
+            if (!Object.keys(allDefaults[key]).length) {
+                delete allDefaults[key];
+            }
+        }
+        saveSongModeDefaultsMap(allDefaults);
+    }
+
+    function getLibraryAudioDir() {
+        const fromInput = libraryAudioDirEl ? String(libraryAudioDirEl.value || "").trim() : "";
+        return fromInput || selectedAudioDirectory || DEFAULT_AUDIO_DIR_REL;
+    }
+
+    function getLibraryOutputDir() {
+        const fromInput = libraryOutputDirEl ? String(libraryOutputDirEl.value || "").trim() : "";
+        return fromInput || DEFAULT_OUTPUT_DIR_REL;
+    }
+
     async function fetchAudioFiles(audioDirPath, forceRefresh) {
         const sourceKey = String(audioDirPath || "").trim() || DEFAULT_AUDIO_DIR_REL;
         if (!forceRefresh && audioFileCacheBySource.has(sourceKey)) {
@@ -124,6 +256,487 @@
         return payload;
     }
 
+    async function fetchLibrary(forceRefresh) {
+        const endpoint = new URL("/api/library", window.location.origin);
+        endpoint.searchParams.set("audio_dir", getLibraryAudioDir());
+        endpoint.searchParams.set("output_dir", getLibraryOutputDir());
+        if (libraryStatusFilterEl && String(libraryStatusFilterEl.value || "").trim()) {
+            endpoint.searchParams.set("status_filter", String(libraryStatusFilterEl.value).trim());
+        }
+        if (librarySearchEl && String(librarySearchEl.value || "").trim()) {
+            endpoint.searchParams.set("q", String(librarySearchEl.value).trim());
+        }
+        if (forceRefresh) {
+            endpoint.searchParams.set("_ts", String(Date.now()));
+        }
+        const res = await fetch(endpoint.toString());
+        if (!res.ok) {
+            throw new Error("Failed to load audio library");
+        }
+        return res.json();
+    }
+
+    async function fetchSongVariants(songId, forceRefresh) {
+        const endpoint = new URL("/api/library/" + encodeURIComponent(songId) + "/variants", window.location.origin);
+        endpoint.searchParams.set("audio_dir", getLibraryAudioDir());
+        endpoint.searchParams.set("output_dir", getLibraryOutputDir());
+        if (forceRefresh) {
+            endpoint.searchParams.set("_ts", String(Date.now()));
+        }
+        const res = await fetch(endpoint.toString());
+        if (!res.ok) {
+            const payload = await res.json().catch(function () { return {}; });
+            throw new Error(payload.detail || "Failed to load variants");
+        }
+        return res.json();
+    }
+
+    async function clearSongOutputs(songId) {
+        const endpoint = new URL("/api/library/" + encodeURIComponent(songId) + "/clear-outputs", window.location.origin);
+        endpoint.searchParams.set("audio_dir", getLibraryAudioDir());
+        endpoint.searchParams.set("output_dir", getLibraryOutputDir());
+        const res = await fetch(endpoint.toString(), { method: "POST" });
+        if (!res.ok) {
+            const payload = await res.json().catch(function () { return {}; });
+            throw new Error(payload.detail || "Failed to clear outputs for song");
+        }
+        return res.json();
+    }
+
+    async function clearAllOutputs() {
+        const endpoint = new URL("/api/library/clear-all-outputs", window.location.origin);
+        endpoint.searchParams.set("output_dir", getLibraryOutputDir());
+        const res = await fetch(endpoint.toString(), { method: "POST" });
+        if (!res.ok) {
+            const payload = await res.json().catch(function () { return {}; });
+            throw new Error(payload.detail || "Failed to clear outputs");
+        }
+        return res.json();
+    }
+
+    function cleanupSummary(prefix, payload) {
+        const data = payload || {};
+        const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+        let text =
+            String(prefix || "Cleanup complete") +
+            " • deleted files: " + String(data.deleted_files || 0) +
+            ", deleted dirs: " + String(data.deleted_dirs || 0) +
+            ", preserved files: " + String(data.preserved_files || 0);
+        if (warnings.length) {
+            text += " • warnings: " + String(warnings.length);
+        }
+        return text;
+    }
+
+    function statusClass(status) {
+        const value = String(status || "").toLowerCase();
+        if (value === "current" || value === "stale" || value === "unknown" || value === "missing") {
+            return value;
+        }
+        return "unknown";
+    }
+
+    function makeStatusPill(statusObj) {
+        const status = statusObj && statusObj.status ? String(statusObj.status).toLowerCase() : "missing";
+        const pill = document.createElement("span");
+        pill.className = "status-pill " + statusClass(status);
+        pill.textContent = status;
+        if (statusObj && statusObj.reason) {
+            pill.title = String(statusObj.reason);
+        }
+        return pill;
+    }
+
+    function setLibrarySummary(text) {
+        if (!librarySummaryEl) return;
+        librarySummaryEl.textContent = String(text || "");
+    }
+
+    function setLibraryEmpty(text) {
+        if (!libraryEmptyEl) return;
+        libraryEmptyEl.textContent = String(text || "");
+    }
+
+    function setDrawerVisibility(open) {
+        if (!runConfigDrawer) return;
+        if (isClassicViewMode()) {
+            runConfigDrawer.hidden = false;
+            return;
+        }
+        if (open) {
+            runConfigDrawer.hidden = false;
+        } else {
+            runConfigDrawer.hidden = true;
+        }
+    }
+
+    function applyViewMode(mode) {
+        const normalized = String(mode || "").toLowerCase() === "classic" ? "classic" : "library";
+        currentViewMode = normalized;
+        if (document.body) {
+            document.body.classList.remove("view-library", "view-classic");
+            document.body.classList.add(normalized === "classic" ? "view-classic" : "view-library");
+        }
+        syncViewToggleButtons();
+        saveViewMode(normalized);
+
+        if (normalized === "classic") {
+            setDrawerVisibility(true);
+        } else if (!selectedDrawerSong) {
+            setDrawerVisibility(false);
+        }
+    }
+
+    function updateDrawerSongContext(mode) {
+        if (!drawerSongContextEl) return;
+        if (!selectedDrawerSong) {
+            drawerSongContextEl.textContent = "No song selected.";
+            return;
+        }
+        const modeTxt = mode ? (" • mode: " + mode) : "";
+        drawerSongContextEl.textContent =
+            selectedDrawerSong.audio_name +
+            modeTxt +
+            " • " +
+            selectedDrawerSong.audio_path;
+    }
+
+    function applyParamsToForm(params) {
+        if (!currentSchema || !Array.isArray(currentSchema.fields)) return;
+        const payload = params || {};
+        currentSchema.fields.forEach(function (field) {
+            const input = document.getElementById(fieldInputId(field.name));
+            if (!input) return;
+            if (!(field.name in payload)) return;
+            const raw = payload[field.name];
+            if (field.action === "store_true" || field.action === "store_false") {
+                input.checked = Boolean(raw);
+            } else if (raw === null || raw === undefined) {
+                input.value = "";
+            } else {
+                input.value = String(raw);
+            }
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+    }
+
+    async function openRunDrawerForSong(song, mode, prefillParams) {
+        selectedDrawerSong = song || null;
+        setDrawerVisibility(true);
+        if (modeSelect) {
+            modeSelect.value = mode;
+        }
+        await loadSchema(mode, { restoreDraft: false });
+
+        const baseParams = {
+            audio: song ? String(song.audio_path || "") : "",
+            output: getLibraryOutputDir(),
+        };
+        const savedDefaults = song ? getSongModeDefaults(song.song_id, mode) : {};
+        const merged = Object.assign({}, baseParams, savedDefaults || {}, prefillParams || {});
+        applyParamsToForm(merged);
+        updateDrawerSongContext(mode);
+        captureDraftForCurrentMode();
+    }
+
+    async function submitAndTrackJob(payload, statusPrefix) {
+        clearPendingNextSuggestion();
+        updateNextButtonState();
+        const job = await submitJob(payload, "/api/jobs");
+        activeJobId = job.job_id;
+        setBusy(true);
+        setStatus((statusPrefix || "Submitted") + ": " + job.job_id);
+        progressEl.value = 0;
+        updateJobProgressWidget("queued", 0, statusPrefix || "Submitted");
+        logsEl.textContent = "";
+        artifactListEl.textContent = "";
+        applyReportLinks(null, null, null);
+        startPolling(job.job_id);
+        await refreshJob(job.job_id, { refreshArtifacts: false });
+    }
+
+    async function runSongQuick(song, mode) {
+        const baseParams = {
+            audio: String(song.audio_path || ""),
+            output: getLibraryOutputDir(),
+        };
+        const defaults = getSongModeDefaults(song.song_id, mode);
+        const params = Object.assign({}, baseParams, defaults || {});
+
+        if (mode === "analyze") {
+            const tonic = String(params.tonic || "").trim();
+            const raga = String(params.raga || "").trim();
+            if (!tonic || !raga) {
+                await openRunDrawerForSong(song, mode, params);
+                setStatus("Analyze quick run needs tonic and raga. Set them in Advanced and run.");
+                return;
+            }
+        }
+
+        if (mode === "detect" && String(params.audio || "").trim() === "") {
+            throw new Error("Missing audio path for detect run.");
+        }
+        if (mode === "analyze" && String(params.audio || "").trim() === "") {
+            throw new Error("Missing audio path for analyze run.");
+        }
+
+        const payload = {
+            mode: mode,
+            params: params,
+            extra_args: [],
+        };
+        await submitAndTrackJob(payload, "Submitted " + mode);
+    }
+
+    function createVariantCard(song, variant) {
+        const card = document.createElement("div");
+        card.className = "library-variant-card";
+        const detectStatus = variant && variant.detect ? variant.detect : { status: "missing" };
+        const analyzeStatus = variant && variant.analyze ? variant.analyze : { status: "missing" };
+        const variantMeta = document.createElement("div");
+        variantMeta.className = "library-variant-meta";
+        const sep = variant && variant.separator ? String(variant.separator) : "demucs";
+        const model = variant && variant.demucs_model ? String(variant.demucs_model) : "htdemucs";
+        variantMeta.textContent = "separator=" + sep + " • model=" + model;
+
+        const topRow = document.createElement("div");
+        topRow.className = "library-row-actions";
+        const detectPill = makeStatusPill(detectStatus);
+        const analyzePill = makeStatusPill(analyzeStatus);
+        topRow.appendChild(detectPill);
+        topRow.appendChild(analyzePill);
+
+        const actionRow = document.createElement("div");
+        actionRow.className = "library-row-actions";
+
+        const useParamsBtn = document.createElement("button");
+        useParamsBtn.type = "button";
+        useParamsBtn.textContent = "Apply Params";
+        useParamsBtn.addEventListener("click", function () {
+            const prefill = variant && variant.run_identity ? Object.assign({}, variant.run_identity) : {};
+            const preferredMode = (analyzeStatus && analyzeStatus.exists) ? "analyze" : "detect";
+            openRunDrawerForSong(song, preferredMode, prefill).catch(function (err) {
+                setStatus("Drawer error: " + err.message);
+            });
+        });
+        actionRow.appendChild(useParamsBtn);
+
+        if (detectStatus && detectStatus.report_url) {
+            const openDetect = document.createElement("button");
+            openDetect.type = "button";
+            openDetect.textContent = "Open Detect";
+            openDetect.addEventListener("click", function () {
+                window.open(String(detectStatus.report_url), "_blank", "noopener");
+            });
+            actionRow.appendChild(openDetect);
+        }
+
+        if (analyzeStatus && analyzeStatus.report_url) {
+            const openAnalyze = document.createElement("button");
+            openAnalyze.type = "button";
+            openAnalyze.textContent = "Open Analyze";
+            openAnalyze.addEventListener("click", function () {
+                window.open(String(analyzeStatus.report_url), "_blank", "noopener");
+            });
+            actionRow.appendChild(openAnalyze);
+        }
+
+        card.appendChild(topRow);
+        card.appendChild(variantMeta);
+        card.appendChild(actionRow);
+        return card;
+    }
+
+    function findSongInLibrary(songId) {
+        if (!currentLibrary || !Array.isArray(currentLibrary.songs)) return null;
+        for (let i = 0; i < currentLibrary.songs.length; i += 1) {
+            const row = currentLibrary.songs[i];
+            if (row && String(row.song_id) === String(songId)) {
+                return row;
+            }
+        }
+        return null;
+    }
+
+    async function toggleSongVariants(song, hostRow) {
+        if (!librarySongTableBody || !song || !hostRow) return;
+        const existing = librarySongTableBody.querySelector('tr[data-variant-row-for=\"' + song.song_id + '\"]');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        const loadingRow = document.createElement("tr");
+        loadingRow.className = "library-variant-row";
+        loadingRow.setAttribute("data-variant-row-for", String(song.song_id));
+        const loadingCell = document.createElement("td");
+        loadingCell.colSpan = 5;
+        loadingCell.textContent = "Loading variants...";
+        loadingRow.appendChild(loadingCell);
+        hostRow.insertAdjacentElement("afterend", loadingRow);
+
+        try {
+            const payload = await fetchSongVariants(song.song_id, false);
+            const variants = Array.isArray(payload.variants) ? payload.variants : [];
+            variantCacheBySong.set(song.song_id, variants);
+            loadingCell.textContent = "";
+            if (!variants.length) {
+                loadingCell.textContent = "No variants found.";
+                return;
+            }
+            variants.forEach(function (variant) {
+                loadingCell.appendChild(createVariantCard(song, variant));
+            });
+        } catch (err) {
+            loadingCell.textContent = "Variant load error: " + err.message;
+        }
+    }
+
+    function renderLibraryRows(payload) {
+        if (!librarySongTableBody) return;
+        clearChildren(librarySongTableBody);
+        currentLibrary = payload || null;
+        const songs = (payload && Array.isArray(payload.songs)) ? payload.songs : [];
+
+        if (!songs.length) {
+            setLibraryEmpty("No songs found for this filter.");
+            return;
+        }
+        setLibraryEmpty("");
+
+        songs.forEach(function (song) {
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-song-id", String(song.song_id));
+
+            const songTd = document.createElement("td");
+            songTd.textContent = String(song.audio_name || "");
+            tr.appendChild(songTd);
+
+            const detectTd = document.createElement("td");
+            detectTd.appendChild(makeStatusPill(song.detect || { status: "missing" }));
+            tr.appendChild(detectTd);
+
+            const analyzeTd = document.createElement("td");
+            analyzeTd.appendChild(makeStatusPill(song.analyze || { status: "missing" }));
+            tr.appendChild(analyzeTd);
+
+            const lastTd = document.createElement("td");
+            lastTd.textContent = song.latest_activity_at ? String(song.latest_activity_at) : "-";
+            tr.appendChild(lastTd);
+
+            const actionTd = document.createElement("td");
+            const actions = document.createElement("div");
+            actions.className = "library-row-actions";
+
+            const runDetectBtn = document.createElement("button");
+            runDetectBtn.type = "button";
+            runDetectBtn.textContent = "Run Detect";
+            runDetectBtn.addEventListener("click", function () {
+                runSongQuick(song, "detect").catch(function (err) {
+                    setStatus("Quick run error: " + err.message);
+                });
+            });
+            actions.appendChild(runDetectBtn);
+
+            const runAnalyzeBtn = document.createElement("button");
+            runAnalyzeBtn.type = "button";
+            runAnalyzeBtn.textContent = "Run Analyze";
+            runAnalyzeBtn.addEventListener("click", function () {
+                runSongQuick(song, "analyze").catch(function (err) {
+                    setStatus("Quick run error: " + err.message);
+                });
+            });
+            actions.appendChild(runAnalyzeBtn);
+
+            const advancedBtn = document.createElement("button");
+            advancedBtn.type = "button";
+            advancedBtn.textContent = "Advanced";
+            advancedBtn.addEventListener("click", function () {
+                openRunDrawerForSong(song, "detect", {}).catch(function (err) {
+                    setStatus("Drawer error: " + err.message);
+                });
+            });
+            actions.appendChild(advancedBtn);
+
+            if (song.detect && song.detect.report_url) {
+                const openDetect = document.createElement("button");
+                openDetect.type = "button";
+                openDetect.textContent = "Open Detect";
+                openDetect.addEventListener("click", function () {
+                    window.open(String(song.detect.report_url), "_blank", "noopener");
+                });
+                actions.appendChild(openDetect);
+            }
+
+            if (song.analyze && song.analyze.report_url) {
+                const openAnalyze = document.createElement("button");
+                openAnalyze.type = "button";
+                openAnalyze.textContent = "Open Analyze";
+                openAnalyze.addEventListener("click", function () {
+                    window.open(String(song.analyze.report_url), "_blank", "noopener");
+                });
+                actions.appendChild(openAnalyze);
+            }
+
+            const variantsBtn = document.createElement("button");
+            variantsBtn.type = "button";
+            variantsBtn.textContent = "Show Variants";
+            variantsBtn.addEventListener("click", function () {
+                toggleSongVariants(song, tr).catch(function (err) {
+                    setStatus("Variant error: " + err.message);
+                });
+            });
+            actions.appendChild(variantsBtn);
+
+            const clearOutputsBtn = document.createElement("button");
+            clearOutputsBtn.type = "button";
+            clearOutputsBtn.textContent = "Clear Outputs";
+            clearOutputsBtn.addEventListener("click", async function () {
+                const confirmed = window.confirm(
+                    "This will permanently delete all generated outputs and logs for '" +
+                    String(song.audio_name || "this song") +
+                    "'. This file loss is irrecoverable. Continue?"
+                );
+                if (!confirmed) {
+                    setStatus("Clear outputs cancelled.");
+                    return;
+                }
+                try {
+                    setStatus("Clearing outputs for " + String(song.audio_name || "") + "...");
+                    const result = await clearSongOutputs(song.song_id);
+                    setStatus(cleanupSummary("Song outputs cleared", result));
+                    await refreshLibrary(true);
+                } catch (err) {
+                    setStatus("Clear outputs error: " + err.message);
+                }
+            });
+            actions.appendChild(clearOutputsBtn);
+
+            actionTd.appendChild(actions);
+            tr.appendChild(actionTd);
+            librarySongTableBody.appendChild(tr);
+        });
+    }
+
+    async function refreshLibrary(forceRefresh) {
+        try {
+            setLibrarySummary("Loading library...");
+            const payload = await fetchLibrary(Boolean(forceRefresh));
+            renderLibraryRows(payload);
+            const counts = payload && payload.counts ? payload.counts : {};
+            setLibrarySummary(
+                "Songs: " + String(counts.songs_total || 0) +
+                " • Detect current: " + String(counts.detect_current || 0) +
+                " • Analyze current: " + String(counts.analyze_current || 0)
+            );
+            selectedAudioDirectory = getLibraryAudioDir();
+            saveAudioDirectory(selectedAudioDirectory);
+        } catch (err) {
+            setLibrarySummary("Failed to load library.");
+            setLibraryEmpty(err.message || "Unknown error");
+        }
+    }
+
     function getFieldDefault(name, fallbackValue) {
         if (!currentSchema || !Array.isArray(currentSchema.fields)) return fallbackValue;
         const field = currentSchema.fields.find(function (item) { return item.name === name; });
@@ -137,6 +750,9 @@
         const outputInput = document.getElementById(fieldInputId("output"));
         if (outputInput && String(outputInput.value || "").trim()) {
             return String(outputInput.value || "").trim();
+        }
+        if (libraryOutputDirEl && String(libraryOutputDirEl.value || "").trim()) {
+            return String(libraryOutputDirEl.value || "").trim();
         }
         return getFieldDefault("output", "batch_results");
     }
@@ -2071,6 +2687,9 @@
                 clearInterval(pollHandle);
                 pollHandle = null;
             }
+            refreshLibrary(true).catch(function (_err) {
+                // Non-blocking refresh after job completion.
+            });
         }
     }
 
@@ -2111,19 +2730,7 @@
                 params: params,
                 extra_args: parseExtraArgs(extraArgsEl.value),
             };
-            clearPendingNextSuggestion();
-            updateNextButtonState();
-            const job = await submitJob(payload, "/api/jobs");
-            activeJobId = job.job_id;
-            setBusy(true);
-            setStatus("Submitted: " + job.job_id);
-            progressEl.value = 0;
-            updateJobProgressWidget("queued", 0, "Submitted");
-            logsEl.textContent = "";
-            artifactListEl.textContent = "";
-            applyReportLinks(null, null, null);
-            startPolling(job.job_id);
-            await refreshJob(job.job_id, { refreshArtifacts: false });
+            await submitAndTrackJob(payload, "Submitted " + mode);
         } catch (err) {
             setStatus("Error: " + err.message);
         }
@@ -2178,20 +2785,75 @@
         });
     }
 
+    if (drawerCloseBtn) {
+        drawerCloseBtn.addEventListener("click", function () {
+            setDrawerVisibility(false);
+        });
+    }
+
+    if (saveSongDefaultsBtn) {
+        saveSongDefaultsBtn.addEventListener("click", function () {
+            try {
+                if (!selectedDrawerSong) {
+                    throw new Error("Select a song from the library first.");
+                }
+                const mode = String(modeSelect.value || "").trim();
+                if (!mode) {
+                    throw new Error("Choose a mode before saving defaults.");
+                }
+                const params = collectParamsOrThrow();
+                setSongModeDefaults(selectedDrawerSong.song_id, mode, params);
+                setStatus("Saved defaults for " + selectedDrawerSong.audio_name + " (" + mode + ").");
+            } catch (err) {
+                setStatus("Save defaults error: " + err.message);
+            }
+        });
+    }
+
+    if (resetSongDefaultsBtn) {
+        resetSongDefaultsBtn.addEventListener("click", function () {
+            try {
+                if (!selectedDrawerSong) {
+                    throw new Error("Select a song from the library first.");
+                }
+                const mode = String(modeSelect.value || "").trim();
+                if (!mode) {
+                    throw new Error("Choose a mode before resetting defaults.");
+                }
+                resetSongModeDefaults(selectedDrawerSong.song_id, mode);
+                openRunDrawerForSong(selectedDrawerSong, mode, {}).catch(function (err) {
+                    setStatus("Reset error: " + err.message);
+                });
+                setStatus("Reset saved defaults for " + selectedDrawerSong.audio_name + " (" + mode + ").");
+            } catch (err) {
+                setStatus("Reset defaults error: " + err.message);
+            }
+        });
+    }
+
     if (runBatchBtn) {
         runBatchBtn.addEventListener("click", async function () {
             try {
                 captureDraftForCurrentMode();
-                const inputDir = (selectedAudioDirectory || getSavedAudioDirectory() || DEFAULT_AUDIO_DIR_REL).trim();
+                const inputDir = getLibraryAudioDir().trim();
                 if (!inputDir) {
                     throw new Error("Select or enter an audio directory first.");
                 }
                 const payload = {
                     input_dir: inputDir,
                     output_dir: getCurrentOutputDirectory(),
-                    mode: "auto",
+                    mode: "detect",
                     silent: true,
                 };
+                const selectedBatchMode = libraryBatchModeEl ? String(libraryBatchModeEl.value || "").trim().toLowerCase() : "detect";
+                payload.mode = (selectedBatchMode === "analyze") ? "analyze" : "detect";
+                const groundTruthValue = libraryGroundTruthEl ? String(libraryGroundTruthEl.value || "").trim() : "";
+                if (groundTruthValue) {
+                    payload.ground_truth = groundTruthValue;
+                }
+                if (payload.mode === "analyze" && !groundTruthValue) {
+                    throw new Error("Batch analyze requires a Ground Truth CSV path.");
+                }
                 clearPendingNextSuggestion();
                 updateNextButtonState();
                 const job = await submitJob(payload, "/api/batch-jobs");
@@ -2238,7 +2900,90 @@
         loadSchema(modeSelect.value).catch(function (err) {
             setStatus("Schema load error: " + err.message);
         });
+        updateDrawerSongContext(modeSelect.value);
     });
+
+    if (viewLibraryBtn) {
+        viewLibraryBtn.addEventListener("click", function () {
+            applyViewMode("library");
+        });
+    }
+
+    if (viewClassicBtn) {
+        viewClassicBtn.addEventListener("click", function () {
+            applyViewMode("classic");
+        });
+    }
+
+    if (libraryRefreshBtn) {
+        libraryRefreshBtn.addEventListener("click", function () {
+            refreshLibrary(true).catch(function (err) {
+                setStatus("Library refresh error: " + err.message);
+            });
+        });
+    }
+
+    if (libraryClearAllBtn) {
+        libraryClearAllBtn.addEventListener("click", async function () {
+            const confirmationText =
+                "This will permanently delete generated outputs for all songs in the selected output directory.\n" +
+                "This file loss is irrecoverable.\n\n" +
+                "Preserved files: " + CLEAR_ALL_PRESERVE_NAMES.join(", ") + "\n\n" +
+                "Type CLEAR to continue.";
+            const typed = window.prompt(confirmationText, "");
+            if (typed !== "CLEAR") {
+                setStatus("Clear all cancelled.");
+                return;
+            }
+            try {
+                setStatus("Clearing all outputs...");
+                const result = await clearAllOutputs();
+                setStatus(cleanupSummary("All outputs cleared", result));
+                await refreshLibrary(true);
+            } catch (err) {
+                setStatus("Clear all error: " + err.message);
+            }
+        });
+    }
+
+    if (libraryAudioDirEl) {
+        libraryAudioDirEl.addEventListener("change", function () {
+            selectedAudioDirectory = getLibraryAudioDir();
+            saveAudioDirectory(selectedAudioDirectory);
+            refreshLibrary(true).catch(function (err) {
+                setStatus("Library error: " + err.message);
+            });
+        });
+    }
+
+    if (libraryOutputDirEl) {
+        libraryOutputDirEl.addEventListener("change", function () {
+            refreshLibrary(true).catch(function (err) {
+                setStatus("Library error: " + err.message);
+            });
+        });
+    }
+
+    if (libraryStatusFilterEl) {
+        libraryStatusFilterEl.addEventListener("change", function () {
+            refreshLibrary(false).catch(function (err) {
+                setStatus("Library filter error: " + err.message);
+            });
+        });
+    }
+
+    if (librarySearchEl) {
+        librarySearchEl.addEventListener("input", function () {
+            if (librarySearchTimer) {
+                clearTimeout(librarySearchTimer);
+            }
+            librarySearchTimer = setTimeout(function () {
+                refreshLibrary(false).catch(function (err) {
+                    setStatus("Library search error: " + err.message);
+                });
+            }, 180);
+        });
+    }
 
     document.addEventListener("raga-transcription-report-regenerated", function (evt) {
         if (!isAnalyzeModeSelected()) return;
@@ -2281,6 +3026,13 @@
         }
     }
 
+    if (libraryAudioDirEl) {
+        libraryAudioDirEl.value = selectedAudioDirectory || DEFAULT_AUDIO_DIR_REL;
+    }
+    if (libraryOutputDirEl && !String(libraryOutputDirEl.value || "").trim()) {
+        libraryOutputDirEl.value = DEFAULT_OUTPUT_DIR_REL;
+    }
+
     schemaForms.addEventListener("input", captureDraftForCurrentMode);
     schemaForms.addEventListener("change", captureDraftForCurrentMode);
     extraArgsEl.addEventListener("input", captureDraftForCurrentMode);
@@ -2290,8 +3042,13 @@
     });
 
     clearAnalyzeWorkspace();
+    applyViewMode(currentViewMode);
+    updateDrawerSongContext(modeSelect.value);
     updateJobProgressWidget("idle", 0, "Idle");
     loadSchema(modeSelect.value).catch(function (err) {
         setStatus("Schema load error: " + err.message);
+    });
+    refreshLibrary(true).catch(function (err) {
+        setStatus("Library load error: " + err.message);
     });
 })();

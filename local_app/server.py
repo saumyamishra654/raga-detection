@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import csv
+import hashlib
 import json
 import os
 import re
@@ -25,11 +26,17 @@ from local_app.jobs import JobManager, JobRecord
 from local_app.schemas import (
     ArtifactInfo,
     BatchJobRequest,
+    CleanupResponse,
     EditableNote,
     EditablePhrase,
     JobCreateRequest,
     JobLogsResponse,
     JobStatusResponse,
+    LibraryResponse,
+    LibrarySongRow,
+    LibraryVariantRow,
+    ReportStatus,
+    RuntimeFingerprint,
     TranscriptionEditBaseResponse,
     TranscriptionEditPayload,
     TranscriptionEditSaveResponse,
@@ -44,6 +51,9 @@ from raga_pipeline.audio import (
     load_pitch_from_csv,
     list_tanpura_tracks,
     start_microphone_recording_session,
+)
+from raga_pipeline.runtime_fingerprint import (
+    get_runtime_fingerprint as _shared_get_runtime_fingerprint,
 )
 
 
@@ -69,6 +79,16 @@ TRANSCRIPTION_EDIT_DIRNAME = "transcription_edits"
 TRANSCRIPTION_EDIT_MANIFEST = "manifest.json"
 TRANSCRIPTION_EDIT_SCHEMA_VERSION = 1
 TRANSCRIPTION_EDIT_SINGLE_VERSION_ID = "edited"
+RUNTIME_FINGERPRINT_TTL_SECONDS = 5.0
+CLEAR_ALL_PRESERVE_BASENAMES = {
+    "vocals.mp3",
+    "melody.mp3",
+    "accompaniment.mp3",
+    "composite_pitch_data.csv",
+    "melody_pitch_data.csv",
+    "vocals_pitch_data.csv",
+    "accompaniment_pitch_data.csv",
+}
 
 
 def _compute_static_version() -> str:
@@ -317,6 +337,384 @@ def _resolve_output_dir(output_dir: Optional[str]) -> Path:
     return path
 
 
+def _get_runtime_fingerprint(force_refresh: bool = False) -> RuntimeFingerprint:
+    payload = _shared_get_runtime_fingerprint(
+        REPO_ROOT,
+        cache_ttl_seconds=RUNTIME_FINGERPRINT_TTL_SECONDS,
+        force_refresh=force_refresh,
+    )
+    return _model_validate(RuntimeFingerprint, payload)
+
+
+def _song_id_for_audio_path(audio_path: Path) -> str:
+    return hashlib.sha1(str(audio_path.resolve()).encode("utf-8")).hexdigest()
+
+
+def _scan_audio_library(audio_dir: Path) -> List[Path]:
+    if not audio_dir.exists() or not audio_dir.is_dir():
+        return []
+
+    files: List[Path] = []
+    for entry in sorted(audio_dir.iterdir(), key=lambda p: p.name.lower()):
+        if not entry.is_file():
+            continue
+        if entry.suffix.lower() not in ALLOWED_AUDIO_EXTENSIONS:
+            continue
+        files.append(entry.resolve())
+    return files
+
+
+def _parse_datetime_maybe(value: Any) -> Optional[datetime]:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def _meta_generated_at(meta: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not isinstance(meta, dict):
+        return None
+    generated = meta.get("generated_at")
+    if generated is None:
+        return None
+    text = str(generated).strip()
+    return text or None
+
+
+def _infer_pipeline_mode_from_path(report_path: Path) -> Optional[str]:
+    name = report_path.name.lower()
+    if name == "detection_report.html":
+        return "detect"
+    if name in {"analysis_report.html", "report.html"}:
+        return "analyze"
+    return None
+
+
+def _resolve_report_pipeline_mode(meta: Optional[Dict[str, Any]], report_path: Path) -> Optional[str]:
+    if isinstance(meta, dict):
+        raw_mode = str(meta.get("pipeline_mode") or "").strip().lower()
+        if raw_mode in {"detect", "analyze"}:
+            return raw_mode
+    return _infer_pipeline_mode_from_path(report_path)
+
+
+def _match_stage_fingerprint(
+    meta: Dict[str, Any],
+    current_fp: RuntimeFingerprint,
+    mode: str,
+) -> tuple[Optional[bool], Optional[str]]:
+    stage_meta = meta.get("stage_fingerprint")
+    if not isinstance(stage_meta, dict):
+        return None, "legacy metadata: missing stage_fingerprint"
+
+    stage_mode = str(stage_meta.get("mode") or "").strip().lower()
+    if stage_mode and stage_mode != mode:
+        return None, f"invalid stage_fingerprint mode: {stage_mode}"
+
+    report_stage_hash = stage_meta.get("hash")
+    if report_stage_hash is None or str(report_stage_hash).strip() == "":
+        return None, f"missing stage_fingerprint hash for {mode}"
+    report_stage_hash_text = str(report_stage_hash).strip()
+
+    current_stage_hashes = current_fp.stage_hashes if isinstance(current_fp.stage_hashes, dict) else {}
+    current_stage_hash = current_stage_hashes.get(mode)
+    if current_stage_hash is None or str(current_stage_hash).strip() == "":
+        return None, f"runtime fingerprint missing stage hash for {mode}"
+    current_stage_hash_text = str(current_stage_hash).strip()
+
+    if report_stage_hash_text == current_stage_hash_text:
+        return True, None
+    return False, f"stage hash mismatch for {mode}"
+
+
+def _read_report_meta(
+    report_path: Path,
+) -> tuple[Optional[Dict[str, Any]], Optional[Path], Optional[str]]:
+    meta_path = report_path.with_suffix(".meta.json")
+    if not meta_path.exists() or not meta_path.is_file():
+        return None, None, "missing metadata sidecar"
+    try:
+        payload = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None, meta_path, "invalid metadata json"
+    if not isinstance(payload, dict):
+        return None, meta_path, "invalid metadata format"
+    return payload, meta_path, None
+
+
+def _infer_variant_identity(stem_dir: Path, output_dir: Path, audio_path: Path) -> Dict[str, Any]:
+    separator = "demucs"
+    demucs_model: Optional[str] = None
+    try:
+        rel_parts = stem_dir.resolve().relative_to(output_dir.resolve()).parts
+    except Exception:
+        rel_parts = ()
+
+    if rel_parts:
+        first = str(rel_parts[0])
+        if first == "spleeter":
+            separator = "spleeter"
+            demucs_model = None
+        else:
+            separator = "demucs"
+            demucs_model = first
+
+    return {
+        "audio_path": str(audio_path.resolve()),
+        "output_dir": str(output_dir.resolve()),
+        "separator": separator,
+        "demucs_model": demucs_model or "htdemucs",
+    }
+
+
+def _build_report_status(
+    report_path: Path,
+    runtime_fingerprint: RuntimeFingerprint,
+    variant_id: str,
+) -> ReportStatus:
+    abs_report = report_path.resolve()
+    if not abs_report.exists() or not abs_report.is_file():
+        return ReportStatus(
+            exists=False,
+            status="missing",
+            report_path=str(abs_report),
+            report_url=None,
+            meta_path=None,
+            generated_at=None,
+            variant_id=variant_id,
+            reason="report file not found",
+        )
+
+    meta, meta_path, meta_error = _read_report_meta(abs_report)
+    generated_at = _meta_generated_at(meta)
+
+    if meta is None:
+        return ReportStatus(
+            exists=True,
+            status="unknown",
+            report_path=str(abs_report),
+            report_url=_local_report_url(abs_report),
+            meta_path=str(meta_path.resolve()) if meta_path else None,
+            generated_at=generated_at,
+            variant_id=variant_id,
+            reason=meta_error or "metadata unavailable",
+        )
+
+    mode = _resolve_report_pipeline_mode(meta, abs_report)
+    if mode not in {"detect", "analyze"}:
+        return ReportStatus(
+            exists=True,
+            status="unknown",
+            report_path=str(abs_report),
+            report_url=_local_report_url(abs_report),
+            meta_path=str(meta_path.resolve()) if meta_path else None,
+            generated_at=generated_at,
+            variant_id=variant_id,
+            reason="invalid or missing pipeline_mode",
+        )
+
+    matched, reason = _match_stage_fingerprint(meta, runtime_fingerprint, mode)
+    if matched is None:
+        return ReportStatus(
+            exists=True,
+            status="unknown",
+            report_path=str(abs_report),
+            report_url=_local_report_url(abs_report),
+            meta_path=str(meta_path.resolve()) if meta_path else None,
+            generated_at=generated_at,
+            variant_id=variant_id,
+            reason=reason or "stage fingerprint unavailable",
+        )
+    return ReportStatus(
+        exists=True,
+        status="current" if matched else "stale",
+        report_path=str(abs_report),
+        report_url=_local_report_url(abs_report),
+        meta_path=str(meta_path.resolve()) if meta_path else None,
+        generated_at=generated_at,
+        variant_id=variant_id,
+        reason=reason if matched is False else None,
+    )
+
+
+def _resolve_analyze_report_path(stem_dir: Path) -> Optional[Path]:
+    primary = stem_dir / "analysis_report.html"
+    legacy = stem_dir / "report.html"
+    if primary.exists() and primary.is_file():
+        return primary
+    if legacy.exists() and legacy.is_file():
+        return legacy
+    return None
+
+
+def _report_activity_ts(status: ReportStatus) -> float:
+    dt = _parse_datetime_maybe(status.generated_at)
+    if dt is not None:
+        return dt.timestamp()
+    if status.report_path:
+        try:
+            return Path(status.report_path).stat().st_mtime
+        except Exception:
+            return 0.0
+    return 0.0
+
+
+def _missing_report_status(kind: str) -> ReportStatus:
+    return ReportStatus(
+        exists=False,
+        status="missing",
+        report_path=None,
+        report_url=None,
+        meta_path=None,
+        generated_at=None,
+        variant_id=None,
+        reason=f"{kind} report missing",
+    )
+
+
+def _latest_status(candidates: List[ReportStatus], *, kind: str) -> ReportStatus:
+    existing = [item for item in candidates if item.exists]
+    if not existing:
+        return _missing_report_status(kind)
+    existing.sort(key=_report_activity_ts, reverse=True)
+    return existing[0]
+
+
+def _scan_variants_for_song(audio_path: Path, output_dir: Path) -> List[LibraryVariantRow]:
+    stem_name = audio_path.stem.strip()
+    if not stem_name:
+        return []
+
+    runtime_fp = _get_runtime_fingerprint()
+    stem_dirs = _discover_stem_dirs(output_dir, stem_name, None, None)
+    existing_dirs = [d.resolve() for d in stem_dirs if d.exists() and d.is_dir()]
+    variants: List[LibraryVariantRow] = []
+
+    for stem_dir in existing_dirs:
+        variant_id = hashlib.sha1(str(stem_dir).encode("utf-8")).hexdigest()
+        detect_report = stem_dir / "detection_report.html"
+        analyze_report = _resolve_analyze_report_path(stem_dir)
+
+        detect_status = _build_report_status(detect_report, runtime_fp, variant_id)
+        if analyze_report is None:
+            analyze_status = _missing_report_status("analyze")
+            analyze_status.variant_id = variant_id
+            analyze_status.report_path = str((stem_dir / "analysis_report.html").resolve())
+        else:
+            analyze_status = _build_report_status(analyze_report, runtime_fp, variant_id)
+
+        infer_identity = _infer_variant_identity(stem_dir, output_dir, audio_path)
+        run_identity = dict(infer_identity)
+        separator = infer_identity.get("separator")
+        demucs_model = infer_identity.get("demucs_model")
+
+        analyze_meta, _analyze_meta_path, _analyze_meta_err = (
+            _read_report_meta(analyze_report) if analyze_report is not None else (None, None, None)
+        )
+        detect_meta, _detect_meta_path, _detect_meta_err = _read_report_meta(detect_report)
+        source_meta = analyze_meta if isinstance(analyze_meta, dict) else detect_meta
+        if isinstance(source_meta, dict):
+            source_identity = source_meta.get("run_identity")
+            if isinstance(source_identity, dict):
+                run_identity.update(source_identity)
+            separator = str(run_identity.get("separator") or separator or "demucs")
+            demucs_model = run_identity.get("demucs_model") or demucs_model
+
+        variants.append(
+            LibraryVariantRow(
+                variant_id=variant_id,
+                stem_dir=str(stem_dir),
+                separator=separator,
+                demucs_model=str(demucs_model) if demucs_model is not None else None,
+                detect=detect_status,
+                analyze=analyze_status,
+                run_identity=run_identity,
+            )
+        )
+
+    variants.sort(
+        key=lambda item: max(_report_activity_ts(item.detect), _report_activity_ts(item.analyze)),
+        reverse=True,
+    )
+    return variants
+
+
+def _build_song_row(audio_path: Path, variants: List[LibraryVariantRow]) -> LibrarySongRow:
+    detect_status = _latest_status([item.detect for item in variants], kind="detect")
+    analyze_status = _latest_status([item.analyze for item in variants], kind="analyze")
+
+    latest_activity_ts = max(_report_activity_ts(detect_status), _report_activity_ts(analyze_status))
+    latest_activity_at = (
+        datetime.fromtimestamp(latest_activity_ts, tz=timezone.utc).isoformat()
+        if latest_activity_ts > 0
+        else None
+    )
+
+    return LibrarySongRow(
+        song_id=_song_id_for_audio_path(audio_path),
+        audio_name=audio_path.name,
+        audio_path=str(audio_path.resolve()),
+        detect=detect_status,
+        analyze=analyze_status,
+        variant_count=len(variants),
+        latest_activity_at=latest_activity_at,
+    )
+
+
+def _song_matches_filter(song: LibrarySongRow, status_filter: Optional[str], query_text: Optional[str]) -> bool:
+    if status_filter:
+        target = status_filter.strip().lower()
+        if target and song.detect.status != target and song.analyze.status != target:
+            return False
+    if query_text:
+        q = query_text.strip().lower()
+        if q and q not in song.audio_name.lower():
+            return False
+    return True
+
+
+def _build_library_rows(
+    audio_dir: Path,
+    output_dir: Path,
+    status_filter: Optional[str] = None,
+    query_text: Optional[str] = None,
+) -> List[LibrarySongRow]:
+    rows: List[LibrarySongRow] = []
+    for audio_path in _scan_audio_library(audio_dir):
+        variants = _scan_variants_for_song(audio_path, output_dir)
+        row = _build_song_row(audio_path, variants)
+        if _song_matches_filter(row, status_filter, query_text):
+            rows.append(row)
+
+    rows.sort(key=lambda item: item.audio_name.lower())
+    return rows
+
+
+def _build_library_counts(rows: List[LibrarySongRow]) -> Dict[str, int]:
+    counts: Dict[str, int] = {
+        "songs_total": len(rows),
+        "detect_current": 0,
+        "detect_stale": 0,
+        "detect_unknown": 0,
+        "detect_missing": 0,
+        "analyze_current": 0,
+        "analyze_stale": 0,
+        "analyze_unknown": 0,
+        "analyze_missing": 0,
+    }
+    for row in rows:
+        detect_key = f"detect_{row.detect.status}"
+        analyze_key = f"analyze_{row.analyze.status}"
+        if detect_key in counts:
+            counts[detect_key] += 1
+        if analyze_key in counts:
+            counts[analyze_key] += 1
+    return counts
+
+
 def _discover_stem_dirs(output_dir: Path, stem_name: str, separator: Optional[str], demucs_model: Optional[str]) -> List[Path]:
     candidates: List[Path] = []
     if separator == "spleeter":
@@ -341,6 +739,157 @@ def _discover_stem_dirs(output_dir: Path, stem_name: str, separator: Optional[st
         seen.add(key)
         deduped.append(candidate)
     return deduped
+
+
+def _resolve_song_for_id(song_id: str, audio_dir: Path) -> Optional[Path]:
+    for audio_path in _scan_audio_library(audio_dir):
+        if _song_id_for_audio_path(audio_path) == song_id:
+            return audio_path
+    return None
+
+
+def _safe_unlink(path: Path, result: Dict[str, Any]) -> None:
+    try:
+        path.unlink()
+        result["deleted_files"] += 1
+    except Exception as exc:
+        result["warnings"].append(f"Failed to delete file '{path}': {exc}")
+
+
+def _safe_rmtree(path: Path, result: Dict[str, Any]) -> None:
+    file_count = 0
+    dir_count = 0
+    try:
+        for _root, dirs, files in os.walk(path, topdown=False):
+            file_count += len(files)
+            dir_count += len(dirs)
+        dir_count += 1  # include the directory itself
+    except Exception as exc:
+        result["warnings"].append(f"Failed to inspect directory '{path}': {exc}")
+
+    try:
+        shutil.rmtree(path)
+        result["deleted_files"] += file_count
+        result["deleted_dirs"] += dir_count
+    except Exception as exc:
+        result["warnings"].append(f"Failed to delete directory '{path}': {exc}")
+
+
+def _clear_song_outputs(audio_path: Path, output_dir: Path) -> CleanupResponse:
+    resolved_output = output_dir.resolve()
+    result: Dict[str, Any] = {
+        "ok": True,
+        "deleted_files": 0,
+        "deleted_dirs": 0,
+        "preserved_files": 0,
+        "warnings": [],
+    }
+
+    stem_name = audio_path.stem.strip()
+    if not stem_name:
+        result["warnings"].append("Audio file has an empty stem; nothing to clear.")
+        return _model_validate(CleanupResponse, result)
+
+    variants = _discover_stem_dirs(resolved_output, stem_name, None, None)
+    seen_dirs: set[str] = set()
+    for candidate in variants:
+        abs_candidate = candidate.resolve()
+        key = str(abs_candidate)
+        if key in seen_dirs:
+            continue
+        seen_dirs.add(key)
+        if not abs_candidate.exists():
+            continue
+        if not _is_relative_to(abs_candidate, resolved_output):
+            result["warnings"].append(f"Skipped path outside output directory: {abs_candidate}")
+            continue
+        if abs_candidate.is_symlink() or abs_candidate.is_file():
+            _safe_unlink(abs_candidate, result)
+            continue
+        if abs_candidate.is_dir():
+            _safe_rmtree(abs_candidate, result)
+
+    logs_dir = (resolved_output / "logs").resolve()
+    if logs_dir.exists() and logs_dir.is_dir():
+        audio_name_lower = audio_path.name.lower()
+        stem_lower = audio_path.stem.lower()
+        for log_path in sorted(logs_dir.iterdir(), key=lambda p: p.name.lower()):
+            if not log_path.exists() or not log_path.is_file():
+                continue
+            log_name_lower = log_path.name.lower()
+            log_stem_lower = log_path.stem.lower()
+            should_delete = (
+                log_name_lower == f"{audio_name_lower}.log"
+                or log_name_lower == f"{stem_lower}.log"
+                or log_stem_lower == audio_name_lower
+                or log_stem_lower == stem_lower
+                or log_stem_lower.startswith(f"{audio_name_lower}.")
+                or log_stem_lower.startswith(f"{stem_lower}.")
+            )
+            if should_delete:
+                _safe_unlink(log_path, result)
+
+        try:
+            if not any(logs_dir.iterdir()):
+                logs_dir.rmdir()
+                result["deleted_dirs"] += 1
+        except Exception as exc:
+            result["warnings"].append(f"Failed to prune logs directory '{logs_dir}': {exc}")
+
+    return _model_validate(CleanupResponse, result)
+
+
+def _clear_all_outputs(output_dir: Path) -> CleanupResponse:
+    resolved_output = output_dir.resolve()
+    result: Dict[str, Any] = {
+        "ok": True,
+        "deleted_files": 0,
+        "deleted_dirs": 0,
+        "preserved_files": 0,
+        "warnings": [],
+    }
+
+    if not resolved_output.exists():
+        result["warnings"].append(f"Output directory not found: {resolved_output}")
+        return _model_validate(CleanupResponse, result)
+    if not resolved_output.is_dir():
+        raise HTTPException(status_code=400, detail="Selected output directory is not a directory.")
+
+    preserve = {name.lower() for name in CLEAR_ALL_PRESERVE_BASENAMES}
+    for root, dirs, files in os.walk(resolved_output, topdown=False):
+        root_path = Path(root).resolve()
+        if not _is_relative_to(root_path, resolved_output):
+            result["warnings"].append(f"Skipped path outside output directory: {root_path}")
+            continue
+
+        for filename in files:
+            file_path = (root_path / filename).resolve()
+            if not _is_relative_to(file_path, resolved_output):
+                result["warnings"].append(f"Skipped file outside output directory: {file_path}")
+                continue
+            if filename.lower() in preserve:
+                result["preserved_files"] += 1
+                continue
+            _safe_unlink(file_path, result)
+
+        for dirname in dirs:
+            dir_path = (root_path / dirname).resolve()
+            if not _is_relative_to(dir_path, resolved_output):
+                result["warnings"].append(f"Skipped directory outside output directory: {dir_path}")
+                continue
+            if dir_path.is_symlink():
+                _safe_unlink(dir_path, result)
+                continue
+            if not dir_path.exists() or not dir_path.is_dir():
+                continue
+            try:
+                if not any(dir_path.iterdir()):
+                    dir_path.rmdir()
+                    result["deleted_dirs"] += 1
+            except Exception as exc:
+                result["warnings"].append(f"Failed to remove directory '{dir_path}': {exc}")
+
+    return _model_validate(CleanupResponse, result)
 
 
 def _collect_stem_artifacts(stem_dir: Path) -> List[ArtifactInfo]:
@@ -441,11 +990,15 @@ def _normalize_single_edit_manifest(manifest: Dict[str, Any]) -> Dict[str, Any]:
     latest_entry["version_id"] = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
     manifest["versions"] = [latest_entry]
 
-    requested_default = str(manifest.get("default_selection", "original") or "").strip()
-    if requested_default and requested_default != "original":
-        manifest["default_selection"] = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
-    else:
-        manifest["default_selection"] = "original"
+    requested_default = _canonical_version_id(
+        manifest.get("default_selection", "original"),
+        allow_original=True,
+    )
+    manifest["default_selection"] = (
+        TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+        if requested_default == TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+        else "original"
+    )
     return manifest
 
 
@@ -478,12 +1031,14 @@ def _save_edit_manifest(report_path: Path, manifest: Dict[str, Any]) -> None:
 
 
 def _effective_default_selection(manifest: Dict[str, Any]) -> str:
-    raw = str(manifest.get("default_selection", "original") or "").strip()
-    if not raw or raw == "original":
+    raw = _canonical_version_id(manifest.get("default_selection", "original"), allow_original=True)
+    if raw == "original":
         return "original"
-    if _find_version_entry(manifest, raw) is None:
+    if raw != TRANSCRIPTION_EDIT_SINGLE_VERSION_ID:
         return "original"
-    return raw
+    if _find_version_entry(manifest, TRANSCRIPTION_EDIT_SINGLE_VERSION_ID) is None:
+        return "original"
+    return TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
 
 
 def _default_report_path(report_path: Path, manifest: Dict[str, Any]) -> Path:
@@ -519,6 +1074,20 @@ def _parse_version_number(version_id: str) -> int:
     return -1
 
 
+def _canonical_version_id(version_id: Any, *, allow_original: bool = False) -> str:
+    raw = str(version_id or "").strip()
+    if not raw:
+        return "original" if allow_original else ""
+    lowered = raw.lower()
+    if allow_original and lowered == "original":
+        return "original"
+    if lowered == TRANSCRIPTION_EDIT_SINGLE_VERSION_ID:
+        return TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+    if re.fullmatch(r"v\d+", raw, flags=re.IGNORECASE):
+        return TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
+    return raw
+
+
 def _next_version_id(manifest: Dict[str, Any]) -> str:
     versions = manifest.get("versions", [])
     max_num = 0
@@ -530,11 +1099,17 @@ def _next_version_id(manifest: Dict[str, Any]) -> str:
 
 
 def _find_version_entry(manifest: Dict[str, Any], version_id: str) -> Optional[Dict[str, Any]]:
+    requested = _canonical_version_id(version_id, allow_original=False)
+    if not requested:
+        return None
     versions_raw = manifest.get("versions", [])
     if not isinstance(versions_raw, list):
         return None
     for item in versions_raw:
-        if isinstance(item, dict) and str(item.get("version_id", "")).strip() == version_id:
+        if not isinstance(item, dict):
+            continue
+        item_id = _canonical_version_id(item.get("version_id", ""), allow_original=False)
+        if item_id == requested:
             return item
     return None
 
@@ -1259,7 +1834,7 @@ def _version_entry_to_info(report_path: Path, entry: Dict[str, Any]) -> Transcri
         report_version_path = (report_path.parent / str(report_file)).resolve()
 
     return TranscriptionEditVersionInfo(
-        version_id=str(entry.get("version_id", "")),
+        version_id=_canonical_version_id(entry.get("version_id", ""), allow_original=False),
         created_at=str(entry.get("created_at", "")),
         note_count=int(entry.get("note_count", 0)),
         phrase_count=int(entry.get("phrase_count", 0)),
@@ -1521,6 +2096,84 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "default_directory": DEFAULT_AUDIO_DIR_REL,
         }
 
+    @app.get("/api/runtime-fingerprint", response_model=RuntimeFingerprint)
+    def api_runtime_fingerprint() -> RuntimeFingerprint:
+        return _get_runtime_fingerprint(force_refresh=False)
+
+    @app.get("/api/library", response_model=LibraryResponse)
+    def api_library(
+        audio_dir: Optional[str] = Query(default=None, description="Audio library directory"),
+        output_dir: Optional[str] = Query(default=None, description="Pipeline output directory"),
+        status_filter: Optional[str] = Query(
+            default=None,
+            description="Optional filter: stale|missing|unknown|current",
+        ),
+        q: Optional[str] = Query(default=None, description="Optional case-insensitive song name substring filter"),
+    ) -> LibraryResponse:
+        resolved_audio = _resolve_audio_dir(audio_dir)
+        resolved_output = _resolve_output_dir(output_dir)
+
+        rows = _build_library_rows(
+            resolved_audio,
+            resolved_output,
+            status_filter=status_filter,
+            query_text=q,
+        )
+
+        return LibraryResponse(
+            runtime_fingerprint=_get_runtime_fingerprint(force_refresh=False),
+            audio_dir=str(resolved_audio),
+            output_dir=str(resolved_output),
+            songs=rows,
+            counts=_build_library_counts(rows),
+        )
+
+    @app.get("/api/library/{song_id}/variants")
+    def api_library_variants(
+        song_id: str,
+        audio_dir: Optional[str] = Query(default=None, description="Audio library directory"),
+        output_dir: Optional[str] = Query(default=None, description="Pipeline output directory"),
+    ) -> Dict[str, Any]:
+        resolved_audio = _resolve_audio_dir(audio_dir)
+        resolved_output = _resolve_output_dir(output_dir)
+        audio_files = _scan_audio_library(resolved_audio)
+
+        target_audio: Optional[Path] = None
+        for audio_path in audio_files:
+            if _song_id_for_audio_path(audio_path) == song_id:
+                target_audio = audio_path
+                break
+        if target_audio is None:
+            raise HTTPException(status_code=404, detail="Song not found in selected audio directory.")
+
+        variants = _scan_variants_for_song(target_audio, resolved_output)
+        return {
+            "song_id": song_id,
+            "audio_name": target_audio.name,
+            "audio_path": str(target_audio.resolve()),
+            "variants": [_model_dump(item) for item in variants],
+        }
+
+    @app.post("/api/library/{song_id}/clear-outputs", response_model=CleanupResponse)
+    def api_library_clear_song_outputs(
+        song_id: str,
+        audio_dir: Optional[str] = Query(default=None, description="Audio library directory"),
+        output_dir: Optional[str] = Query(default=None, description="Pipeline output directory"),
+    ) -> CleanupResponse:
+        resolved_audio = _resolve_audio_dir(audio_dir)
+        resolved_output = _resolve_output_dir(output_dir)
+        target_audio = _resolve_song_for_id(song_id, resolved_audio)
+        if target_audio is None:
+            raise HTTPException(status_code=404, detail="Song not found in selected audio directory.")
+        return _clear_song_outputs(target_audio, resolved_output)
+
+    @app.post("/api/library/clear-all-outputs", response_model=CleanupResponse)
+    def api_library_clear_all_outputs(
+        output_dir: Optional[str] = Query(default=None, description="Pipeline output directory"),
+    ) -> CleanupResponse:
+        resolved_output = _resolve_output_dir(output_dir)
+        return _clear_all_outputs(resolved_output)
+
     @app.get("/api/tanpura-tracks")
     def api_tanpura_tracks() -> Dict[str, Any]:
         tracks = []
@@ -1545,21 +2198,26 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         separator: Optional[str] = Query(default=None, description="Separator engine (demucs|spleeter)"),
         demucs_model: Optional[str] = Query(default=None, description="Demucs model name"),
     ) -> Dict[str, Any]:
-        stem_name = Path(audio_path).stem.strip()
+        resolved_audio = Path(audio_path).expanduser().resolve()
+        stem_name = resolved_audio.stem.strip()
         if not stem_name:
             raise HTTPException(status_code=400, detail="audio_path must include a file name.")
 
         resolved_output = _resolve_output_dir(output_dir)
-        stem_dirs = _discover_stem_dirs(resolved_output, stem_name, separator, demucs_model)
-        existing_dirs = [d.resolve() for d in stem_dirs if d.exists() and d.is_dir()]
+        variants = _scan_variants_for_song(resolved_audio, resolved_output)
+        if separator:
+            variants = [item for item in variants if (item.separator or "").strip() == separator]
+        if demucs_model:
+            variants = [item for item in variants if (item.demucs_model or "").strip() == demucs_model]
 
-        if not existing_dirs:
+        if not variants:
+            searched_dirs = _discover_stem_dirs(resolved_output, stem_name, separator, demucs_model)
             return {
                 "found": False,
                 "audio_path": audio_path,
                 "audio_stem": stem_name,
                 "output_dir": str(resolved_output),
-                "searched_dirs": [str(p.resolve()) for p in stem_dirs],
+                "searched_dirs": [str(p.resolve()) for p in searched_dirs],
                 "stem_dir": None,
                 "artifacts": [],
                 "detect_report_url": None,
@@ -1567,18 +2225,16 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
                 "analyze_report_context": None,
             }
 
-        stem_dir = existing_dirs[0]
+        variants.sort(
+            key=lambda item: max(_report_activity_ts(item.detect), _report_activity_ts(item.analyze)),
+            reverse=True,
+        )
+        selected_variant = variants[0]
+        stem_dir = Path(selected_variant.stem_dir).resolve()
         artifacts = _collect_stem_artifacts(stem_dir)
-        detect_url = None
-        analyze_url = None
-        analyze_report_name = None
-        for item in artifacts:
-            lower_name = item.name.lower()
-            if detect_url is None and lower_name == "detection_report.html":
-                detect_url = item.url
-            if analyze_url is None and lower_name in {"analysis_report.html", "report.html"}:
-                analyze_url = item.url
-                analyze_report_name = item.name
+        detect_url = selected_variant.detect.report_url
+        analyze_url = selected_variant.analyze.report_url
+        analyze_report_name = Path(selected_variant.analyze.report_path).name if selected_variant.analyze.report_path else None
 
         analyze_report_context = None
         if analyze_url and analyze_report_name:
@@ -1593,7 +2249,7 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             "audio_path": audio_path,
             "audio_stem": stem_name,
             "output_dir": str(resolved_output),
-            "searched_dirs": [str(p.resolve()) for p in stem_dirs],
+            "searched_dirs": [item.stem_dir for item in variants],
             "stem_dir": str(stem_dir),
             "artifacts": [_artifact_to_dict(item) for item in artifacts],
             "detect_report_url": detect_url,
@@ -1671,12 +2327,11 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
 
         manifest = _normalize_single_edit_manifest(_load_edit_manifest(report_path))
-        requested = str(default_selection or "").strip()
+        requested = _canonical_version_id(default_selection, allow_original=True)
         if not requested:
             raise HTTPException(status_code=400, detail="default_selection is required.")
 
         if requested != "original":
-            requested = TRANSCRIPTION_EDIT_SINGLE_VERSION_ID
             entry = _find_version_entry(manifest, requested)
             if entry is None:
                 raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
@@ -1764,9 +2419,13 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
         versions_raw = manifest.get("versions", [])
         if not isinstance(versions_raw, list):
             versions_raw = []
+        canonical_version = _canonical_version_id(version_id, allow_original=False)
         requested = None
         for item in versions_raw:
-            if isinstance(item, dict) and str(item.get("version_id", "")).strip() == version_id:
+            if not isinstance(item, dict):
+                continue
+            item_version = _canonical_version_id(item.get("version_id", ""), allow_original=False)
+            if item_version == canonical_version:
                 requested = item
                 break
         if requested is None:
@@ -1914,7 +2573,8 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="Only HTML reports support transcription edits.")
 
         manifest = _normalize_single_edit_manifest(_load_edit_manifest(report_path))
-        entry = _find_version_entry(manifest, version_id)
+        canonical_version = _canonical_version_id(version_id, allow_original=False)
+        entry = _find_version_entry(manifest, canonical_version)
         if entry is None:
             raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
 
@@ -1973,12 +2633,14 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             versions_raw = []
             manifest["versions"] = versions_raw
 
+        canonical_version = _canonical_version_id(version_id, allow_original=False)
         idx_to_remove = None
         entry_to_remove: Optional[Dict[str, Any]] = None
         for idx, item in enumerate(versions_raw):
             if not isinstance(item, dict):
                 continue
-            if str(item.get("version_id", "")).strip() == version_id:
+            item_version = _canonical_version_id(item.get("version_id", ""), allow_original=False)
+            if item_version == canonical_version:
                 idx_to_remove = idx
                 entry_to_remove = item
                 break
@@ -1986,7 +2648,7 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Requested transcription edit version was not found.")
 
         del versions_raw[idx_to_remove]
-        if str(manifest.get("default_selection", "")).strip() == version_id:
+        if _canonical_version_id(manifest.get("default_selection", ""), allow_original=True) == canonical_version:
             manifest["default_selection"] = "original"
         _save_edit_manifest(report_path, manifest)
 
@@ -2152,9 +2814,13 @@ def create_app(job_manager: JobManager | None = None) -> FastAPI:
 
     @app.post("/api/batch-jobs", response_model=JobStatusResponse)
     def api_create_batch_job(payload: BatchJobRequest) -> JobStatusResponse:
-        mode = payload.mode.strip() if payload.mode else "auto"
-        if mode not in {"auto", "detect"}:
-            raise HTTPException(status_code=400, detail="Batch mode must be 'auto' or 'detect'.")
+        mode = payload.mode.strip() if payload.mode else "detect"
+        if mode not in {"detect", "analyze"}:
+            raise HTTPException(status_code=400, detail="Batch mode must be 'detect' or 'analyze'.")
+        if mode == "analyze":
+            gt = str(payload.ground_truth or "").strip()
+            if not gt:
+                raise HTTPException(status_code=400, detail="ground_truth is required for batch mode 'analyze'.")
         job = app.state.job_manager.submit(
             mode="batch",
             params={

@@ -133,6 +133,7 @@ class PipelineConfig:
     force_recompute: bool = False         # Force pitch extraction only (stems reused if present)
     force_stem_recompute: bool = False    # Detect only: force stem separation recomputation
     save_intermediates: bool = True       # Save CSVs, plots, etc.
+    skip_report: bool = False             # Skip HTML report generation (candidates.csv still saved)
 
     # GMM parameters
     gmm_window_cents: float = 150.0
@@ -368,6 +369,7 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
         help="Detect mode only: skip stem separation (fast path). Uncheck this in UI to enable denoising via stem separation. Requires --tonic and forces --melody-source composite",
     )
     parser.add_argument("--raga-db", help="Override path to raga database CSV")
+    parser.add_argument("--skip-report", action="store_true", help="Skip HTML report generation (candidates.csv and pitch caches are still saved)")
 
 
 def _normalize_preprocess_argv_aliases(argv: Sequence[str]) -> List[str]:
@@ -624,6 +626,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         accomp_confidence=getattr(args, 'accomp_confidence', 0.80),
         force_recompute=getattr(args, 'force', False),
         force_stem_recompute=getattr(args, 'force_stem_recompute', False),
+        skip_report=getattr(args, 'skip_report', False),
         raga_db_path=getattr(args, 'raga_db', None),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),

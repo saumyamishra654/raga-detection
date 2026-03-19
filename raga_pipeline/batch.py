@@ -312,6 +312,7 @@ def process_directory(
     output_dir: str = "results",
     mode: str = "detect",
     silent: bool = False,
+    skip_report: bool = False,
 ) -> None:
     """Walk an input directory and run the pipeline on each audio file."""
     normalized_mode = str(mode or "").strip().lower()
@@ -351,6 +352,8 @@ def process_directory(
         if normalized_mode == "detect":
             print("  -> Running in DETECT mode")
             cmd = [pipeline_script, "detect", "--audio", audio_path, "--output", output_dir]
+            if skip_report:
+                cmd.append("--skip-report")
         else:
             if not gt_info:
                 print("  -> [SKIP] No matched ground truth row for analyze mode.")
@@ -444,6 +447,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", "-m", choices=['detect', 'analyze'], default='detect',
                         help="Processing mode: 'detect' or 'analyze'.")
     parser.add_argument("--silent", "-s", action="store_true", help="Suppress output to console (log files are still saved)")
+    parser.add_argument("--skip-report", action="store_true", help="Skip HTML report generation for faster batch runs")
     parser.add_argument("--init-csv", action="store_true", help="Initialize a blank ground truth CSV for files in input_dir")
     
     args = parser.parse_args()
@@ -462,7 +466,7 @@ if __name__ == "__main__":
         init_ground_truth_csv(args.input_dir, target_csv)
     else:
         try:
-            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent)
+            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent, args.skip_report)
         except ValueError as exc:
             print(f"Error: {exc}")
             sys.exit(1)

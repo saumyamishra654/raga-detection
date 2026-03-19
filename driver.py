@@ -123,8 +123,6 @@ def _print_timing(label: str, elapsed_s: float, audio_duration_s: float | None) 
 
 def run_pipeline(
     config: PipelineConfig,
-    run_histogram_analysis: bool = True,  # Legacy flag, kept for compatibility but effectively controlled by mode
-    run_sequence_analysis: bool = True,   # Legacy flag
 ) -> AnalysisResults:
     """
     run the raga detection pipeline in the configured mode
@@ -639,20 +637,23 @@ def run_pipeline(
         # --- DETECT MODE EXIT POINT ---
         if config.mode == "detect":
             step7_start = perf_counter()
-            print("\n[STEP 7/7] Generating detection summary...")
-            from raga_pipeline.output import generate_detection_report
-            report_path = os.path.join(stem_dir, "detection_report.html")
-            generate_detection_report(results, report_path)
-            print(f"  Saved: {report_path}")
-            try:
-                detection_meta_path = write_detection_report_metadata(
-                    results,
-                    report_path,
-                    runtime_fingerprint=runtime_fingerprint,
-                )
-                print(f"  Saved: {detection_meta_path}")
-            except Exception as exc:
-                print(f"  [WARN] Failed to write detection report metadata: {exc}")
+            if config.skip_report:
+                print("\n[STEP 7/7] Skipping report generation (--skip-report)")
+            else:
+                print("\n[STEP 7/7] Generating detection summary...")
+                from raga_pipeline.output import generate_detection_report
+                report_path = os.path.join(stem_dir, "detection_report.html")
+                generate_detection_report(results, report_path)
+                print(f"  Saved: {report_path}")
+                try:
+                    detection_meta_path = write_detection_report_metadata(
+                        results,
+                        report_path,
+                        runtime_fingerprint=runtime_fingerprint,
+                    )
+                    print(f"  Saved: {detection_meta_path}")
+                except Exception as exc:
+                    print(f"  [WARN] Failed to write detection report metadata: {exc}")
             print("\n DETECTION COMPLETE")
             
             # Print suggested analyze command
@@ -978,19 +979,13 @@ def run_pipeline(
     # STEP 7: HTML Report (Analysis/Full)
     # =========================================================================
     step7_start = perf_counter()
-    print("\n[STEP 7/7] Generating full analysis report...")
-    
-    if config.mode == "analyze" and stats_obj:
-        report_path = generate_analysis_report(
-            results,
-            stats_obj,
-            config.stem_dir,
-            runtime_fingerprint=runtime_fingerprint,
-        )
+    if config.skip_report:
+        print("\n[STEP 7/7] Skipping report generation (--skip-report)")
+        report_path = os.path.join(config.stem_dir, "analysis_report.html")
     else:
-        # Fallback for full mode or if somethings missing (though Full usually implies analysis)
-        # If in FULL mode, we also have stats_obj from above.
-        if stats_obj:
+        print("\n[STEP 7/7] Generating full analysis report...")
+
+        if config.mode == "analyze" and stats_obj:
             report_path = generate_analysis_report(
                 results,
                 stats_obj,
@@ -998,12 +993,19 @@ def run_pipeline(
                 runtime_fingerprint=runtime_fingerprint,
             )
         else:
-            report_path = os.path.join(config.stem_dir, "report.html")
-            generate_html_report(results, report_path)
-            
+            if stats_obj:
+                report_path = generate_analysis_report(
+                    results,
+                    stats_obj,
+                    config.stem_dir,
+                    runtime_fingerprint=runtime_fingerprint,
+                )
+            else:
+                report_path = os.path.join(config.stem_dir, "report.html")
+                generate_html_report(results, report_path)
+
+        print(f"  Saved: {report_path}")
     results.plot_paths["report"] = report_path
-    
-    print(f"  Saved: {report_path}")
     _print_timing("Step 7/7 analysis report", perf_counter() - step7_start, audio_duration_s)
     
     # =========================================================================

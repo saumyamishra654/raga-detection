@@ -37,6 +37,18 @@ from .sequence import Note, Phrase, OFFSET_TO_SARGAM
 from .runtime_fingerprint import get_runtime_fingerprint
 
 
+SET2_PALETTE = [
+    '#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3',
+    '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3',
+]
+
+SET3_PALETTE = [
+    '#8dd3c7', '#ffffb3', '#bebada', '#fb8072',
+    '#80b1d3', '#fdb462', '#b3de69', '#fccde5',
+    '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f',
+]
+
+
 # =============================================================================
 # RESULTS CONTAINER
 # =============================================================================
@@ -321,7 +333,7 @@ def plot_gmm_overlay(
         x_plot = x_plot[order_x]
     
     for gmm in gmm_results:
-        color = plt.get_cmap("Set2")(gmm.nearest_note / 12)
+        color = SET2_PALETTE[gmm.nearest_note % len(SET2_PALETTE)]
         
         # Plot Gaussian components scaled as a mixture to the local peak height
         components = []
@@ -392,7 +404,7 @@ def plot_note_segments(
         ax.scatter(times, midi, c='lightblue', s=1, alpha=0.5, label='Pitch contour')
     
     # Plot note segments
-    colors = plt.get_cmap("Set3")(np.linspace(0, 1, 12))
+    colors = SET3_PALETTE
     
     for note in notes:
         pc = int(round(note.pitch_midi)) % 12
@@ -3967,10 +3979,10 @@ def plot_pitch_wide_to_base64_with_legend(
                 y=pitch_midi,
                 xmin=start_t,
                 xmax=end_t,
-                colors=color,
+                colors=[color],
                 linewidth=line_width,
                 alpha=alpha,
-                label=label,
+                label=label or "",
                 zorder=3,
             )
             rendered_any = True
@@ -4056,7 +4068,7 @@ def plot_pitch_wide_to_base64_with_legend(
                     y=event.snapped_midi,
                     xmin=event.start,
                     xmax=event.end,
-                    colors='orange',
+                    colors=['orange'],
                     linewidth=3,
                     alpha=0.8,
                     label='Transcribed'
@@ -4066,7 +4078,7 @@ def plot_pitch_wide_to_base64_with_legend(
                     y=event.snapped_midi,
                     xmin=event.start,
                     xmax=event.end,
-                    colors='orange',
+                    colors=['orange'],
                     linewidth=3,
                     alpha=0.8
                 )
@@ -4096,8 +4108,8 @@ def plot_pitch_wide_to_base64_with_legend(
                 x=inflection_times,
                 ymin=min_m,
                 ymax=max_m,
-                colors='red',
-                linestyles=':',
+                colors=['red'],
+                linestyles='dotted',
                 linewidth=0.8,
                 alpha=0.4,
                 label='Inflection'
@@ -4148,7 +4160,7 @@ def plot_pitch_wide_to_base64_with_legend(
             line_color = OCTAVE_COLORS.get(octave_diff, 'gray')
             line_alpha = 0.4 if (raga_notes is not None and pc in raga_notes) else 0.15
             linestyle = '--'
-            ax.axhline(y=midi_val, color=line_color, alpha=line_alpha, linewidth=0.8, linestyle=linestyle)
+            ax.axhline(y=float(midi_val), color=line_color, alpha=line_alpha, linewidth=0.8, linestyle=linestyle)
 
     # Save Main
     buf = io.BytesIO()
@@ -4177,8 +4189,8 @@ def plot_pitch_wide_to_base64_with_legend(
             
             text_color = OCTAVE_COLORS.get(octave_diff, 'gray')
             # Stronger text
-            legend_ax.axhline(y=midi_val, color=text_color, alpha=0.4, linewidth=0.8)
-            legend_ax.text(0.9, midi_val, label, fontsize=10, color=text_color, fontweight='bold',
+            legend_ax.axhline(y=float(midi_val), color=text_color, alpha=0.4, linewidth=0.8)
+            legend_ax.text(0.9, float(midi_val), label, fontsize=10, color=text_color, fontweight='bold',
                            ha='right', va='center', 
                            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.9, edgecolor='none'))
 

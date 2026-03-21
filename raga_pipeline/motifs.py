@@ -110,7 +110,7 @@ def _normalize_instrument(value: str) -> str:
 
 
 def _normalize_sargam(value: str) -> str:
-    return _clean(value).replace("'", "").replace("`", "").replace("’", "").replace("·", "").lower()
+    return _clean(value).replace("’", "").replace("`", "").replace("’", "").replace("·", "")
 
 
 def _parse_filter_values(values: Optional[Sequence[str]]) -> set[str]:
@@ -223,7 +223,25 @@ def _read_ground_truth_rows(csv_path: Path) -> List[GroundTruthRow]:
     return rows
 
 
-def _load_token_notes(transcription_csv: Path) -> Tuple[List[TokenNote], Optional[str]]:
+_NOTE_TO_PC: Dict[str, int] = {
+    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3,
+    "E": 4, "Fb": 4, "F": 5, "E#": 5, "F#": 6, "Gb": 6,
+    "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10,
+    "B": 11, "Cb": 11,
+}
+
+
+def _tonic_to_pitch_class(tonic: str) -> Optional[int]:
+    t = tonic.strip()
+    if not t:
+        return None
+    return _NOTE_TO_PC.get(t)
+
+
+def _load_token_notes(
+    transcription_csv: Path,
+    tonic_pc: Optional[int] = None,
+) -> Tuple[List[TokenNote], Optional[str]]:
     notes: List[TokenNote] = []
     try:
         with transcription_csv.open("r", encoding="utf-8") as handle:
@@ -283,6 +301,8 @@ def _load_token_notes(transcription_csv: Path) -> Tuple[List[TokenNote], Optiona
                 if not math.isfinite(start) or not math.isfinite(end):
                     continue
 
+                if tonic_pc is not None:
+                    pitch_class = (pitch_class - tonic_pc) % 12
                 notes.append(TokenNote(start=start, end=end, token=f"{sargam}:{pitch_class}"))
     except Exception as exc:
         return [], f"failed to parse CSV: {exc}"
@@ -434,7 +454,8 @@ def mine_motifs(
                 else:
                     transcription_file = str(selected_csv)
                     transcription_mode = selected_source
-                    token_notes, parse_error = _load_token_notes(selected_csv)
+                    tonic_pc = _tonic_to_pitch_class(row.tonic)
+                    token_notes, parse_error = _load_token_notes(selected_csv, tonic_pc=tonic_pc)
                     if parse_error:
                         status = "invalid_transcription"
                         message = parse_error
@@ -619,6 +640,7 @@ def _infer_phrase_indices(notes: Sequence[TokenNote], phrase_gap: float) -> Tupl
 def score_transcription(
     index_path: str,
     transcription_path: str,
+    tonic: Optional[str] = None,
     top_k: int = 5,
     out_path: Optional[str] = None,
     phrase_gap: float = 1.0,
@@ -643,7 +665,8 @@ def score_transcription(
     if effective_max_len < effective_min_len:
         raise ValueError("max_len must be >= min_len.")
 
-    token_notes, parse_error = _load_token_notes(transcription_file)
+    tonic_pc = _tonic_to_pitch_class(tonic) if tonic else None
+    token_notes, parse_error = _load_token_notes(transcription_file, tonic_pc=tonic_pc)
     if parse_error:
         raise ValueError(f"Cannot score transcription: {parse_error}")
     tokens = [item.token for item in token_notes]
@@ -801,6 +824,7 @@ def _build_parser() -> argparse.ArgumentParser:
     score = subparsers.add_parser("score", help="Score a transcription against a motif index.")
     score.add_argument("--index", required=True, help="Path to motif index JSON.")
     score.add_argument("--transcription", required=True, help="Path to transcription CSV.")
+    score.add_argument("--tonic", default=None, help="Tonic note name (e.g., C#, D) for pitch class normalization.")
     score.add_argument("--top-k", type=int, default=5, help="Number of top ragas to return (default: 5).")
     score.add_argument("--out", default=None, help="Optional JSON output path.")
     score.add_argument(
@@ -811,6 +835,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     score.add_argument("--min-len", type=int, default=None, help="Override minimum motif length for scoring.")
     score.add_argument("--max-len", type=int, default=None, help="Override maximum motif length for scoring.")
+
+    report = subparsers.add_parser("report", help="Generate an HTML report from a motif index.")
+    report.add_argument("--index", required=True, help="Path to motif index JSON.")
+    report.add_argument("--summary-csv", default=None, help="Path to summary CSV from --summary-out (enables recording view).")
+    report.add_argument("--out", default="motif_report.html", help="Output HTML path (default: motif_report.html).")
+    report.add_argument("--top-n", type=int, default=50, help="Motifs shown per raga before 'show more' (default: 50).")
 
     return parser
 
@@ -840,6 +870,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         result = score_transcription(
             index_path=args.index,
             transcription_path=args.transcription,
+            tonic=args.tonic,
             top_k=args.top_k,
             out_path=args.out,
             phrase_gap=args.phrase_gap,
@@ -847,6 +878,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             max_len=args.max_len,
         )
         print(json.dumps(result, indent=2))
+        return 0
+
+    if args.command == "report":
+        try:
+            from .motif_report import generate_motif_report
+        except ImportError:
+            from motif_report import generate_motif_report
+        path = generate_motif_report(
+            index_path=args.index,
+            summary_csv_path=args.summary_csv,
+            output_html_path=args.out,
+            top_n_per_raga=args.top_n,
+        )
+        print(f"Report written to {path}")
         return 0
 
     parser.error(f"Unknown command: {args.command}")

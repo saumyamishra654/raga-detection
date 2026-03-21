@@ -132,6 +132,9 @@ class ScoredCandidate:
     raga_size: int
     match_diff: int               # |raga_size - detected_peaks|
     complexity_pen: float
+    melody_dist: tuple = ()       # 12-bin tonic-rotated melody distribution
+    accomp_dist: tuple = ()       # 12-bin tonic-rotated accompaniment distribution
+    valley_penalty: int = 0       # Count of raga notes at valleys (not peaks)
 
 
 # =============================================================================
@@ -529,7 +532,11 @@ def score_candidates_full(
     
     note_masses_raw = np.array([mass_within_window_for_note(i) for i in range(12)], dtype=float)
     H_pc_arr = note_masses_raw.copy()
-    
+
+    # Smoothed histogram for valley detection (Gaussian, sigma=5 cents)
+    from scipy.ndimage import gaussian_filter1d
+    cent_hist_smooth = gaussian_filter1d(cent_hist.astype(float), sigma=5.0, mode='wrap')
+
     # Normalized probability distribution
     p_pc = (H_pc_arr + EPS) / (np.sum(H_pc_arr) + 12 * EPS)
     
@@ -678,7 +685,44 @@ def score_candidates_full(
             
             fit_norm = max(-1.0, min(1.0, fit_norm))
             fit_score = float(fit_norm * params.SCALE)
-            
+
+            # --- Melody distribution (tonic-rotated, normalized) ---
+            melody_dist = tuple(float(v) for v in p_rot)
+
+            # --- Accompaniment distribution (tonic-rotated, normalized) ---
+            if has_accompaniment:
+                accomp_rot = np.roll(H_acc.astype(float), -tonic)
+                accomp_sum = float(accomp_rot.sum())
+                if accomp_sum > 0:
+                    accomp_rot = accomp_rot / accomp_sum
+                accomp_dist = tuple(float(v) for v in accomp_rot)
+            else:
+                accomp_dist = tuple(0.0 for _ in range(12))
+
+            # --- Valley penalty ---
+            # Count raga notes sitting at a valley in smoothed histogram
+            # unless that note is also a detected peak.
+            detected_peak_pcs = set()
+            # Map detected_peak_count's source pitch classes from the
+            # rotated histogram: peaks in p_rot that are among the top
+            # detected_peak_count values
+            sorted_indices = np.argsort(H_pc_arr)[::-1]
+            for idx in sorted_indices[:detected_peak_count]:
+                detected_peak_pcs.add(int(idx))
+
+            valley_count = 0
+            for note_idx in raga_note_indices:
+                # Absolute pitch class = (note_idx + tonic) % 12
+                abs_pc = (note_idx + tonic) % 12
+                center_bin = int(abs_pc * 100) % 1200
+                center_val = cent_hist_smooth[center_bin]
+                left_val = cent_hist_smooth[(center_bin - 15) % 1200]
+                right_val = cent_hist_smooth[(center_bin + 15) % 1200]
+                is_valley = center_val < left_val and center_val < right_val
+                is_peak = abs_pc in detected_peak_pcs
+                if is_valley and not is_peak:
+                    valley_count += 1
+
             final_results.append({
                 "raga": ", ".join(names),
                 "tonic": int(tonic),
@@ -693,6 +737,9 @@ def score_candidates_full(
                 "raga_size": raga_size,
                 "match_diff": size_diff,
                 "complexity_pen": complexity_pen,
+                **{f"melody_dist_{i}": melody_dist[i] for i in range(12)},
+                **{f"accomp_dist_{i}": accomp_dist[i] for i in range(12)},
+                "valley_penalty": valley_count,
             })
     
     df = pd.DataFrame(final_results)

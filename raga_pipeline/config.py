@@ -134,6 +134,8 @@ class PipelineConfig:
     force_stem_recompute: bool = False    # Detect only: force stem separation recomputation
     save_intermediates: bool = True       # Save CSVs, plots, etc.
     skip_report: bool = False             # Skip HTML report generation (candidates.csv still saved)
+    pitch_only: bool = False              # Detect: exit after pitch extraction (steps 1-2 only); skip histogram, scoring, report
+    transcription_only: bool = False      # Analyze: produce only transcribed_notes.csv; skip plots, GMM, report
 
     # GMM parameters
     gmm_window_cents: float = 150.0
@@ -370,6 +372,8 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
     )
     parser.add_argument("--raga-db", help="Override path to raga database CSV")
     parser.add_argument("--skip-report", action="store_true", help="Skip HTML report generation (candidates.csv and pitch caches are still saved)")
+    parser.add_argument("--pitch-only", action="store_true", help="Detect: exit after stem separation + pitch extraction (steps 1-2 only). Skips histogram, scoring, and report. Use for batch runs where only analyze/motif mining is needed downstream")
+    parser.add_argument("--transcription-only", action="store_true", help="Analyze: produce only transcribed_notes.csv. Skips all plots, GMM analysis, and HTML report. Use for motif mining batch runs")
 
 
 def _normalize_preprocess_argv_aliases(argv: Sequence[str]) -> List[str]:
@@ -627,6 +631,8 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         force_recompute=getattr(args, 'force', False),
         force_stem_recompute=getattr(args, 'force_stem_recompute', False),
         skip_report=getattr(args, 'skip_report', False),
+        pitch_only=getattr(args, 'pitch_only', False),
+        transcription_only=getattr(args, 'transcription_only', False),
         raga_db_path=getattr(args, 'raga_db', None),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),

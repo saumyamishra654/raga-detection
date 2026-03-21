@@ -480,7 +480,13 @@ def run_pipeline(
             print(f"  [CONFIG] Using SEPARATED STEM pitch for melody analysis")
             results.pitch_data_vocals = pitch_data_stems
         _print_timing("Step 2/7 pitch extraction", perf_counter() - step2_start, audio_duration_s)
-        
+
+        # --- PITCH-ONLY EARLY EXIT ---
+        if config.pitch_only and config.mode == "detect":
+            print("\n[--pitch-only] Stems + pitch CSVs cached. Skipping steps 3-7.")
+            _print_timing("Total detect pipeline (pitch-only)", perf_counter() - pipeline_start, audio_duration_s)
+            return results
+
         step3_start = perf_counter()
         print("\n[STEP 3/7] Computing histograms and detecting peaks...")
         results.histogram_vocals = compute_cent_histograms_from_config(results.pitch_data_vocals, config)
@@ -829,6 +835,12 @@ def run_pipeline(
         csv_path = os.path.join(config.stem_dir, "transcribed_notes.csv")
         save_notes_to_csv(results.notes, csv_path)
         print(f"  Saved notes: {csv_path}")
+
+        # --- TRANSCRIPTION-ONLY EARLY EXIT ---
+        if config.transcription_only:
+            print("\n[--transcription-only] transcribed_notes.csv saved. Skipping plots, GMM, and report.")
+            _print_timing("Total analyze pipeline (transcription-only)", perf_counter() - pipeline_start, audio_duration_s)
+            return results
 
         # Final phrase exclusion pass after optional silence re-splitting.
         pre_filter_count = len(results.phrases)

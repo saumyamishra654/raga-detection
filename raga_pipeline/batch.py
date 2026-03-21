@@ -313,6 +313,8 @@ def process_directory(
     mode: str = "detect",
     silent: bool = False,
     skip_report: bool = False,
+    pitch_only: bool = False,
+    transcription_only: bool = False,
 ) -> None:
     """Walk an input directory and run the pipeline on each audio file."""
     normalized_mode = str(mode or "").strip().lower()
@@ -322,7 +324,13 @@ def process_directory(
         raise ValueError("ground_truth_path is required when mode='analyze'.")
 
     tasks: list[str] = []
-    for root, _dirs, files in os.walk(input_dir):
+    max_depth = 3
+    input_dir_abs = os.path.abspath(input_dir)
+    for root, _dirs, files in os.walk(input_dir_abs):
+        depth = root[len(input_dir_abs):].count(os.sep)
+        if depth >= max_depth:
+            _dirs.clear()
+            continue
         for file in files:
             if _is_valid_audio_file(file, AUDIO_EXTS):
                 tasks.append(os.path.join(root, file))
@@ -349,10 +357,21 @@ def process_directory(
         print(f"\n[{i+1}/{len(tasks)}] Processing: {fname}")
 
         gt_info = gt_data.get(audio_abs, {})
+
+        # Skip if output already exists
+        song_stem = Path(fname).stem
+        expected_csv = os.path.join(output_dir, "htdemucs", song_stem, "transcribed_notes.csv")
+        if normalized_mode == "analyze" and transcription_only and os.path.isfile(expected_csv):
+            print(f"  -> [CACHE] transcribed_notes.csv already exists, skipping.")
+            processed_count += 1
+            continue
+
         if normalized_mode == "detect":
             print("  -> Running in DETECT mode")
             cmd = [pipeline_script, "detect", "--audio", audio_path, "--output", output_dir]
-            if skip_report:
+            if pitch_only:
+                cmd.append("--pitch-only")
+            elif skip_report:
                 cmd.append("--skip-report")
         else:
             if not gt_info:
@@ -378,6 +397,8 @@ def process_directory(
                 "--tonic",
                 tonic,
             ]
+            if transcription_only:
+                cmd.append("--transcription-only")
 
         if gt_info:
             _append_metadata_args(cmd, gt_info)
@@ -448,6 +469,8 @@ if __name__ == "__main__":
                         help="Processing mode: 'detect' or 'analyze'.")
     parser.add_argument("--silent", "-s", action="store_true", help="Suppress output to console (log files are still saved)")
     parser.add_argument("--skip-report", action="store_true", help="Skip HTML report generation for faster batch runs")
+    parser.add_argument("--pitch-only", action="store_true", help="Detect: exit after stem separation + pitch extraction (steps 1-2 only). Use when only analyze/motif mining is needed downstream")
+    parser.add_argument("--transcription-only", action="store_true", help="Analyze: produce only transcribed_notes.csv. Skips plots, GMM, and report. Use for motif mining batch runs")
     parser.add_argument("--init-csv", action="store_true", help="Initialize a blank ground truth CSV for files in input_dir")
     
     args = parser.parse_args()
@@ -466,7 +489,7 @@ if __name__ == "__main__":
         init_ground_truth_csv(args.input_dir, target_csv)
     else:
         try:
-            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent, args.skip_report)
+            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent, args.skip_report, args.pitch_only, args.transcription_only)
         except ValueError as exc:
             print(f"Error: {exc}")
             sys.exit(1)

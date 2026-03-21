@@ -110,6 +110,9 @@ raga_weights.json
 !main notebooks/ragadb.xlsx
 !raga_rename_suggestions.csv
 
+# Claude Code
+CLAUDE.md
+
 # OS-specific
 .DS_Store
 Thumbs.db

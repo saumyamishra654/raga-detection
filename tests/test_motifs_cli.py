@@ -83,7 +83,7 @@ class MotifsCliTests(unittest.TestCase):
             self.assertEqual(row["instrument"], "bansuri")
 
             motif_strs = [m["motif_str"] for m in result["index"]["ragas"]["Yaman"]["motifs"]]
-            self.assertIn("ni:11 re:2 ga:4", motif_strs)
+            self.assertIn("Ni:11 Re:2 Ga:4", motif_strs)
 
     def test_mine_recording_support_filters_single_recording_repeats(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -133,7 +133,7 @@ class MotifsCliTests(unittest.TestCase):
 
             motif_entries = result["index"]["ragas"]["Yaman"]["motifs"]
             self.assertEqual(len(motif_entries), 1)
-            self.assertEqual(motif_entries[0]["motif_str"], "sa:0 re:2 ga:4")
+            self.assertEqual(motif_entries[0]["motif_str"], "Sa:0 Re:2 Ga:4")
             self.assertEqual(motif_entries[0]["recording_support"], 2)
 
     def test_mine_missing_transcription_rows_are_reported(self) -> None:

@@ -115,7 +115,7 @@ class ConfigSchemaTests(unittest.TestCase):
         schema = get_mode_schema("detect")
         by_name = {field["name"]: field for field in schema["fields"]}
         self.assertEqual(by_name["fmax_note"]["default"], "D6")
-        self.assertEqual(by_name["vocal_confidence"]["default"], 0.95)
+        self.assertIsNone(by_name["vocal_confidence"]["default"])
         self.assertIn("force_stem_recompute", by_name)
 
     def test_parse_config_analyze_uses_new_phrase_defaults(self) -> None:

@@ -231,11 +231,12 @@ def collect_features(results_dir: str, gt_csv_path: str, output_path: str) -> pd
 # Optimization: pairwise ranking loss
 # ---------------------------------------------------------------------------
 
-def _build_pair_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, int, int]:
+def _build_pair_matrix(df: pd.DataFrame, feature_cols: Optional[List[str]] = None) -> Tuple[np.ndarray, int, int]:
     """Build pairwise difference vectors (correct - incorrect) for all songs.
 
     Returns (X_pairs, n_songs_used, n_songs_skipped).
     """
+    cols = feature_cols or FEATURE_COLS
     pairs: List[np.ndarray] = []
     n_used = 0
     n_skipped = 0
@@ -248,15 +249,15 @@ def _build_pair_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, int, int]:
             n_skipped += 1
             continue
 
-        correct_feats = correct[FEATURE_COLS].iloc[0].values.astype(np.float64)
+        correct_feats = correct[cols].iloc[0].values.astype(np.float64)
         n_used += 1
 
         for _, inc_row in incorrect.iterrows():
-            inc_feats = inc_row[FEATURE_COLS].values.astype(np.float64)
+            inc_feats = inc_row[cols].values.astype(np.float64)
             pairs.append(correct_feats - inc_feats)
 
     if not pairs:
-        return np.empty((0, len(FEATURE_COLS))), n_used, n_skipped
+        return np.empty((0, len(cols))), n_used, n_skipped
 
     return np.array(pairs, dtype=np.float64), n_used, n_skipped
 
@@ -282,8 +283,10 @@ def compute_metrics(
     df: pd.DataFrame,
     w: np.ndarray,
     label: str = "",
+    feature_cols: Optional[List[str]] = None,
 ) -> dict:
     """Compute MRR, top-k accuracy, and rank distribution for given weights."""
+    cols = feature_cols or FEATURE_COLS
     reciprocal_ranks: List[float] = []
     ranks: List[int] = []
 
@@ -292,7 +295,7 @@ def compute_metrics(
         if correct.empty:
             continue
 
-        features = group[FEATURE_COLS].values.astype(np.float64)
+        features = group[cols].values.astype(np.float64)
         scores = features @ w
 
         correct_idx = correct.index[0] - group.index[0]
@@ -329,7 +332,7 @@ def compute_metrics(
     return metrics
 
 
-def optimize_linear(data_path: str, output_path: Optional[str] = None) -> Tuple[np.ndarray, dict]:
+def optimize_linear(data_path: str, output_path: Optional[str] = None, use_extended: bool = False) -> Tuple[np.ndarray, dict]:
     """Optimize scoring coefficients using pairwise ranking loss."""
     df = pd.read_csv(data_path)
 
@@ -341,21 +344,30 @@ def optimize_linear(data_path: str, output_path: Optional[str] = None) -> Tuple[
             lambda x: x / (x.max() + 1e-12)
         )
 
+    feature_cols = MLP_FEATURE_COLS if use_extended else FEATURE_COLS
+    missing = [c for c in feature_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns for extended features: {missing}")
+
     # Build pairs
-    X_pairs, n_used, n_skipped = _build_pair_matrix(df)
+    X_pairs, n_used, n_skipped = _build_pair_matrix(df, feature_cols=feature_cols)
     print(f"Built {len(X_pairs)} pairwise comparisons from {n_used} songs")
     if n_skipped:
         print(f"  ({n_skipped} songs skipped: correct candidate not in results)")
 
     if len(X_pairs) == 0:
         print("No pairs to optimize. Check that ground truth matches candidates.")
-        return CURRENT_WEIGHTS, {}
+        w0 = np.zeros(len(feature_cols))
+        return w0, {}
 
-    # Evaluate current weights
-    compute_metrics(df, CURRENT_WEIGHTS, label="BEFORE (current hand-tuned)")
+    # Evaluate current baseline (only meaningful for original 8 features)
+    if not use_extended:
+        compute_metrics(df, CURRENT_WEIGHTS, label="BEFORE (current hand-tuned)", feature_cols=feature_cols)
 
     # Optimize
-    w0 = CURRENT_WEIGHTS.copy()
+    w0 = np.zeros(len(feature_cols))
+    if not use_extended:
+        w0 = CURRENT_WEIGHTS.copy()
     result = minimize(
         _pairwise_loss,
         w0,
@@ -367,35 +379,34 @@ def optimize_linear(data_path: str, output_path: Optional[str] = None) -> Tuple[
     w_opt = result.x
 
     # Evaluate optimized
-    metrics_after = compute_metrics(df, w_opt, label="AFTER (optimized)")
+    metrics_after = compute_metrics(df, w_opt, label="AFTER (optimized)", feature_cols=feature_cols)
 
     # Print coefficient comparison
     print(f"\n{'='*60}")
-    print(f"  Coefficient comparison")
+    print(f"  Coefficient comparison ({len(feature_cols)} features)")
     print(f"{'='*60}")
-    print(f"  {'Feature':<25s} {'Before':>10s} {'After':>10s} {'Delta':>10s}")
-    print(f"  {'-'*55}")
-    for i, name in enumerate(FEATURE_COLS):
-        before = CURRENT_WEIGHTS[i]
-        after = w_opt[i]
-        delta = after - before
-        print(f"  {name:<25s} {before:>+10.4f} {after:>+10.4f} {delta:>+10.4f}")
+    print(f"  {'Feature':<25s} {'Weight':>10s}")
+    print(f"  {'-'*35}")
+    for i, name in enumerate(feature_cols):
+        print(f"  {name:<25s} {w_opt[i]:>+10.4f}")
 
-    # Map to ScoringParams
-    scoring_params = _weights_to_scoring_params(w_opt)
-    print(f"\n  ScoringParams equivalent:")
-    for k, v in scoring_params.items():
-        print(f"    {k}: {v}")
+    # Map to ScoringParams (only for original 8)
+    scoring_params = {}
+    if not use_extended:
+        scoring_params = _weights_to_scoring_params(w_opt)
+        print(f"\n  ScoringParams equivalent:")
+        for k, v in scoring_params.items():
+            print(f"    {k}: {v}")
 
     # Save
     if output_path:
         out = {
-            "feature_cols": FEATURE_COLS,
+            "feature_cols": list(feature_cols),
             "weights": w_opt.tolist(),
-            "scoring_params": scoring_params,
-            "metrics_before": compute_metrics(df, CURRENT_WEIGHTS),
             "metrics_after": metrics_after,
         }
+        if scoring_params:
+            out["scoring_params"] = scoring_params
         with open(output_path, "w") as f:
             json.dump(out, f, indent=2)
         print(f"\nSaved to {output_path}")
@@ -646,6 +657,7 @@ def main():
     p_opt = sub.add_parser("optimize", help="Optimize linear scoring coefficients")
     p_opt.add_argument("--data", required=True, help="Scoring dataset CSV (from collect)")
     p_opt.add_argument("--output", default="optimized_params.json", help="Output JSON path")
+    p_opt.add_argument("--extended", action="store_true", help="Use extended 33-feature set (melody/accomp distributions + valley penalty)")
 
     # evaluate
     p_eval = sub.add_parser("evaluate", help="Evaluate scoring metrics")
@@ -666,7 +678,7 @@ def main():
     if args.command == "collect":
         collect_features(args.results_dir, args.gt, args.output)
     elif args.command == "optimize":
-        optimize_linear(args.data, args.output)
+        optimize_linear(args.data, args.output, use_extended=args.extended)
     elif args.command == "evaluate":
         evaluate(args.data, args.params, mlp_path=args.mlp)
     elif args.command == "mlp":

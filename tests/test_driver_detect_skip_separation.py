@@ -92,8 +92,10 @@ class DriverDetectSkipSeparationTests(unittest.TestCase):
             confidence_threshold: float = 0.9,
             force_recompute: bool = False,
             energy_metric: str = "rms",
+            extractor: str = "swiftf0",
+            hop_ms: float = 0.0,
         ) -> PitchData:
-            _ = (output_dir, prefix, fmin, fmax, confidence_threshold, force_recompute, energy_metric)
+            _ = (output_dir, prefix, fmin, fmax, confidence_threshold, force_recompute, energy_metric, extractor, hop_ms)
             return _dummy_pitch_data(audio_path)
 
         with (

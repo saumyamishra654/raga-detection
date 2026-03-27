@@ -1,0 +1,193 @@
+<h2>Library - Card View (Default)</h2>
+<p class="subtitle">Home screen after sign-in. Shows all uploaded songs.</p>
+
+<div class="mockup">
+  <div class="mockup-header">/ library</div>
+  <div class="mockup-body" style="background: #1a1a2e; color: #e0e0e0; padding: 0; font-family: system-ui, sans-serif;">
+
+    <!-- Top bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid #2a2a4a;">
+      <div style="font-size: 20px; font-weight: 600; color: #fff;">Raga Detection</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #4a4a6a; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #ccc;">SM</div>
+      </div>
+    </div>
+
+    <!-- Action bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="font-size: 24px; font-weight: 700; color: #fff;">Your Library</div>
+        <span style="background: #2a2a4a; color: #8a8aaa; padding: 2px 10px; border-radius: 12px; font-size: 13px;">12 songs</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <!-- Search -->
+        <div style="background: #2a2a4a; border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; gap: 8px; min-width: 200px;">
+          <span style="color: #6a6a8a; font-size: 13px;">Search songs...</span>
+        </div>
+        <!-- View toggle -->
+        <div style="display: flex; background: #2a2a4a; border-radius: 6px; overflow: hidden;">
+          <div style="padding: 6px 12px; background: #4a4a8a; color: #fff; font-size: 12px;">Grid</div>
+          <div style="padding: 6px 12px; color: #6a6a8a; font-size: 12px;">List</div>
+        </div>
+        <!-- Upload button -->
+        <div style="background: #6366f1; color: #fff; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">+ Upload</div>
+      </div>
+    </div>
+
+    <!-- Filter pills -->
+    <div style="padding: 0 24px 16px; display: flex; gap: 8px;">
+      <span style="background: #4a4a8a; color: #fff; padding: 4px 14px; border-radius: 16px; font-size: 12px;">All</span>
+      <span style="background: #2a2a4a; color: #8a8aaa; padding: 4px 14px; border-radius: 16px; font-size: 12px;">Processing</span>
+      <span style="background: #2a2a4a; color: #8a8aaa; padding: 4px 14px; border-radius: 16px; font-size: 12px;">Complete</span>
+      <span style="background: #2a2a4a; color: #8a8aaa; padding: 4px 14px; border-radius: 16px; font-size: 12px;">YouTube</span>
+      <span style="background: #2a2a4a; color: #8a8aaa; padding: 4px 14px; border-radius: 16px; font-size: 12px;">Uploaded</span>
+    </div>
+
+    <!-- Card Grid -->
+    <div style="padding: 0 24px 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+
+      <!-- Card 1: Complete, YouTube source -->
+      <div style="background: #222244; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a4a;">
+        <div style="background: #2a2a4a; height: 100px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div style="color: #6a6a8a; font-size: 32px;">&#9654;</div>
+          <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">YT</div>
+        </div>
+        <div style="padding: 14px;">
+          <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Raga Yaman - Pt. Jasraj</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <span style="background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Yaman</span>
+            <span style="background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px;">C#</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6a6a8a; font-size: 11px;">Mar 25, 2026</span>
+            <span style="color: #22c55e; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span>
+              Complete
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Complete, uploaded file -->
+      <div style="background: #222244; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a4a;">
+        <div style="background: #2a2a4a; height: 100px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div style="color: #6a6a8a; font-size: 24px;">&#9835; MP3</div>
+          <div style="position: absolute; top: 8px; right: 8px; background: #6366f1; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">File</div>
+        </div>
+        <div style="padding: 14px;">
+          <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Bhairavi Thumri - Begum Akhtar</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <span style="background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Bhairavi</span>
+            <span style="background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px;">D</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6a6a8a; font-size: 11px;">Mar 24, 2026</span>
+            <span style="color: #22c55e; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span>
+              Complete
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Processing -->
+      <div style="background: #222244; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a4a;">
+        <div style="background: #2a2a4a; height: 100px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div style="color: #6a6a8a; font-size: 32px;">&#9654;</div>
+          <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">YT</div>
+        </div>
+        <div style="padding: 14px;">
+          <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Raga Marwa - Ustad Vilayat Khan</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <span style="background: #3a2a1a; color: #f59e0b; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Detecting...</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6a6a8a; font-size: 11px;">Mar 27, 2026</span>
+            <span style="color: #f59e0b; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; display: inline-block;"></span>
+              Processing
+            </span>
+          </div>
+          <!-- Progress bar -->
+          <div style="margin-top: 8px; background: #1a1a2e; border-radius: 4px; height: 4px; overflow: hidden;">
+            <div style="width: 35%; height: 100%; background: #f59e0b; border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Complete -->
+      <div style="background: #222244; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a4a;">
+        <div style="background: #2a2a4a; height: 100px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div style="color: #6a6a8a; font-size: 24px;">&#9835; MP3</div>
+          <div style="position: absolute; top: 8px; right: 8px; background: #6366f1; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">File</div>
+        </div>
+        <div style="padding: 14px;">
+          <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Raga Darbari - Ustad Amir Khan</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <span style="background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Darbari</span>
+            <span style="background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px;">C</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6a6a8a; font-size: 11px;">Mar 22, 2026</span>
+            <span style="color: #22c55e; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span>
+              Complete
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5: Failed -->
+      <div style="background: #222244; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a4a;">
+        <div style="background: #2a2a4a; height: 100px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div style="color: #6a6a8a; font-size: 32px;">&#9654;</div>
+          <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">YT</div>
+        </div>
+        <div style="padding: 14px;">
+          <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Raga Todi - Kishori Amonkar</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <span style="background: #3a1a1a; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Failed</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6a6a8a; font-size: 11px;">Mar 20, 2026</span>
+            <span style="color: #ef4444; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span>
+              Error
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty upload card -->
+      <div style="background: transparent; border-radius: 12px; overflow: hidden; border: 2px dashed #3a3a5a; display: flex; align-items: center; justify-content: center; min-height: 190px; cursor: pointer;">
+        <div style="text-align: center; color: #6a6a8a;">
+          <div style="font-size: 28px; margin-bottom: 4px;">+</div>
+          <div style="font-size: 13px;">Upload or drop file</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drop zone overlay (shown when dragging file) -->
+    <div style="margin: 0 24px 24px; border: 2px dashed #6366f1; border-radius: 12px; padding: 32px; text-align: center; background: rgba(99, 102, 241, 0.05);">
+      <div style="color: #6366f1; font-size: 14px; font-weight: 500;">Drop zone overlay (appears when dragging a file over the page)</div>
+      <div style="color: #6a6a8a; font-size: 12px; margin-top: 4px;">Drop your MP3 to start analysis</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Key elements</h3>
+  <ul>
+    <li><strong>Card grid</strong> - 3 columns on desktop, 2 on tablet, 1 on mobile</li>
+    <li><strong>Source badge</strong> - red "YT" or purple "File" in top-right of thumbnail area</li>
+    <li><strong>Raga + tonic pills</strong> - shown once analysis is complete</li>
+    <li><strong>Status indicators</strong> - green (complete), amber (processing with progress bar), red (error)</li>
+    <li><strong>Ghost card</strong> - dashed "Upload or drop file" card always at the end of the grid</li>
+    <li><strong>Drop zone</strong> - full-page overlay appears when dragging a file, then navigates to /upload with file attached</li>
+    <li><strong>View toggle</strong> - Grid/List switcher in the action bar, persisted to user preferences</li>
+    <li><strong>Filter pills</strong> - All, Processing, Complete, YouTube, Uploaded</li>
+    <li><strong>Dark theme</strong> - deep navy/purple palette, consistent throughout app</li>
+  </ul>
+</div>

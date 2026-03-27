@@ -110,6 +110,25 @@ class AnalysisResults:
     # Plot paths
     plot_paths: Dict[str, str] = field(default_factory=_new_plot_paths)
 
+    # Dual-extractor compare mode
+    extractor_transcriptions: Dict[str, 'ExtractorTranscription'] = field(default_factory=dict)
+
+
+@dataclass
+class ExtractorTranscription:
+    """Container for one extractor's transcription results (compare mode)."""
+    extractor: str                    # "swiftf0" or "pyin"
+    pitch_data: PitchData
+    notes: List[Note]
+    phrases: List[Phrase]
+    phrase_clusters: Dict[int, List[Phrase]]
+    pattern_analysis: dict
+    correction_summary: dict
+    confidence_threshold: float
+    derivative_timestamps: Optional[np.ndarray] = None
+    derivative_values: Optional[np.ndarray] = None
+    derivative_voiced_mask: Optional[np.ndarray] = None
+
 
 class TrackSpec(TypedDict):
     key: str
@@ -6546,6 +6565,75 @@ def write_detection_report_metadata(
     return metadata_path
 
 
+def _build_pattern_html(pattern_analysis: dict, raga_name: str, extractor_key: str = "") -> str:
+    """Build pattern analysis HTML from a pattern_analysis dict."""
+    if not pattern_analysis:
+        return ""
+    p = pattern_analysis
+    suffix = f" ({extractor_key.upper()})" if extractor_key else ""
+
+    motif_items = []
+    for m in p.get('common_motifs', []):
+        motif_items.append(f"<li><strong>{m['pattern']}</strong>: {m['count']} occurrences</li>")
+
+    aaroh_items = []
+    for run, count in p.get('aaroh_stats', {}).items():
+        aaroh_items.append(f"<li><strong>{run}</strong>: {count}</li>")
+
+    avroh_items = []
+    for run, count in p.get('avroh_stats', {}).items():
+        avroh_items.append(f"<li><strong>{run}</strong>: {count}</li>")
+
+    checker_html = ""
+    checker = p.get("aaroh_avroh_checker")
+    reference = p.get("aaroh_avroh_reference", {})
+    if checker:
+        note_rows = []
+        for row in checker.get("note_evidence", []):
+            if not row.get("sufficient_evidence"):
+                continue
+            note_rows.append(
+                "<tr>"
+                f"<td>{row.get('note', '')}</td>"
+                f"<td>{row.get('asc_edges', 0)}</td>"
+                f"<td>{row.get('desc_edges', 0)}</td>"
+                f"<td>{row.get('asc_ratio', 0.0):.2f}</td>"
+                f"<td>{row.get('desc_ratio', 0.0):.2f}</td>"
+                f"<td>{row.get('expected_asc', 0.0):.1f}</td>"
+                f"<td>{row.get('expected_desc', 0.0):.1f}</td>"
+                "</tr>"
+            )
+        ref_name = reference.get("matched_name", raga_name)
+        ref_aaroh = reference.get("aaroh_raw", "N/A")
+        ref_avroh = reference.get("avroh_raw", "N/A")
+        checker_html = f"""
+        <div class="stat-box">
+            <strong>Aaroh/Avroh Checker</strong>
+            <p><strong>Reference:</strong> {ref_name}</p>
+            <p><strong>Aaroh:</strong> {ref_aaroh}</p>
+            <p><strong>Avroh:</strong> {ref_avroh}</p>
+            <p><strong>Score:</strong> {checker.get('score', 0.0):.3f}
+               ({checker.get('matched_checks', 0)}/{checker.get('total_checks', 0)} checks)</p>
+            <p><strong>Missing Aaroh:</strong> {", ".join(checker.get('missing_aaroh', [])) or "None"}</p>
+            <p><strong>Missing Avroh:</strong> {", ".join(checker.get('missing_avroh', [])) or "None"}</p>
+            <p><strong>Unexpected Aaroh:</strong> {", ".join(checker.get('unexpected_aaroh', [])) or "None"}</p>
+            <p><strong>Unexpected Avroh:</strong> {", ".join(checker.get('unexpected_avroh', [])) or "None"}</p>
+        </div>
+        """
+
+    return f"""
+    <section id="patterns{'-' + extractor_key if extractor_key else ''}">
+        <h2>Pattern Analysis{suffix}</h2>
+        <div class="stats-grid">
+             <div class="stat-box"><strong>Common Motifs</strong><ul>{"".join(motif_items) or "<li>None</li>"}</ul></div>
+             <div class="stat-box"><strong>Aaroh (Ascending) Runs</strong><ul>{"".join(aaroh_items) or "<li>None</li>"}</ul></div>
+             <div class="stat-box"><strong>Avroh (Descending) Runs</strong><ul>{"".join(avroh_items) or "<li>None</li>"}</ul></div>
+             {checker_html}
+        </div>
+    </section>
+    """
+
+
 def generate_analysis_report(
     results: 'AnalysisResults',
     stats: AnalysisStats,
@@ -6952,26 +7040,166 @@ def generate_analysis_report(
     else:
         track_panels_html = "<p>No pitch data available for interactive analysis.</p>"
 
-    # Transcription html
-    transcription_html = _generate_transcription_section(
-        results.notes,
-        results.phrases,
-        results.detected_tonic or 0,
-        audio_element_ids=None,
-    )
+    # ---- Extractor toggle (compare mode) or single-extractor sections ----
+    extractor_toggle_buttons_html = ""
+    extractor_toggle_js = ""
+    _ext_transcriptions = results.extractor_transcriptions
+    _compare_mode = bool(_ext_transcriptions)
 
-    # Phrase karaoke section (top interactive view)
-    karaoke_html = ""
-    if results.phrases:
-        karaoke_html = _generate_karaoke_section(
+    if _compare_mode:
+        # Build per-extractor sections wrapped in toggled divs
+        _ext_keys = list(_ext_transcriptions.keys())
+        _primary_key = results.config.pitch_extractor if results.config.pitch_extractor in _ext_keys else _ext_keys[0]
+
+        # Toggle buttons
+        _btn_parts = []
+        for ek in _ext_keys:
+            ext_t = _ext_transcriptions[ek]
+            label = ek.upper()
+            info = f"conf={ext_t.confidence_threshold:.3f}, {len(ext_t.notes)} notes"
+            _btn_parts.append(
+                f'<button type="button" class="extractor-toggle-btn" data-extractor-key="{ek}" '
+                f'style="padding:8px 14px; border-radius:6px; border:1px solid #30363d; '
+                f'background:#21262d; color:#c9d1d9; cursor:pointer;">'
+                f'{label} ({info})</button>'
+            )
+        extractor_toggle_buttons_html = f'''
+        <div style="margin: 20px 0 10px 0;">
+            <p style="font-size: 0.86em; color: #8b949e; margin: 0 0 6px 0;">
+                Extractor Comparison (note counts calibrated to match):
+            </p>
+            <div id="extractor-toggle-selector" style="display:flex; flex-wrap:wrap; gap:8px;">
+                {"".join(_btn_parts)}
+            </div>
+        </div>
+        '''
+
+        # JS for toggle
+        extractor_toggle_js = f"""
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {{
+            var extractorKeys = {json.dumps(_ext_keys)};
+            var defaultExtractor = {json.dumps(_primary_key)};
+
+            function showExtractorPanel(key) {{
+                extractorKeys.forEach(function(k) {{
+                    var panels = document.querySelectorAll(".extractor-panel-" + k);
+                    panels.forEach(function(el) {{
+                        el.style.display = (k === key) ? "block" : "none";
+                    }});
+                    var btn = document.querySelector('.extractor-toggle-btn[data-extractor-key="' + k + '"]');
+                    if (btn) {{
+                        if (k === key) {{
+                            btn.style.background = "#8957e5";
+                            btn.style.color = "#ffffff";
+                            btn.style.borderColor = "#8957e5";
+                        }} else {{
+                            btn.style.background = "#21262d";
+                            btn.style.color = "#c9d1d9";
+                            btn.style.borderColor = "#30363d";
+                        }}
+                    }}
+                }});
+            }}
+
+            document.querySelectorAll(".extractor-toggle-btn").forEach(function(btn) {{
+                btn.addEventListener("click", function() {{
+                    showExtractorPanel(btn.getAttribute("data-extractor-key"));
+                }});
+            }});
+
+            showExtractorPanel(defaultExtractor);
+        }});
+        </script>
+        """
+
+        # Generate per-extractor wrapped sections
+        _karaoke_parts = []
+        _transcription_parts = []
+        _correction_parts = []
+        _pattern_parts = []
+
+        for ek in _ext_keys:
+            ext_t = _ext_transcriptions[ek]
+            is_default = (ek == _primary_key)
+
+            # Karaoke
+            ek_karaoke = ""
+            if ext_t.phrases:
+                ek_karaoke = _generate_karaoke_section(
+                    ext_t.phrases,
+                    results.detected_tonic or 0,
+                    audio_element_ids=audio_element_ids,
+                )
+            _karaoke_parts.append(
+                f'<div class="extractor-panel-{ek}" style="display:{"block" if is_default else "none"};">'
+                f'{ek_karaoke}</div>'
+            )
+
+            # Transcription
+            ek_transcription = _generate_transcription_section(
+                ext_t.notes, ext_t.phrases,
+                results.detected_tonic or 0, audio_element_ids=None,
+            )
+            _transcription_parts.append(
+                f'<div class="extractor-panel-{ek}" style="display:{"block" if is_default else "none"};">'
+                f'{ek_transcription}</div>'
+            )
+
+            # Correction
+            ek_correction = ""
+            if ext_t.correction_summary:
+                s = ext_t.correction_summary
+                ek_correction = f'''
+                <section id="correction-{ek}">
+                    <h2>Raga Correction Summary ({ek.upper()})</h2>
+                    <div class="stats-grid">
+                        <div class="stat-box"><strong>Total Notes:</strong> {s.get('total', 0)}</div>
+                        <div class="stat-box"><strong>Unchanged:</strong> {s.get('unchanged', 0)}</div>
+                        <div class="stat-box"><strong>Corrected (Snapped):</strong> {s.get('corrected', 0)}</div>
+                        <div class="stat-box"><strong>Discarded:</strong> {s.get('discarded', 0)}</div>
+                        <div class="stat-box"><strong>Valid Notes Remaining:</strong> {s.get('remaining', 0)}</div>
+                    </div>
+                </section>
+                '''
+            _correction_parts.append(
+                f'<div class="extractor-panel-{ek}" style="display:{"block" if is_default else "none"};">'
+                f'{ek_correction}</div>'
+            )
+
+            # Pattern (reuse existing builder logic inline)
+            ek_pattern = _build_pattern_html(ext_t.pattern_analysis, stats.raga_name, ek)
+            _pattern_parts.append(
+                f'<div class="extractor-panel-{ek}" style="display:{"block" if is_default else "none"};">'
+                f'{ek_pattern}</div>'
+            )
+
+        karaoke_html = "".join(_karaoke_parts)
+        transcription_html = "".join(_transcription_parts)
+        correction_html = "".join(_correction_parts)
+        pattern_html = "".join(_pattern_parts)
+
+    else:
+        # Single-extractor mode (original behavior)
+        transcription_html = _generate_transcription_section(
+            results.notes,
             results.phrases,
             results.detected_tonic or 0,
-            audio_element_ids=audio_element_ids,
+            audio_element_ids=None,
         )
 
-    # Pattern Analysis HTML (Motifs + Aaroh/Avroh)
-    pattern_html = ""
-    if stats.pattern_analysis:
+        karaoke_html = ""
+        if results.phrases:
+            karaoke_html = _generate_karaoke_section(
+                results.phrases,
+                results.detected_tonic or 0,
+                audio_element_ids=audio_element_ids,
+            )
+
+    # Pattern Analysis HTML (Motifs + Aaroh/Avroh) -- single extractor only
+    if not _compare_mode:
+        pattern_html = ""
+    if not _compare_mode and stats.pattern_analysis:
         p = stats.pattern_analysis
         
         # Motifs
@@ -7062,9 +7290,10 @@ def generate_analysis_report(
         </section>
         """
         
-    # Correction Stats HTML
-    correction_html = ""
-    if stats.correction_summary:
+    # Correction Stats HTML (single-extractor only; compare mode builds its own)
+    if not _compare_mode:
+        correction_html = ""
+    if not _compare_mode and stats.correction_summary:
         s = stats.correction_summary
         correction_html = f"""
         <section id="correction">
@@ -7173,6 +7402,7 @@ def generate_analysis_report(
                 </p>
                 {track_buttons_html}
                 {energy_buttons_html}
+                {extractor_toggle_buttons_html}
                 {track_panels_html}
                 {karaoke_html}
             </section>
@@ -7192,6 +7422,7 @@ def generate_analysis_report(
             <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
         </footer>
         {track_switch_js}
+        {extractor_toggle_js}
     </body>
     </html>
     """

@@ -1251,17 +1251,116 @@ def _fit_array_to_length(values: np.ndarray, target_len: int, fill_value: float 
 # PITCH EXTRACTION
 # =============================================================================
 
-def _build_swiftf0_detector(fmin: float, fmax: float, confidence_threshold: float):
-    """Instantiate SwiftF0 with standard constructor args only."""
+def _pitch_csv_path(output_dir: str, prefix: str, extractor: str) -> str:
+    """Build cache CSV path. SwiftF0 uses legacy name for backward compat."""
+    if extractor == "swiftf0":
+        return os.path.join(output_dir, f"{prefix}_pitch_data.csv")
+    return os.path.join(output_dir, f"{prefix}_pitch_data_{extractor}.csv")
+
+
+# ---------------------------------------------------------------------------
+# Per-extractor backends
+# Each returns: (timestamps, pitch_hz, confidence, voicing, frame_period)
+# ---------------------------------------------------------------------------
+
+def _extract_swiftf0(
+    audio_path: str,
+    fmin: float,
+    fmax: float,
+    confidence_threshold: float,
+    **kwargs: Any,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+    """Extract pitch via SwiftF0."""
     from swift_f0 import SwiftF0
 
-    base_kwargs: Dict[str, Any] = {
-        "fmin": fmin,
-        "fmax": fmax,
-        "confidence_threshold": confidence_threshold,
-    }
-    return SwiftF0(**base_kwargs)
+    detector = SwiftF0(fmin=fmin, fmax=fmax, confidence_threshold=confidence_threshold)
+    result = detector.detect_from_file(audio_path)
 
+    pitch_hz = np.asarray(result.pitch_hz)
+    timestamps = (
+        np.asarray(result.timestamps)
+        if hasattr(result, "timestamps")
+        else np.arange(len(pitch_hz), dtype=float) * 0.01
+    )
+    confidence = (
+        np.asarray(result.confidence)
+        if hasattr(result, "confidence")
+        else np.ones_like(pitch_hz)
+    )
+    voicing = (
+        np.asarray(result.voicing)
+        if hasattr(result, "voicing")
+        else (pitch_hz > 0)
+    )
+
+    # Infer frame period
+    inferred_fp = None
+    if len(timestamps) > 1:
+        dt = np.diff(timestamps.astype(float))
+        dt = dt[np.isfinite(dt) & (dt > 0)]
+        if len(dt) > 0:
+            inferred_fp = float(np.median(dt))
+
+    raw_fp = getattr(result, "frame_period", None)
+    try:
+        raw_fp = float(raw_fp) if raw_fp is not None else None
+    except (TypeError, ValueError):
+        raw_fp = None
+
+    if raw_fp is not None and np.isfinite(raw_fp) and raw_fp > 0:
+        frame_period = raw_fp
+    elif inferred_fp is not None:
+        frame_period = inferred_fp
+    else:
+        frame_period = 0.01
+
+    if inferred_fp is not None and abs(frame_period - inferred_fp) > 5e-4:
+        print(
+            f"[AUDIO] frame_period mismatch (result={frame_period:.6f}s, "
+            f"timestamps={inferred_fp:.6f}s). Using timestamp-derived value."
+        )
+        frame_period = inferred_fp
+
+    return timestamps, pitch_hz, confidence, voicing, frame_period
+
+
+def _extract_pyin(
+    audio_path: str,
+    fmin: float,
+    fmax: float,
+    confidence_threshold: float,
+    hop_ms: float = 0.0,
+    **kwargs: Any,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+    """Extract pitch via librosa.pyin."""
+    sr_native = 22050
+    y, sr = librosa.load(audio_path, sr=sr_native)
+
+    frame_length = 2048
+    if hop_ms > 0:
+        hop_length = max(1, int(round(sr * hop_ms / 1000.0)))
+    else:
+        hop_length = frame_length // 4  # librosa default: 512 @ 22050 = ~23ms
+
+    f0, voiced_flag, voiced_probs = librosa.pyin(
+        y, fmin=fmin, fmax=fmax, sr=sr,
+        frame_length=frame_length, hop_length=hop_length,
+    )
+
+    # NaN -> 0.0 for unvoiced (matches PitchData contract)
+    f0 = np.nan_to_num(f0, nan=0.0)
+    frame_period = hop_length / sr
+    timestamps = np.arange(len(f0)) * frame_period
+
+    confidence = np.nan_to_num(voiced_probs, nan=0.0)
+    voicing = np.asarray(voiced_flag, dtype=bool)
+
+    return timestamps, f0, confidence, voicing, frame_period
+
+
+# ---------------------------------------------------------------------------
+# Unified pitch extraction with caching
+# ---------------------------------------------------------------------------
 
 def extract_pitch(
     audio_path: str,
@@ -1272,9 +1371,11 @@ def extract_pitch(
     confidence_threshold: float = 0.9,
     force_recompute: bool = False,
     energy_metric: str = "rms",
+    extractor: str = "swiftf0",
+    hop_ms: float = 0.0,
 ) -> PitchData:
     """
-    Extract pitch using SwiftF0 with caching.
+    Extract pitch with caching, supporting multiple backends.
 
     Args:
         audio_path: Path to audio file
@@ -1285,11 +1386,13 @@ def extract_pitch(
         confidence_threshold: Minimum confidence for valid pitch
         force_recompute: Ignore cached results
         energy_metric: 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-normalised)
+        extractor: Pitch backend -- 'swiftf0' or 'pyin'
+        hop_ms: Frame hop in ms (pyin only; 0 = extractor default)
 
     Returns:
         PitchData containing pitch extraction results with energy
     """
-    csv_path = os.path.join(output_dir, f"{prefix}_pitch_data.csv")
+    csv_path = _pitch_csv_path(output_dir, prefix, extractor)
 
     # Try loading from cache
     if os.path.isfile(csv_path) and not force_recompute:
@@ -1303,75 +1406,38 @@ def extract_pitch(
 
         return pitch_data
 
-    # Run SwiftF0
-    print(f"[SWIFTF0] Extracting pitch from: {os.path.basename(audio_path)}")
+    # Dispatch to extractor backend
+    extractor_label = extractor.upper()
+    print(f"[{extractor_label}] Extracting pitch from: {os.path.basename(audio_path)}")
+    print(f"[{extractor_label}] Confidence threshold: {confidence_threshold}")
 
-    from swift_f0 import export_to_csv
-
-    detector = _build_swiftf0_detector(
-        fmin=fmin,
-        fmax=fmax,
-        confidence_threshold=confidence_threshold,
-    )
-    result = detector.detect_from_file(audio_path)
-
-    # Calculate Energy
-    y, sr = librosa.load(audio_path, sr=None)
-    pitch_hz = np.asarray(result.pitch_hz)
-    target_len = len(pitch_hz)
-    timestamps = (
-        np.asarray(result.timestamps)
-        if hasattr(result, "timestamps")
-        else np.arange(target_len, dtype=float) * 0.01
-    )
-
-    # Align RMS hop with the actual SwiftF0 timeline.
-    inferred_frame_period = None
-    if len(timestamps) > 1:
-        dt = np.diff(timestamps.astype(float))
-        dt = dt[np.isfinite(dt) & (dt > 0)]
-        if len(dt) > 0:
-            inferred_frame_period = float(np.median(dt))
-
-    raw_frame_period = getattr(result, "frame_period", None)
-    try:
-        raw_frame_period = float(raw_frame_period) if raw_frame_period is not None else None
-    except (TypeError, ValueError):
-        raw_frame_period = None
-
-    if raw_frame_period is not None and np.isfinite(raw_frame_period) and raw_frame_period > 0:
-        frame_period = raw_frame_period
-    elif inferred_frame_period is not None:
-        frame_period = inferred_frame_period
-    else:
-        frame_period = 0.01
-
-    if (
-        inferred_frame_period is not None
-        and abs(frame_period - inferred_frame_period) > 5e-4
-    ):
-        print(
-            f"[AUDIO] frame_period mismatch (result={frame_period:.6f}s, "
-            f"timestamps={inferred_frame_period:.6f}s). Using timestamp-derived value."
+    if extractor == "pyin":
+        timestamps, pitch_hz, confidence, voicing, frame_period = _extract_pyin(
+            audio_path, fmin, fmax, confidence_threshold, hop_ms=hop_ms,
         )
-        frame_period = inferred_frame_period
+    else:
+        timestamps, pitch_hz, confidence, voicing, frame_period = _extract_swiftf0(
+            audio_path, fmin, fmax, confidence_threshold,
+        )
 
+    target_len = len(pitch_hz)
+
+    # Calculate Energy (shared across all extractors)
+    y, sr = librosa.load(audio_path, sr=None)
     hop_length = max(1, int(round(sr * frame_period)))
 
     if energy_metric == "log_amp":
         # ----- Log-amplitude (dBFS) with percentile normalisation -----
         print("[AUDIO] Calculating log-amplitude (dBFS) energy...")
-        # Frame-level RMS as the amplitude proxy, then convert to dB
         rms = librosa.feature.rms(y=y, hop_length=hop_length, center=False)[0]
         rms = _fit_array_to_length(rms, target_len)
 
-        eps = 1e-10  # avoid log(0)
-        db = 20.0 * np.log10(rms + eps)  # dBFS (full-scale relative to 1.0)
+        eps = 1e-10
+        db = 20.0 * np.log10(rms + eps)
 
-        # Percentile-based normalisation: map [p5, p95] -> [0, 1], clamp
         p5 = np.percentile(db, 5)
         p95 = np.percentile(db, 95)
-        if p95 - p5 < 1e-6:  # near-constant energy
+        if p95 - p5 < 1e-6:
             energy_norm = np.ones_like(db) * 0.5
         else:
             energy_norm = (db - p5) / (p95 - p5)
@@ -1384,7 +1450,6 @@ def extract_pitch(
         rms = librosa.feature.rms(y=y, hop_length=hop_length, center=False)[0]
         rms = _fit_array_to_length(rms, target_len)
 
-        # Normalize energy (0-1)
         energy_max = rms.max() if rms.max() > 0 else 1.0
         energy_norm = rms / energy_max
 
@@ -1399,39 +1464,35 @@ def extract_pitch(
         f"ts_range=[{ts_start:.3f}, {ts_end:.3f}], metric={energy_metric}, center=False, pad=zero"
     )
 
-    # Append energy as a separate column because SwiftF0 result objects are immutable.
-
-    # Export to CSV first
+    # Unified CSV export
     os.makedirs(output_dir, exist_ok=True)
-    export_to_csv(result, csv_path)
 
-    # Append energy to CSV
-    df = pd.read_csv(csv_path)
-    # Ensure lengths match
-    if len(df) != len(energy_norm):
-        print(f"[WARN] Length mismatch: CSV={len(df)}, Energy={len(energy_norm)}")
-        min_len = min(len(df), len(energy_norm))
-        df = df.iloc[:min_len]
-        energy_norm = energy_norm[:min_len]
-
-    df["energy"] = energy_norm
-    df.to_csv(csv_path, index=False)
-    print(f"[WRITE] Exported CSV with energy: {csv_path}")
-
-    # Convert to PitchData
-    confidence = np.asarray(result.confidence) if hasattr(result, "confidence") else np.ones_like(pitch_hz)
-    voicing = np.asarray(result.voicing) if hasattr(result, "voicing") else (pitch_hz > 0)
-
-    # Ensure all arrays match min_len if truncation occurred
-    if len(pitch_hz) != len(energy_norm):
-        min_len = min(len(pitch_hz), len(energy_norm))
+    # Ensure lengths match before export
+    if len(energy_norm) != target_len:
+        print(f"[WARN] Length mismatch: pitch={target_len}, Energy={len(energy_norm)}")
+        min_len = min(target_len, len(energy_norm))
         pitch_hz = pitch_hz[:min_len]
         timestamps = timestamps[:min_len]
         confidence = confidence[:min_len]
         voicing = voicing[:min_len]
         energy_norm = energy_norm[:min_len]
+        target_len = min_len
 
-    voiced_mask = (pitch_hz > 0) & voicing & (confidence >= confidence_threshold)
+    df = pd.DataFrame({
+        "time": timestamps,
+        "pitch_hz": pitch_hz,
+        "confidence": confidence,
+        "voicing": voicing,
+        "energy": energy_norm,
+    })
+    df.to_csv(csv_path, index=False)
+    print(f"[WRITE] Exported CSV with energy: {csv_path}")
+
+    # Build PitchData -- bake confidence threshold into voicing so that
+    # voiced_mask, voiced_times, and midi_vals are all consistent.
+    # (Raw voicing is already persisted in the CSV for cache reload.)
+    filtered_voicing = voicing & (confidence >= confidence_threshold)
+    voiced_mask = (pitch_hz > 0) & filtered_voicing
     valid_freqs = pitch_hz[voiced_mask]
     midi_vals = librosa.hz_to_midi(valid_freqs) if len(valid_freqs) > 0 else np.array([])
 
@@ -1439,7 +1500,7 @@ def extract_pitch(
         timestamps=timestamps,
         pitch_hz=pitch_hz,
         confidence=confidence,
-        voicing=voicing,
+        voicing=filtered_voicing,
         valid_freqs=valid_freqs,
         midi_vals=midi_vals,
         energy=energy_norm,
@@ -1543,4 +1604,6 @@ def extract_pitch_from_config(config: PipelineConfig, stem: str = "vocals") -> P
         confidence_threshold=confidence,
         force_recompute=config.force_recompute,
         energy_metric=getattr(config, 'energy_metric', 'rms'),
+        extractor=getattr(config, 'pitch_extractor', 'swiftf0'),
+        hop_ms=getattr(config, 'pitch_hop_ms', 0.0),
     )

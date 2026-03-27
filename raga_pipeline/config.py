@@ -27,6 +27,15 @@ LEGACY_RECORD_MODE_TO_INGEST = {
 }
 TANPURA_KEYS = ["A", "Bb", "B", "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab"]
 
+# Per-extractor default confidence thresholds.
+# pYIN voiced_probs are much lower than SwiftF0 (melody median ~0.18, accomp max ~0.76).
+# These defaults are applied when the user does not explicitly pass
+# --vocal-confidence / --accomp-confidence on the CLI.
+EXTRACTOR_CONFIDENCE_DEFAULTS = {
+    "swiftf0": {"vocal": 0.95, "accomp": 0.80},
+    "pyin":    {"vocal": 0.15, "accomp": 0.05},
+}
+
 
 def _clean_optional_str(value: Optional[str]) -> Optional[str]:
     """Trim optional CLI strings and normalize empty strings to None."""
@@ -106,6 +115,11 @@ class PipelineConfig:
     transcription_derivative_threshold: float = 4.0 # Stability threshold (semitones/sec)
     energy_threshold: float = 0.0 # Per-track normalized energy threshold (0-1) for note gating
     energy_metric: str = "rms"  # 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-normalised)
+
+    # Pitch extractor selection
+    pitch_extractor: str = "swiftf0"  # "swiftf0" or "pyin"
+    pitch_hop_ms: float = 0.0         # 0 = extractor default; applies to pyin only
+    compare_extractors: bool = False  # Analyze: run both SwiftF0 and pYIN, show toggled report
 
     # Phrase detection parameters
     phrase_max_gap: float = 1.0           # Max silence between notes in phrase
@@ -345,13 +359,45 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
     parser.add_argument(
         "--vocal-confidence",
         type=float,
-        default=0.95,
+        default=None,
         help=(
             "Confidence threshold (0-1) for melody pitch data. "
-            "Lower (0.90-0.95) to retain subtle taans; raise to suppress noisy transients."
+            "Default depends on --pitch-extractor: swiftf0=0.95, pyin=0.15. "
+            "Lower to retain subtle taans; raise to suppress noisy transients."
         ),
     )
-    parser.add_argument("--accomp-confidence", type=float, default=0.80, help="Confidence threshold (0-1) for accompaniment pitch data")
+    parser.add_argument(
+        "--accomp-confidence",
+        type=float,
+        default=None,
+        help=(
+            "Confidence threshold (0-1) for accompaniment pitch data. "
+            "Default depends on --pitch-extractor: swiftf0=0.80, pyin=0.05."
+        ),
+    )
+
+    # Pitch extractor selection
+    parser.add_argument(
+        "--pitch-extractor",
+        choices=["swiftf0", "pyin"],
+        default="swiftf0",
+        help="Pitch extraction backend. swiftf0 (default, 16ms hop fixed), "
+             "pyin (librosa, configurable hop).",
+    )
+    parser.add_argument(
+        "--pitch-hop-ms",
+        type=float,
+        default=0.0,
+        help="Pitch frame hop in milliseconds (pyin only). "
+             "0 = extractor default (~23ms). Lower for drut passages (e.g. 5).",
+    )
+    parser.add_argument(
+        "--compare-extractors",
+        action="store_true",
+        help="Analyze mode: run both SwiftF0 and pYIN, calibrate confidence "
+             "thresholds so both produce the same number of raw notes, and show "
+             "both transcriptions in the report with a toggle.",
+    )
 
     # Peak Detection settings
     parser.add_argument("--prominence-high", type=float, default=0.01, help="Prominence threshold factor for high-res peak detection")
@@ -609,6 +655,21 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
     # Determine effective mode (default to detect)
     mode = args.command if args.command in VALID_MODES else "detect"
 
+    # Validate --compare-extractors
+    compare_extractors = getattr(args, 'compare_extractors', False)
+    if compare_extractors and mode != "analyze":
+        parser.error("--compare-extractors is only supported in analyze mode.")
+
+    # Resolve extractor-specific confidence defaults when user did not override
+    extractor = getattr(args, 'pitch_extractor', 'swiftf0')
+    ext_defaults = EXTRACTOR_CONFIDENCE_DEFAULTS.get(
+        extractor, EXTRACTOR_CONFIDENCE_DEFAULTS["swiftf0"]
+    )
+    raw_vocal_conf = getattr(args, 'vocal_confidence', None)
+    raw_accomp_conf = getattr(args, 'accomp_confidence', None)
+    resolved_vocal_conf = raw_vocal_conf if raw_vocal_conf is not None else ext_defaults["vocal"]
+    resolved_accomp_conf = raw_accomp_conf if raw_accomp_conf is not None else ext_defaults["accomp"]
+
     return PipelineConfig(
         audio_path=getattr(args, 'audio', None),
         output_dir=getattr(args, 'output', 'batch_results'),
@@ -626,8 +687,8 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         vocalist_gender=getattr(args, 'vocalist_gender', None),
         instrument_type=getattr(args, 'instrument_type', 'autodetect'),
         skip_separation=getattr(args, 'skip_separation', False),
-        vocal_confidence=getattr(args, 'vocal_confidence', 0.95),
-        accomp_confidence=getattr(args, 'accomp_confidence', 0.80),
+        vocal_confidence=resolved_vocal_conf,
+        accomp_confidence=resolved_accomp_conf,
         force_recompute=getattr(args, 'force', False),
         force_stem_recompute=getattr(args, 'force_stem_recompute', False),
         skip_report=getattr(args, 'skip_report', False),
@@ -645,6 +706,9 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         transcription_derivative_threshold=getattr(args, 'transcription_stability_threshold', 4.0),
         energy_threshold=getattr(args, 'energy_threshold', 0.0),
         energy_metric=getattr(args, 'energy_metric', 'rms'),
+        pitch_extractor=getattr(args, 'pitch_extractor', 'swiftf0'),
+        pitch_hop_ms=getattr(args, 'pitch_hop_ms', 0.0),
+        compare_extractors=compare_extractors,
         silence_threshold=getattr(args, 'silence_threshold', 0.0),
         silence_min_duration=getattr(args, 'silence_min_duration', 0.25),
         phrase_min_duration=getattr(args, 'phrase_min_duration', 0.2),

@@ -31,6 +31,7 @@ from raga_pipeline.audio import (
     ingest_recorded_audio_file,
     record_microphone_audio_interactive,
     get_tonic_from_tanpura_key,
+    _pitch_csv_path,
 )
 from raga_pipeline.analysis import (
     compute_cent_histograms, 
@@ -68,6 +69,7 @@ from raga_pipeline.sequence import (
 from raga_pipeline.output import (
     AnalysisResults,
     AnalysisStats,
+    ExtractorTranscription,
     plot_histograms,
     plot_absolute_note_histogram,
     plot_gmm_overlay,
@@ -119,6 +121,249 @@ def _print_timing(label: str, elapsed_s: float, audio_duration_s: float | None) 
         f"[TIMER] {label}: {_format_seconds(elapsed_s)} | "
         f"{ratio:.3f}x song length | {speedup_txt} realtime"
     )
+
+
+def _transcribe_for_extractor(
+    pitch_data, config, results, raga_db, aaroh_avroh_lookup,
+    aaroh_avroh_subset_path, extractor_name, confidence_threshold,
+):
+    """Run full transcription pipeline for a single extractor's pitch data.
+    Returns an ExtractorTranscription."""
+    import copy
+
+    derivative_profile = {}
+    raw_notes = transcription.transcribe_to_notes(
+        pitch_hz=pitch_data.pitch_hz,
+        timestamps=pitch_data.timestamps,
+        voicing_mask=pitch_data.voiced_mask,
+        tonic=results.detected_tonic,
+        energy=pitch_data.energy,
+        energy_threshold=config.energy_threshold,
+        smoothing_sigma_ms=config.transcription_smoothing_ms,
+        min_event_duration=config.transcription_min_duration,
+        derivative_threshold=config.transcription_derivative_threshold,
+        snap_mode='chromatic',
+        transcription_min_duration=config.transcription_min_duration,
+        bias_cents=results.gmm_bias_cents or 0.0,
+        derivative_profile_out=derivative_profile,
+    )
+
+    # Raga correction
+    correction_summary = {}
+    if raga_db and results.detected_raga:
+        strict_raga_max_cents = max(float(getattr(config, "strict_raga_max_cents", 35.0)), 0.0)
+        raga_max_distance = (strict_raga_max_cents / 100.0) if config.strict_raga_35c_filter else 1.0
+        keep_impure = config.keep_impure_notes
+        if config.strict_raga_35c_filter and keep_impure:
+            keep_impure = False
+        notes, correction_stats, _ = apply_raga_correction_to_notes(
+            raw_notes, raga_db, results.detected_raga, results.detected_tonic,
+            max_distance=raga_max_distance, keep_impure=keep_impure,
+        )
+        correction_summary = correction_stats
+    else:
+        notes = raw_notes
+
+    # Merge
+    notes = merge_consecutive_notes(notes, max_gap=0.1, pitch_tolerance=0.7,
+                                     max_dropout_gap=0.18, dropout_fragment_duration=0.12)
+
+    # Phrase detection + silence split + collapse
+    phrases = detect_phrases(notes, max_gap=config.phrase_max_gap,
+                              min_length=config.phrase_min_length,
+                              min_phrase_duration=config.phrase_min_duration)
+    silence_thresh = config.silence_threshold
+    if silence_thresh <= 0 and config.energy_threshold > 0:
+        silence_thresh = config.energy_threshold
+    if silence_thresh > 0:
+        phrases = split_phrases_by_silence(
+            phrases=phrases, energy=pitch_data.energy,
+            timestamps=pitch_data.timestamps,
+            silence_threshold=silence_thresh,
+            silence_min_duration=config.silence_min_duration,
+        )
+
+    # Phrase-level collapse
+    if phrases:
+        collapsed = []
+        for phrase in phrases:
+            collapsed_notes = merge_consecutive_notes(
+                phrase.notes, max_gap=config.phrase_max_gap, pitch_tolerance=0.7,
+                max_dropout_gap=config.phrase_max_gap,
+                dropout_fragment_duration=config.phrase_max_gap,
+            )
+            collapsed.append(phrase.__class__(notes=collapsed_notes))
+        phrases = collapsed
+        notes = [n for p in phrases for n in p.notes]
+
+    # Filter
+    phrases = [p for p in phrases
+               if p.duration >= config.phrase_min_duration
+               and len(p.notes) >= config.phrase_min_length]
+
+    phrase_clusters = cluster_phrases(phrases)
+
+    # Pattern analysis
+    expected_pattern = None
+    if aaroh_avroh_lookup and results.detected_raga:
+        expected_pattern = get_aaroh_avroh_pattern_for_raga(
+            results.detected_raga, aaroh_avroh_lookup)
+    if expected_pattern:
+        pattern_results = analyze_raga_patterns(
+            phrases, results.detected_tonic,
+            expected_aaroh=expected_pattern.aaroh_pattern,
+            expected_avroh=expected_pattern.avroh_pattern,
+        )
+    else:
+        pattern_results = analyze_raga_patterns(phrases, results.detected_tonic)
+
+    return ExtractorTranscription(
+        extractor=extractor_name,
+        pitch_data=pitch_data,
+        notes=notes,
+        phrases=phrases,
+        phrase_clusters=phrase_clusters,
+        pattern_analysis=pattern_results,
+        correction_summary=correction_summary,
+        confidence_threshold=confidence_threshold,
+        derivative_timestamps=derivative_profile.get("timestamps"),
+        derivative_values=derivative_profile.get("values"),
+        derivative_voiced_mask=derivative_profile.get("voiced_mask"),
+    )
+
+
+def _run_compare_extractors(config, results, stem_dir, melody_path,
+                             fmin, fmax, raga_db, aaroh_avroh_lookup,
+                             aaroh_avroh_subset_path):
+    """Run both SwiftF0 and pYIN, calibrate note counts, populate results."""
+    from raga_pipeline.config import EXTRACTOR_CONFIDENCE_DEFAULTS
+
+    print("\n[COMPARE] Running dual-extractor comparison (SwiftF0 + pYIN)...")
+
+    # 1. Extract pitch with both backends at confidence=0
+    extractors = {}
+    for ext_name in ["swiftf0", "pyin"]:
+        print(f"  [{ext_name.upper()}] Extracting pitch at confidence=0...")
+        pd_raw = extract_pitch(
+            audio_path=melody_path,
+            output_dir=stem_dir,
+            prefix="melody" if config.source_type != "vocal" else "vocals",
+            fmin=fmin, fmax=fmax,
+            confidence_threshold=0.0,
+            force_recompute=config.force_recompute,
+            energy_metric=config.energy_metric,
+            extractor=ext_name,
+            hop_ms=config.pitch_hop_ms if ext_name == "pyin" else 0.0,
+        )
+        extractors[ext_name] = pd_raw
+
+    # 2. Count raw notes from each at confidence=0
+    counts = {}
+    for ext_name, pd_raw in extractors.items():
+        raw_notes = transcription.transcribe_to_notes(
+            pitch_hz=pd_raw.pitch_hz,
+            timestamps=pd_raw.timestamps,
+            voicing_mask=pd_raw.voiced_mask,
+            tonic=results.detected_tonic,
+            energy=pd_raw.energy,
+            energy_threshold=config.energy_threshold,
+            smoothing_sigma_ms=config.transcription_smoothing_ms,
+            min_event_duration=config.transcription_min_duration,
+            derivative_threshold=config.transcription_derivative_threshold,
+            snap_mode='chromatic',
+            transcription_min_duration=config.transcription_min_duration,
+            bias_cents=results.gmm_bias_cents or 0.0,
+        )
+        counts[ext_name] = len(raw_notes)
+        print(f"  [{ext_name.upper()}] Raw notes at conf=0: {len(raw_notes)}")
+
+    # 3. Calibrate both extractors to the same proportion of their max notes.
+    #    Use the extractor with fewer notes to determine the target percentage
+    #    (that extractor keeps 100% at conf=0; the other is reduced to match).
+    min_ext = min(counts, key=counts.get)
+    max_ext = max(counts, key=counts.get)
+    if counts[min_ext] == counts[max_ext]:
+        target_pct = 1.0
+    else:
+        target_pct = counts[min_ext] / counts[max_ext]
+    print(f"  [COMPARE] Target proportion: {target_pct:.3f} "
+          f"({counts[min_ext]}/{counts[max_ext]} notes)")
+
+    calibrated_thresholds = {}
+
+    def _binary_search_threshold(ext_name, target_count):
+        """Find confidence threshold that produces target_count raw notes."""
+        pd_raw = extractors[ext_name]
+        lo, hi = 0.0, 1.0
+        best_t, best_diff = 0.0, abs(counts[ext_name] - target_count)
+        for _ in range(20):
+            mid = (lo + hi) / 2.0
+            pd_threshed = pd_raw.apply_confidence_threshold(mid)
+            notes = transcription.transcribe_to_notes(
+                pitch_hz=pd_threshed.pitch_hz,
+                timestamps=pd_threshed.timestamps,
+                voicing_mask=pd_threshed.voiced_mask,
+                tonic=results.detected_tonic,
+                energy=pd_threshed.energy,
+                energy_threshold=config.energy_threshold,
+                smoothing_sigma_ms=config.transcription_smoothing_ms,
+                min_event_duration=config.transcription_min_duration,
+                derivative_threshold=config.transcription_derivative_threshold,
+                snap_mode='chromatic',
+                transcription_min_duration=config.transcription_min_duration,
+                bias_cents=results.gmm_bias_cents or 0.0,
+            )
+            n = len(notes)
+            diff = abs(n - target_count)
+            if diff < best_diff:
+                best_diff = diff
+                best_t = mid
+            if n > target_count:
+                lo = mid
+            elif n < target_count:
+                hi = mid
+            else:
+                best_t = mid
+                break
+        return best_t
+
+    for ext_name in extractors:
+        target_count = int(round(counts[ext_name] * target_pct))
+        if target_count >= counts[ext_name]:
+            calibrated_thresholds[ext_name] = 0.0
+        else:
+            calibrated_thresholds[ext_name] = _binary_search_threshold(
+                ext_name, target_count)
+        print(f"  [{ext_name.upper()}] Calibrated confidence={calibrated_thresholds[ext_name]:.4f} "
+              f"(target={target_count}/{counts[ext_name]} notes, {target_pct:.1%})")
+
+    # 4. Run full transcription at calibrated thresholds
+    for ext_name in ["swiftf0", "pyin"]:
+        t = calibrated_thresholds[ext_name]
+        pd_calibrated = extractors[ext_name]
+        if t > 0:
+            pd_calibrated = pd_calibrated.apply_confidence_threshold(t)
+        print(f"  [{ext_name.upper()}] Running full transcription pipeline (conf={t:.4f})...")
+        ext_result = _transcribe_for_extractor(
+            pd_calibrated, config, results, raga_db,
+            aaroh_avroh_lookup, aaroh_avroh_subset_path,
+            ext_name, t,
+        )
+        results.extractor_transcriptions[ext_name] = ext_result
+        print(f"  [{ext_name.upper()}] {len(ext_result.notes)} notes, "
+              f"{len(ext_result.phrases)} phrases")
+
+    # 5. Populate primary fields from config.pitch_extractor for backward compat
+    primary = config.pitch_extractor
+    if primary in results.extractor_transcriptions:
+        prim = results.extractor_transcriptions[primary]
+        results.notes = prim.notes
+        results.phrases = prim.phrases
+        results.phrase_clusters = prim.phrase_clusters
+        results.pitch_data_vocals = prim.pitch_data
+        results.transcription_derivative_timestamps = prim.derivative_timestamps
+        results.transcription_derivative_values = prim.derivative_values
+        results.transcription_derivative_voiced_mask = prim.derivative_voiced_mask
 
 
 def run_pipeline(
@@ -300,14 +545,24 @@ def run_pipeline(
         melody_prefix = None
         melody_pitch_csv = None
         for prefix in prefix_candidates:
-            candidate_csv = os.path.join(config.stem_dir, f"{prefix}_pitch_data.csv")
+            # Try extractor-specific cache first, then legacy name
+            candidate_csv = _pitch_csv_path(config.stem_dir, prefix, config.pitch_extractor)
             if os.path.exists(candidate_csv):
                 melody_prefix = prefix
                 melody_pitch_csv = candidate_csv
                 break
+            legacy_csv = os.path.join(config.stem_dir, f"{prefix}_pitch_data.csv")
+            if os.path.exists(legacy_csv):
+                melody_prefix = prefix
+                melody_pitch_csv = legacy_csv
+                break
 
-        accomp_pitch_csv = os.path.join(config.stem_dir, "accompaniment_pitch_data.csv")
-        composite_pitch_csv = os.path.join(config.stem_dir, "composite_pitch_data.csv")
+        accomp_pitch_csv = _pitch_csv_path(config.stem_dir, "accompaniment", config.pitch_extractor)
+        if not os.path.exists(accomp_pitch_csv):
+            accomp_pitch_csv = os.path.join(config.stem_dir, "accompaniment_pitch_data.csv")
+        composite_pitch_csv = _pitch_csv_path(config.stem_dir, "composite", config.pitch_extractor)
+        if not os.path.exists(composite_pitch_csv):
+            composite_pitch_csv = os.path.join(config.stem_dir, "composite_pitch_data.csv")
         if melody_prefix is None and os.path.exists(composite_pitch_csv):
             melody_prefix = "composite"
             melody_pitch_csv = composite_pitch_csv
@@ -340,6 +595,9 @@ def run_pipeline(
             confidence_threshold=config.vocal_confidence,
             force_recompute=config.force_recompute,
             energy_metric=config.energy_metric,
+            extractor=config.pitch_extractor,
+            hop_ms=config.pitch_hop_ms,
+
         )
         results.pitch_data_stem = pitch_data_stems
         if melody_prefix == "composite":
@@ -356,6 +614,9 @@ def run_pipeline(
                 confidence_threshold=config.vocal_confidence,
                 force_recompute=config.force_recompute,
                 energy_metric=config.energy_metric,
+                extractor=config.pitch_extractor,
+                hop_ms=config.pitch_hop_ms,
+    
             )
             
         # Assign primary melody based on config
@@ -377,6 +638,9 @@ def run_pipeline(
                 confidence_threshold=config.accomp_confidence,
                 force_recompute=config.force_recompute,
                 energy_metric=config.energy_metric,
+                extractor=config.pitch_extractor,
+                hop_ms=config.pitch_hop_ms,
+    
             )
         else:
             results.pitch_data_accomp = None
@@ -435,6 +699,9 @@ def run_pipeline(
             confidence_threshold=config.vocal_confidence, # Use vocal confidence for now
             force_recompute=config.force_recompute,
             energy_metric=config.energy_metric,
+            extractor=config.pitch_extractor,
+            hop_ms=config.pitch_hop_ms,
+
         )
         
         # 2b. Stem Pitch (Vocals/Melody)
@@ -452,6 +719,9 @@ def run_pipeline(
                 confidence_threshold=config.vocal_confidence,
                 force_recompute=config.force_recompute,
                 energy_metric=config.energy_metric,
+                extractor=config.pitch_extractor,
+                hop_ms=config.pitch_hop_ms,
+    
             )
         assert pitch_data_stems is not None
         results.pitch_data_stem = pitch_data_stems
@@ -468,6 +738,9 @@ def run_pipeline(
                 confidence_threshold=config.accomp_confidence,
                 force_recompute=config.force_recompute,
                 energy_metric=config.energy_metric,
+                extractor=config.pitch_extractor,
+                hop_ms=config.pitch_hop_ms,
+    
             )
         else:
             results.pitch_data_accomp = None
@@ -697,8 +970,59 @@ def run_pipeline(
     # Needs a tonic to proceed with sargam/transcription
     if results.detected_tonic is None:
         print("  [WARN] No tonic detected/provided. Skipping sargam analysis.")
+    elif config.compare_extractors:
+        # Dual-extractor compare mode
+        _run_compare_extractors(
+            config, results, config.stem_dir, melody_audio_path, fmin, fmax,
+            raga_db, aaroh_avroh_lookup, aaroh_avroh_subset_path,
+        )
+        # Use primary extractor's data for plots/stats
+        primary_key = config.pitch_extractor
+        prim_ext = results.extractor_transcriptions.get(primary_key)
+        correction_summary = prim_ext.correction_summary if prim_ext else {}
+        pattern_results = prim_ext.pattern_analysis if prim_ext else {}
+
+        # CSV + histogram (from primary)
+        csv_path = os.path.join(config.stem_dir, "transcribed_notes.csv")
+        save_notes_to_csv(results.notes, csv_path)
+        print(f"  Saved notes: {csv_path}")
+
+        note_duration_hist_path = os.path.join(config.stem_dir, "note_duration_histogram.png")
+        plot_note_duration_histogram(results.notes, note_duration_hist_path)
+        results.plot_paths["note_duration_histogram"] = note_duration_hist_path
+
+        # Transition matrix (from primary)
+        tm_matrix, tm_labels, tm_stats = build_transition_matrix_corrected(
+            results.phrases, results.detected_tonic)
+        tm_path = os.path.join(config.stem_dir, "transition_matrix.png")
+        plot_transition_heatmap_v2(tm_matrix, tm_labels, tm_path)
+
+        # Pitch sargam plot (from primary)
+        pp_path = os.path.join(config.stem_dir, "pitch_sargam.png")
+        raga_name = results.detected_raga or "Unknown"
+        plot_pitch_with_sargam_lines(
+            results.pitch_data_vocals.voiced_times,
+            results.pitch_data_vocals.midi_vals,
+            results.detected_tonic, raga_name, pp_path,
+            phrase_ranges=[(p.start, p.end) for p in results.phrases if p.end > p.start],
+            bias_cents=results.gmm_bias_cents,
+        )
+
+        # Note segments
+        notes_path = os.path.join(config.stem_dir, "note_segments.png")
+        plot_note_segments(results.pitch_data_vocals, results.notes, notes_path,
+                          tonic=results.detected_tonic)
+
+        # Stats
+        stats_obj = AnalysisStats(
+            correction_summary=correction_summary,
+            pattern_analysis=pattern_results,
+            raga_name=raga_name,
+            tonic=_tonic_name(results.detected_tonic),
+            transition_matrix_path=tm_path,
+            pitch_plot_path=pp_path,
+        )
     else:
-        # Note detection
         # Note detection - Unified Transcription
         print(f"  Using Unified Transcription (Stationary + Inflection)")
         derivative_profile = {}

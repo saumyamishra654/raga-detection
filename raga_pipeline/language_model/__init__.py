@@ -376,6 +376,183 @@ def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[str]:
     return tokenize_notes_for_lm(notes, tonic_midi)
 
 
+def _load_note_timestamps_from_csv(csv_path: Path) -> List[Tuple[float, float]]:
+    """Read (start, end) timestamp pairs from a transcription CSV.
+
+    Returns a list parallel to the notes in the file (one entry per valid row).
+    Rows that cannot be parsed are skipped, matching the skip logic in
+    :func:`_load_notes_from_csv`.
+    """
+    timestamps: List[Tuple[float, float]] = []
+    try:
+        with csv_path.open("r", encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            fieldnames = reader.fieldnames or []
+            start_col = _find_col(fieldnames, ["start", "start_time"])
+            end_col = _find_col(fieldnames, ["end", "end_time"])
+            midi_col = _find_col(fieldnames, ["pitch_midi", "midi"])
+            sargam_col = _find_col(fieldnames, ["sargam"])
+            for row in reader:
+                try:
+                    start = float(row[start_col]) if start_col else 0.0
+                    end = float(row[end_col]) if end_col else 0.0
+                    # Validate that pitch and sargam columns parse too so we
+                    # stay in sync with the note-loading logic above.
+                    if midi_col:
+                        float(row[midi_col])
+                    if sargam_col:
+                        str(row[sargam_col]).strip()
+                    timestamps.append((start, end))
+                except (ValueError, KeyError, TypeError):
+                    continue
+    except OSError:
+        pass
+    return timestamps
+
+
+def score_transcription(
+    model_path: str,
+    transcription_path: str,
+    tonic: str,
+    segments: bool = False,
+    segment_window: int = 100,
+    top_k: int = 5,
+    output: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Score a transcription against a trained n-gram model.
+
+    Loads the model from *model_path*, tokenizes the transcription CSV at
+    *transcription_path* using *tonic* as the reference pitch, and ranks all
+    ragas in the model by average log-likelihood.
+
+    Args:
+        model_path: Path to a JSON model file produced by :func:`train_model`.
+        transcription_path: Path to a ``transcribed_notes.csv`` file.
+        tonic: Tonic note name (e.g. ``"C"``, ``"C#"``).
+        segments: When True, also return segment-level rankings using a
+            sliding window of *segment_window* tokens with 50 % overlap.
+        segment_window: Number of tokens per segment window (default 100).
+        top_k: Maximum number of ragas to include in the overall ranking
+            (default 5).  Segment-level results always include 3 ragas.
+        output: Optional path to write the result dict as JSON.
+
+    Returns:
+        A dict with the following keys:
+
+        - ``"rankings"``: list of ``{"raga": str, "score": float, "rank": int}``
+          sorted highest-score-first, limited to *top_k* entries.
+        - ``"segments"`` (only when *segments* is True): list of segment dicts,
+          each with ``"start_time"``, ``"end_time"``,
+          ``"token_range": [start_idx, end_idx]``, and
+          ``"top_ragas": [{"raga": str, "score": float}, ...]`` (top 3).
+        - ``"error"`` (only on failure): human-readable error string.
+    """
+    # Load model.
+    try:
+        with open(model_path, "r", encoding="utf-8") as fh:
+            model = NgramModel.from_dict(json.load(fh))
+    except (OSError, KeyError, ValueError) as exc:
+        return {"error": f"failed to load model: {exc}"}
+
+    # Tokenize transcription.
+    tonic_midi = _tonic_name_to_midi(tonic)
+    trans_path = Path(transcription_path)
+    tokens = _load_notes_from_csv(trans_path, tonic_midi)
+
+    if not tokens:
+        return {"error": "no tokens extracted from transcription"}
+
+    # Whole-recording ranking.
+    ranked = model.rank_ragas(tokens)
+    rankings = [
+        {"raga": raga, "score": round(score, 4), "rank": i + 1}
+        for i, (raga, score) in enumerate(ranked[:top_k])
+    ]
+
+    result: Dict[str, Any] = {"rankings": rankings}
+
+    # Segment-level scoring.
+    if segments:
+        # Build a parallel list that maps each token index to a note timestamp.
+        # Tokens contain <BOS> markers interspersed among note tokens.
+        # We need to resolve each token position to a time span.
+        timestamps = _load_note_timestamps_from_csv(trans_path)
+
+        # Walk the token list and record a (start_time, end_time) for every
+        # token.  <BOS> tokens get the timestamp of the next note; the last
+        # <BOS> (if any) at the very end gets the last note's end time.
+        token_times: List[Tuple[float, float]] = []
+        note_idx = 0
+        n_tokens = len(tokens)
+
+        for tok_idx, tok in enumerate(tokens):
+            if tok == "<BOS>":
+                # Look ahead to find the next note token's start time.
+                lookahead_note_idx = note_idx  # note_idx hasn't advanced yet
+                # Count ahead in the token list to find next non-BOS token.
+                future_note_offset = 0
+                for future_tok in tokens[tok_idx + 1:]:
+                    if future_tok != "<BOS>":
+                        break
+                    future_note_offset += 1
+
+                idx = lookahead_note_idx + future_note_offset
+                if idx < len(timestamps):
+                    token_times.append(timestamps[idx])
+                elif timestamps:
+                    token_times.append(timestamps[-1])
+                else:
+                    token_times.append((0.0, 0.0))
+            else:
+                if note_idx < len(timestamps):
+                    token_times.append(timestamps[note_idx])
+                elif timestamps:
+                    token_times.append(timestamps[-1])
+                else:
+                    token_times.append((0.0, 0.0))
+                note_idx += 1
+
+        # Slide a window of segment_window tokens with 50 % overlap.
+        step = max(1, segment_window // 2)
+        seg_results: List[Dict[str, Any]] = []
+
+        start = 0
+        while start < n_tokens:
+            end = min(start + segment_window, n_tokens)
+            seg_tokens = tokens[start:end]
+
+            seg_start_time = token_times[start][0] if start < len(token_times) else 0.0
+            seg_end_time = token_times[end - 1][1] if (end - 1) < len(token_times) else 0.0
+
+            seg_ranked = model.rank_ragas(seg_tokens)
+            top_ragas = [
+                {"raga": r, "score": round(s, 4)}
+                for r, s in seg_ranked[:3]
+            ]
+
+            seg_results.append({
+                "start_time": seg_start_time,
+                "end_time": seg_end_time,
+                "token_range": [start, end],
+                "top_ragas": top_ragas,
+            })
+
+            if end == n_tokens:
+                break
+            start += step
+
+        result["segments"] = seg_results
+
+    # Optional file output.
+    if output is not None:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with out_path.open("w", encoding="utf-8") as fh:
+            json.dump(result, fh, indent=2)
+
+    return result
+
+
 def train_model(
     ground_truth: str,
     results_dir: str,

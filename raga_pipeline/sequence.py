@@ -1659,3 +1659,60 @@ def cluster_notes_into_phrases(
         phrases.append(Phrase(notes=note_objs))
 
     return phrases, breaks_indices, threshold_used
+
+
+# =============================================================================
+# LM TOKENIZER
+# =============================================================================
+
+def tokenize_notes_for_lm(
+    notes: List[Note],
+    tonic_midi: float,
+    phrase_gap_sec: float = 0.25,
+) -> List[str]:
+    """Convert note list to LM tokens with octave markers and phrase boundaries.
+
+    Token format:
+        - Middle octave (containing tonic): bare sargam, e.g. ``Sa``, ``Re``
+        - One octave below: single apostrophe suffix, e.g. ``Ni'``, ``Dha'``
+        - One octave above: double apostrophe suffix, e.g. ``Sa''``
+        - Beyond: clipped to nearest boundary octave
+
+    Phrase boundaries (gaps > *phrase_gap_sec* between consecutive notes)
+    insert a ``<BOS>`` token.
+
+    Returns:
+        List of string tokens, e.g.
+        ``['<BOS>', 'Sa', 'Re', 'Ga', '<BOS>', 'Ni\\'', 'Re', ...]``
+    """
+    if not notes:
+        return []
+
+    tonic_octave = int(round(tonic_midi)) // 12
+
+    tokens: List[str] = []
+    prev_end: Optional[float] = None
+
+    for note in notes:
+        # Insert phrase boundary on gap or at start
+        if prev_end is None or (note.start - prev_end) > phrase_gap_sec:
+            tokens.append("<BOS>")
+
+        midi_rounded = int(round(note.pitch_midi))
+        offset = (midi_rounded - int(round(tonic_midi))) % 12
+        sargam = OFFSET_TO_SARGAM.get(offset, f"?{offset}")
+
+        note_octave = midi_rounded // 12
+        octave_diff = note_octave - tonic_octave
+
+        # Clip to [-1, +1] range
+        if octave_diff <= -1:
+            sargam += "'"
+        elif octave_diff >= 1:
+            sargam += "''"
+        # else: middle octave, bare sargam
+
+        tokens.append(sargam)
+        prev_end = note.end
+
+    return tokens

@@ -7,7 +7,7 @@ import os
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 
 class NgramModel:
@@ -318,7 +318,7 @@ def _normalize_col_header(value: str) -> str:
     return "".join(ch.lower() for ch in str(value or "") if ch.isalnum())
 
 
-def _find_col(fieldnames: List[str], aliases: List[str]) -> Optional[str]:
+def _find_col(fieldnames: Sequence[str], aliases: Sequence[str]) -> Optional[str]:
     norm: Dict[str, str] = {_normalize_col_header(n): n for n in fieldnames if n}
     for alias in aliases:
         resolved = norm.get(_normalize_col_header(alias))

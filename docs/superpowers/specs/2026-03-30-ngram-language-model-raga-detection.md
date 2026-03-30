@@ -93,7 +93,7 @@ For each raga r with recordings R_1..R_k:
 
 1. Tokenize each recording's transcription
 2. Pool all tokens for raga r
-3. Count n-grams for orders 1 through `--order` (default 3)
+3. Count n-grams for orders 1 through `--order` (default 5)
 4. Apply smoothing
 5. Compute interpolation weights (lambdas)
 
@@ -108,13 +108,13 @@ Start with `add-k`. Switch to Kneser-Kney if evaluation shows it matters.
 
 ### Interpolation
 
-Final probability for a token given context:
+Final probability for a token given context (example for order 5):
 
-```
-P(w | c2, c1) = L3 * P_trigram(w | c2, c1) + L2 * P_bigram(w | c1) + L1 * P_unigram(w)
+```text
+P(w | c4..c1) = L5*P_5gram + L4*P_4gram + L3*P_3gram + L2*P_bigram + L1*P_unigram
 ```
 
-Default lambdas: `L3=0.6, L2=0.3, L1=0.1`. Optionally tune via held-out likelihood on training data (grid search or EM).
+Default: equal-weight interpolation across all orders. Optionally tune via held-out likelihood on training data (grid search or EM).
 
 ### Model serialization
 
@@ -123,10 +123,10 @@ JSON file with this structure:
 ```json
 {
   "metadata": {
-    "order": 3,
+    "order": 5,
     "smoothing": "add-k",
     "smoothing_params": {"k": 0.01},
-    "lambdas": [0.6, 0.3, 0.1],
+    "lambdas": [0.2, 0.2, 0.2, 0.2, 0.2],
     "vocabulary": ["Sa", "re", "Re", "ga", "Ga", "ma", "Ma", "Pa", "dha", "Dha", "ni", "Ni", "Sa'", "..."],
     "training_recordings": 270,
     "training_ragas": 30,
@@ -138,7 +138,9 @@ JSON file with this structure:
       "total_tokens": 45000,
       "unigrams": {"Sa": 5200, "Re": 4100, "Ga": 6300, "...": "..."},
       "bigrams": {"Sa|Re": 2100, "Re|Ga": 3400, "...": "..."},
-      "trigrams": {"Sa|Re|Ga": 1800, "Ni'|Re|Ga": 950, "...": "..."}
+      "trigrams": {"Sa|Re|Ga": 1800, "Ni'|Re|Ga": 950, "...": "..."},
+      "4grams": {"Sa|Re|Ga|ma": 900, "...": "..."},
+      "5grams": {"Sa|Re|Ga|ma|Pa": 400, "...": "..."}
     },
     "Bhairav": { "..." : "..." }
   }
@@ -214,6 +216,10 @@ Leave-one-out cross-validation per raga: for each recording, train on all other 
 - **Per-raga accuracy**: breakdown by raga (identifies which ragas are hard)
 - **Confusion pairs**: which raga pairs are most often confused (e.g., Yaman/Kalyan)
 
+### Order sweep
+
+The `--sweep-orders` flag in `evaluate` runs the full leave-one-out evaluation at each specified order and produces a summary table: accuracy vs. n-gram order. This shows where returns diminish and how much sequential context ragas need for discrimination. Literature suggests orders 4-5 should outperform trigrams for music; the sweep confirms this empirically on our corpus.
+
 ### Baselines for comparison
 
 1. **Histogram scorer** (existing 8-coefficient `RagaScorer`)
@@ -252,11 +258,11 @@ python -m raga_pipeline.language_model train \
 | `--gt` | required | Ground-truth CSV (filename, raga, tonic) |
 | `--results-dir` | required | Batch results directory with transcription CSVs |
 | `--output` | `raga_ngram_model.json` | Output model path |
-| `--order` | `3` | Maximum n-gram order |
+| `--order` | `5` | Maximum n-gram order |
 | `--smoothing` | `add-k` | Smoothing method (`add-k` or `kneser-ney`) |
 | `--smoothing-k` | `0.01` | k parameter for add-k smoothing |
 | `--min-recordings` | `3` | Skip ragas with fewer recordings |
-| `--lambdas` | `0.6,0.3,0.1` | Interpolation weights (highest order first) |
+| `--lambdas` | equal weight | Interpolation weights (highest order first, comma-separated) |
 
 ### `score`
 
@@ -285,20 +291,22 @@ python -m raga_pipeline.language_model score \
 python -m raga_pipeline.language_model evaluate \
     --gt ground_truth.csv \
     --results-dir batch_results/ \
-    --order 3 \
+    --order 5 \
     --smoothing add-k \
-    --output eval_results.csv
+    --output eval_results.csv \
+    --sweep-orders 2,3,4,5,6
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--gt` | required | Ground-truth CSV |
 | `--results-dir` | required | Batch results directory |
-| `--order` | `3` | Maximum n-gram order |
+| `--order` | `5` | Maximum n-gram order |
 | `--smoothing` | `add-k` | Smoothing method |
 | `--smoothing-k` | `0.01` | k parameter |
 | `--min-recordings` | `3` | Skip ragas with fewer recordings |
-| `--lambdas` | `0.6,0.3,0.1` | Interpolation weights |
+| `--lambdas` | equal weight | Interpolation weights |
+| `--sweep-orders` | None | Comma-separated orders to sweep (e.g., `2,3,4,5,6`); runs full eval for each |
 | `--output` | `eval_results.csv` | Output CSV path |
 
 ---

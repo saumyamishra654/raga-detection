@@ -1,8 +1,13 @@
 """Per-raga n-gram language models for raga detection. CLI entry point: python -m raga_pipeline.language_model train|score|evaluate ..."""
 
+import csv
+import json
 import math
+import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class NgramModel:
@@ -282,3 +287,227 @@ class NgramModel:
 
         model._finalized = True
         return model
+
+
+# =============================================================================
+# Training helpers
+# =============================================================================
+
+_TONIC_MAP: Dict[str, int] = {
+    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3,
+    "E": 4, "Fb": 4, "F": 5, "E#": 5, "F#": 6, "Gb": 6,
+    "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10,
+    "B": 11, "Cb": 11,
+}
+
+
+def _tonic_name_to_midi(tonic: str) -> float:
+    """Convert a tonic name to a MIDI note number in octave 4.
+
+    E.g. "C" -> 60.0, "C#" -> 61.0, "G" -> 67.0.
+    Returns 60.0 (middle C) as a fallback for unknown tonic names.
+    """
+    pc = _TONIC_MAP.get(tonic.strip())
+    if pc is None:
+        return 60.0
+    # Octave 4 in MIDI convention: C4 = 60.
+    return float(60 + pc)
+
+
+def _normalize_col_header(value: str) -> str:
+    return "".join(ch.lower() for ch in str(value or "") if ch.isalnum())
+
+
+def _find_col(fieldnames: List[str], aliases: List[str]) -> Optional[str]:
+    norm: Dict[str, str] = {_normalize_col_header(n): n for n in fieldnames if n}
+    for alias in aliases:
+        resolved = norm.get(_normalize_col_header(alias))
+        if resolved is not None:
+            return resolved
+    return None
+
+
+def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[str]:
+    """Read a transcription CSV, build Note objects, and return LM tokens.
+
+    Supports flexible column names:
+        - start time: ``start``, ``start_time``
+        - end time: ``end``, ``end_time``
+        - pitch: ``pitch_midi``, ``midi``
+        - sargam: ``sargam``
+
+    Delegates to :func:`raga_pipeline.sequence.tokenize_notes_for_lm`.
+    """
+    from raga_pipeline.sequence import Note, tokenize_notes_for_lm  # lazy import
+
+    notes: List[Note] = []
+    try:
+        with csv_path.open("r", encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            fieldnames = reader.fieldnames or []
+            start_col = _find_col(fieldnames, ["start", "start_time"])
+            end_col = _find_col(fieldnames, ["end", "end_time"])
+            midi_col = _find_col(fieldnames, ["pitch_midi", "midi"])
+            sargam_col = _find_col(fieldnames, ["sargam"])
+
+            for row in reader:
+                try:
+                    start = float(row[start_col]) if start_col else 0.0
+                    end = float(row[end_col]) if end_col else 0.0
+                    pitch_midi = float(row[midi_col]) if midi_col else 60.0
+                    sargam = str(row[sargam_col]).strip() if sargam_col else ""
+                    # pitch_hz is not used by the tokenizer but required by the dataclass.
+                    pitch_hz = 440.0 * (2.0 ** ((pitch_midi - 69.0) / 12.0))
+                    notes.append(
+                        Note(
+                            start=start,
+                            end=end,
+                            pitch_midi=pitch_midi,
+                            pitch_hz=pitch_hz,
+                            confidence=1.0,
+                            sargam=sargam,
+                        )
+                    )
+                except (ValueError, KeyError, TypeError):
+                    continue
+    except OSError:
+        return []
+
+    return tokenize_notes_for_lm(notes, tonic_midi)
+
+
+def train_model(
+    ground_truth: str,
+    results_dir: str,
+    output: str,
+    order: int = 5,
+    smoothing: str = "add-k",
+    smoothing_k: float = 0.01,
+    lambdas: Optional[List[float]] = None,
+    min_recordings: int = 3,
+    transcription_source: str = "auto",
+    quiet: bool = False,
+) -> Dict[str, Any]:
+    """Train a per-raga n-gram language model from a labeled corpus.
+
+    Reads a ground-truth CSV (columns: Filename, Raga, Tonic) and discovers
+    transcription CSVs under *results_dir* using the same candidate-discovery
+    logic as :mod:`raga_pipeline.motifs`.  Each recording is tokenized via
+    :func:`_load_notes_from_csv` and added to the :class:`NgramModel`.
+
+    Ragas whose recording count falls below *min_recordings* are removed from
+    the model before serialization.
+
+    Args:
+        ground_truth: Path to the ground-truth CSV file.
+        results_dir: Root directory that contains per-recording sub-directories
+            with ``transcribed_notes.csv`` files.
+        output: Path where the serialized JSON model will be written.
+        order: Maximum n-gram order (default 5).
+        smoothing: Smoothing scheme passed to :class:`NgramModel` (default "add-k").
+        smoothing_k: Add-k smoothing parameter (default 0.01).
+        lambdas: Optional interpolation weights; length must equal *order*.
+        min_recordings: Minimum number of recordings required to keep a raga
+            in the model (default 3).
+        transcription_source: ``"auto"``, ``"edited"``, or ``"original"``
+            (default ``"auto"``).
+        quiet: Suppress progress messages when True.
+
+    Returns:
+        The serialized model dict (same as what is written to *output*).
+    """
+    from raga_pipeline.motifs import _discover_candidates, _read_ground_truth_rows  # lazy import
+
+    gt_path = Path(ground_truth)
+    rd_path = Path(results_dir)
+    out_path = Path(output)
+
+    gt_rows = _read_ground_truth_rows(gt_path)
+    stem_map, basename_map = _discover_candidates(rd_path)
+
+    model = NgramModel(
+        order=order,
+        smoothing=smoothing,
+        smoothing_k=smoothing_k,
+        lambdas=lambdas,
+    )
+
+    skipped = 0
+    processed = 0
+
+    for row in gt_rows:
+        filename = row.filename
+        raga = row.raga
+        tonic = row.tonic
+
+        if not filename or not raga:
+            skipped += 1
+            continue
+
+        # Match filename to a transcription candidate using stem lookup.
+        base = os.path.basename(filename)
+        stem = Path(base).stem.lower()
+
+        # Try stem_map first, then basename_map.
+        candidates = stem_map.get(stem) or basename_map.get(base.lower())
+        if not candidates:
+            if not quiet:
+                print(f"[train_model] no candidate for '{filename}', skipping")
+            skipped += 1
+            continue
+        if len(candidates) > 1:
+            if not quiet:
+                print(f"[train_model] ambiguous match for '{filename}' ({len(candidates)} candidates), skipping")
+            skipped += 1
+            continue
+
+        candidate = candidates[0]
+        csv_path, _source = candidate.resolve(transcription_source)
+        if csv_path is None or not csv_path.exists():
+            if not quiet:
+                print(f"[train_model] transcription CSV missing for '{filename}', skipping")
+            skipped += 1
+            continue
+
+        tonic_midi = _tonic_name_to_midi(tonic) if tonic else 60.0
+        tokens = _load_notes_from_csv(csv_path, tonic_midi)
+        if not tokens:
+            if not quiet:
+                print(f"[train_model] empty token sequence for '{filename}', skipping")
+            skipped += 1
+            continue
+
+        model.add_sequence(raga, tokens)
+        processed += 1
+
+    # Remove ragas below the minimum recording threshold.
+    ragas_to_remove = [
+        r for r in list(model._recording_counts)
+        if model._recording_counts[r] < min_recordings
+    ]
+    for raga in ragas_to_remove:
+        model._counts.pop(raga, None)
+        model._context_counts.pop(raga, None)
+        model._token_counts.pop(raga, None)
+        model._recording_counts.pop(raga, None)
+
+    model.finalize()
+
+    serialized = model.to_dict()
+    # Augment metadata with provenance information.
+    serialized["metadata"]["ground_truth"] = str(gt_path.resolve())
+    serialized["metadata"]["results_dir"] = str(rd_path.resolve())
+    serialized["metadata"]["trained_at"] = datetime.now(tz=timezone.utc).isoformat()
+    serialized["metadata"]["training_ragas"] = len(model._counts)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as fh:
+        json.dump(serialized, fh, indent=2)
+
+    if not quiet:
+        print(
+            f"[train_model] processed={processed} skipped={skipped} "
+            f"ragas={len(model._counts)} -> {out_path}"
+        )
+
+    return serialized

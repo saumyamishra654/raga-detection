@@ -688,3 +688,279 @@ def train_model(
         )
 
     return serialized
+
+
+# =============================================================================
+# Evaluation helpers
+# =============================================================================
+
+
+def _run_leave_one_out(
+    gt_rows: List[Any],
+    recordings: Dict[str, Tuple[str, str, List[str]]],
+    order: int,
+    smoothing: str,
+    smoothing_k: float,
+    lambdas: Optional[List[float]],
+    min_recordings: int,
+) -> List[Dict[str, Any]]:
+    """Run leave-one-out cross-validation over *recordings*.
+
+    *recordings* maps filename -> (raga, tonic, tokens).
+
+    For each held-out recording a fresh :class:`NgramModel` is trained on all
+    other recordings, ragas below *min_recordings* (after excluding the
+    held-out recording) are removed, and the held-out tokens are scored.
+
+    Returns a list of per-recording result dicts.
+    """
+    results: List[Dict[str, Any]] = []
+    filenames = list(recordings.keys())
+
+    for held_out_filename in filenames:
+        true_raga, _tonic, held_out_tokens = recordings[held_out_filename]
+
+        # Build model from all recordings except the held-out one.
+        loo_lambdas = [1.0 / order] * order if lambdas is None else lambdas
+        model = NgramModel(
+            order=order,
+            smoothing=smoothing,
+            smoothing_k=smoothing_k,
+            lambdas=loo_lambdas,
+        )
+
+        # Count recordings per raga excluding held-out (for threshold check).
+        raga_rec_counts: Dict[str, int] = defaultdict(int)
+        for fname, (raga, _tonic2, tokens) in recordings.items():
+            if fname == held_out_filename:
+                continue
+            model.add_sequence(raga, tokens)
+            raga_rec_counts[raga] += 1
+
+        # Remove ragas below the minimum recording threshold.
+        ragas_to_remove = [r for r, cnt in raga_rec_counts.items() if cnt < min_recordings]
+        for raga in ragas_to_remove:
+            model._counts.pop(raga, None)
+            model._context_counts.pop(raga, None)
+            model._token_counts.pop(raga, None)
+            model._recording_counts.pop(raga, None)
+
+        model.finalize()
+
+        ranked = model.rank_ragas(held_out_tokens)
+
+        # Determine rank of true raga.
+        true_raga_rank = None
+        for rank_idx, (raga, _score) in enumerate(ranked, start=1):
+            if raga == true_raga:
+                true_raga_rank = rank_idx
+                break
+        # If true raga was removed (below min_recordings), rank is worst + 1.
+        if true_raga_rank is None:
+            true_raga_rank = len(ranked) + 1
+
+        predicted_raga = ranked[0][0] if ranked else ""
+        correct = predicted_raga == true_raga
+
+        row: Dict[str, Any] = {
+            "filename": held_out_filename,
+            "true_raga": true_raga,
+            "predicted_raga": predicted_raga,
+            "correct": correct,
+            "true_raga_rank": true_raga_rank,
+            "score_top1": round(ranked[0][1], 4) if len(ranked) > 0 else 0.0,
+            "score_top2": round(ranked[1][1], 4) if len(ranked) > 1 else 0.0,
+            "score_top3": round(ranked[2][1], 4) if len(ranked) > 2 else 0.0,
+            "raga_top1": ranked[0][0] if len(ranked) > 0 else "",
+            "raga_top2": ranked[1][0] if len(ranked) > 1 else "",
+            "raga_top3": ranked[2][0] if len(ranked) > 2 else "",
+        }
+        results.append(row)
+
+    return results
+
+
+def _compute_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Compute top-1 accuracy, top-3 accuracy, and MRR from per-recording results."""
+    total = len(results)
+    if total == 0:
+        return {"top1_accuracy": 0.0, "top3_accuracy": 0.0, "mrr": 0.0, "total": 0}
+
+    top1_correct = sum(1 for r in results if r["correct"])
+    top3_correct = sum(1 for r in results if r["true_raga_rank"] <= 3)
+    mrr = sum(1.0 / r["true_raga_rank"] for r in results) / total
+
+    return {
+        "top1_accuracy": top1_correct / total,
+        "top3_accuracy": top3_correct / total,
+        "mrr": round(mrr, 4),
+        "total": total,
+    }
+
+
+def _write_eval_csv(path: Path, results: List[Dict[str, Any]]) -> None:
+    """Write per-recording evaluation results to a CSV file."""
+    fieldnames = [
+        "filename", "true_raga", "predicted_raga", "correct",
+        "true_raga_rank", "score_top1", "score_top2", "score_top3",
+        "raga_top1", "raga_top2", "raga_top3",
+    ]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in results:
+            writer.writerow({k: row.get(k, "") for k in fieldnames})
+
+
+def evaluate_model(
+    ground_truth: str,
+    results_dir: str,
+    output: str,
+    order: int = 5,
+    smoothing: str = "add-k",
+    smoothing_k: float = 0.01,
+    lambdas: Optional[List[float]] = None,
+    min_recordings: int = 3,
+    transcription_source: str = "auto",
+    sweep_orders: Optional[List[int]] = None,
+    quiet: bool = False,
+) -> Dict[str, Any]:
+    """Evaluate a per-raga n-gram model using leave-one-out cross-validation.
+
+    Loads the ground-truth CSV and discovers transcription CSVs under
+    *results_dir* (same logic as :func:`train_model`).  All recordings are
+    tokenized once, then leave-one-out CV is run at *order* (or at each order
+    in *sweep_orders* if provided).
+
+    Args:
+        ground_truth: Path to the ground-truth CSV file (Filename, Raga, Tonic).
+        results_dir: Root directory with per-recording sub-directories.
+        output: Path where the per-recording result CSV will be written.
+        order: N-gram order to use when *sweep_orders* is None (default 5).
+        smoothing: Smoothing scheme for :class:`NgramModel` (default "add-k").
+        smoothing_k: Add-k smoothing parameter (default 0.01).
+        lambdas: Optional interpolation weights (length must equal *order*).
+        min_recordings: Minimum recordings per raga to include in each LOO fold
+            (default 3).
+        transcription_source: "auto", "edited", or "original" (default "auto").
+        sweep_orders: When provided, run LOO CV at each listed order and return
+            per-order results under ``"sweep_results"`` in the summary.
+        quiet: Suppress progress messages when True.
+
+    Returns:
+        Summary dict with ``"top1_accuracy"``, ``"top3_accuracy"``, ``"mrr"``,
+        ``"total"`` (for the primary/last order).  When *sweep_orders* is
+        provided, also includes ``"sweep_results"``: a list of per-order dicts
+        each containing the above keys plus ``"order"``.
+    """
+    from raga_pipeline.motifs import _discover_candidates, _read_ground_truth_rows  # lazy import
+
+    gt_path = Path(ground_truth)
+    rd_path = Path(results_dir)
+    out_path = Path(output)
+
+    gt_rows = _read_ground_truth_rows(gt_path)
+    stem_map, basename_map = _discover_candidates(rd_path)
+
+    # Tokenize all recordings once.
+    recordings: Dict[str, Tuple[str, str, List[str]]] = {}
+    skipped = 0
+
+    for row in gt_rows:
+        filename = row.filename
+        raga = row.raga
+        tonic = row.tonic
+
+        if not filename or not raga:
+            skipped += 1
+            continue
+
+        base = os.path.basename(filename)
+        stem = Path(base).stem.lower()
+
+        candidates = stem_map.get(stem) or basename_map.get(base.lower())
+        if not candidates:
+            if not quiet:
+                print(f"[evaluate_model] no candidate for '{filename}', skipping")
+            skipped += 1
+            continue
+        if len(candidates) > 1:
+            if not quiet:
+                print(f"[evaluate_model] ambiguous match for '{filename}' ({len(candidates)} candidates), skipping")
+            skipped += 1
+            continue
+
+        candidate = candidates[0]
+        csv_path, _source = candidate.resolve(transcription_source)
+        if csv_path is None or not csv_path.exists():
+            if not quiet:
+                print(f"[evaluate_model] transcription CSV missing for '{filename}', skipping")
+            skipped += 1
+            continue
+
+        tonic_midi = _tonic_name_to_midi(tonic) if tonic else 60.0
+        tokens = _load_notes_from_csv(csv_path, tonic_midi)
+        if not tokens:
+            if not quiet:
+                print(f"[evaluate_model] empty token sequence for '{filename}', skipping")
+            skipped += 1
+            continue
+
+        recordings[filename] = (raga, tonic, tokens)
+
+    if not quiet:
+        print(f"[evaluate_model] loaded={len(recordings)} skipped={skipped}")
+
+    if sweep_orders is not None:
+        sweep_results: List[Dict[str, Any]] = []
+        last_loo_results: List[Dict[str, Any]] = []
+        for sweep_order in sweep_orders:
+            loo_results = _run_leave_one_out(
+                gt_rows=gt_rows,
+                recordings=recordings,
+                order=sweep_order,
+                smoothing=smoothing,
+                smoothing_k=smoothing_k,
+                lambdas=None,  # lambdas are order-specific; use default for each
+                min_recordings=min_recordings,
+            )
+            order_summary = _compute_summary(loo_results)
+            order_summary["order"] = sweep_order
+            sweep_results.append(order_summary)
+            last_loo_results = loo_results
+            if not quiet:
+                print(
+                    f"[evaluate_model] order={sweep_order} "
+                    f"top1={order_summary['top1_accuracy']:.3f} "
+                    f"top3={order_summary['top3_accuracy']:.3f} "
+                    f"mrr={order_summary['mrr']:.3f}"
+                )
+
+        _write_eval_csv(out_path, last_loo_results)
+        summary = _compute_summary(last_loo_results)
+        summary["sweep_results"] = sweep_results
+        return summary
+
+    else:
+        loo_results = _run_leave_one_out(
+            gt_rows=gt_rows,
+            recordings=recordings,
+            order=order,
+            smoothing=smoothing,
+            smoothing_k=smoothing_k,
+            lambdas=lambdas,
+            min_recordings=min_recordings,
+        )
+        _write_eval_csv(out_path, loo_results)
+        summary = _compute_summary(loo_results)
+
+        if not quiet:
+            print(
+                f"[evaluate_model] top1={summary['top1_accuracy']:.3f} "
+                f"top3={summary['top3_accuracy']:.3f} "
+                f"mrr={summary['mrr']:.3f} "
+                f"total={summary['total']}"
+            )
+
+        return summary

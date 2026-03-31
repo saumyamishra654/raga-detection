@@ -81,6 +81,34 @@ class TestTokenizeNotesForLM(unittest.TestCase):
         tokens = tokenize_notes_for_lm(notes, tonic_midi=60)
         self.assertEqual(tokens, ["<BOS>", "Sa'"])
 
+    def test_non_c_tonic_middle_octave(self):
+        """Notes in the same musical octave as a non-C tonic stay in middle octave."""
+        # Tonic = G4 = MIDI 67. The musical octave spans G4(67) to F#5(78).
+        # All 12 sargam notes in this range should be bare (no octave marker).
+        # Sa=67(G), re=68(Ab), Re=69(A), ga=70(Bb), Ga=71(B),
+        # ma=72(C5), Ma=73(C#5), Pa=74(D5), dha=75(Eb5), Dha=76(E5),
+        # ni=77(F5), Ni=78(F#5)
+        notes = [
+            self._make_note(0.0, 0.3, 67),   # Sa
+            self._make_note(0.3, 0.6, 72),   # ma (C5, still middle octave)
+            self._make_note(0.6, 0.9, 74),   # Pa (D5, still middle octave)
+            self._make_note(0.9, 1.2, 78),   # Ni (F#5, still middle octave)
+        ]
+        tokens = tokenize_notes_for_lm(notes, tonic_midi=67)
+        self.assertEqual(tokens, ["<BOS>", "Sa", "ma", "Pa", "Ni"])
+
+    def test_non_c_tonic_octave_boundaries(self):
+        """Upper/lower octave markers are correct for non-C tonic."""
+        # Tonic = G4 = MIDI 67.
+        # G5 = MIDI 79 -> Sa'' (upper octave)
+        # F#4 = MIDI 66 -> Ni' (lower octave, one semitone below tonic)
+        notes = [
+            self._make_note(0.0, 0.3, 79),   # Sa (upper)
+            self._make_note(0.3, 0.6, 66),   # Ni (lower) -- contiguous, no phrase break
+        ]
+        tokens = tokenize_notes_for_lm(notes, tonic_midi=67)
+        self.assertEqual(tokens, ["<BOS>", "Sa''", "Ni'"])
+
 
 if __name__ == "__main__":
     unittest.main()

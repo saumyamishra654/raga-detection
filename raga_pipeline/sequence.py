@@ -1688,7 +1688,7 @@ def tokenize_notes_for_lm(
     if not notes:
         return []
 
-    tonic_octave = int(round(tonic_midi)) // 12
+    tonic_rounded = int(round(tonic_midi))
 
     tokens: List[str] = []
     prev_end: Optional[float] = None
@@ -1699,11 +1699,11 @@ def tokenize_notes_for_lm(
             tokens.append("<BOS>")
 
         midi_rounded = int(round(note.pitch_midi))
-        offset = (midi_rounded - int(round(tonic_midi))) % 12
+        offset = (midi_rounded - tonic_rounded) % 12
         sargam = OFFSET_TO_SARGAM.get(offset, f"?{offset}")
 
-        note_octave = midi_rounded // 12
-        octave_diff = note_octave - tonic_octave
+        # Tonic-relative octave: how many octaves above/below the tonic
+        octave_diff = (midi_rounded - tonic_rounded) // 12
 
         # Clip to [-1, +1] range
         if octave_diff <= -1:

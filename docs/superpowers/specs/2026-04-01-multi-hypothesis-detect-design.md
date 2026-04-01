@@ -32,10 +32,11 @@ This removes the circularity problem: every hypothesis gets its own raga correct
           -> lm_score = model.score_sequence(raga, tokens)
           -> Store: lm_score, deletion_rate per candidate
 
-    5.5e) Output both lm_score and deletion_rate as independent columns
-          Sort candidates by lm_score (primary ranking)
+    5.5e) Write lm_candidates.csv with lm_score, deletion_rate, lm_rank
+          Sorted by lm_score descending
+          Original candidates.csv is NOT modified
 
-[Steps 6-7: existing report generation -- uses re-ranked candidates]
+[Steps 6-7: existing report generation -- unchanged, uses original candidates]
 ```
 
 ## Key Design Decisions
@@ -87,11 +88,11 @@ Existing columns preserved. New columns added:
 | `notes_before_correction` | Total chromatic notes (same for all candidates with same tonic) |
 | `notes_after_correction` | Notes remaining after raga correction |
 
-Rows sorted by `lm_score` descending.
+Rows sorted by `lm_score` descending. Written to `lm_candidates.csv` (separate file, does not modify `candidates.csv`).
 
 ### detection_report.html
 
-Top raga display uses LM ranking. Histogram scores and deletion rates visible in the detailed candidate table.
+Unchanged. The existing report continues to show histogram rankings only. LM results are in `lm_candidates.csv` only (no report changes in this spec).
 
 ## Files to Modify
 

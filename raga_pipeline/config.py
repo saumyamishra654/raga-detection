@@ -140,6 +140,10 @@ class PipelineConfig:
     use_ml_model: bool = False  # Disabled per migration plan
     model_path: Optional[str] = None      # Path to trained model (unused)
 
+    # LM scoring (detect mode)
+    use_lm_scoring: bool = False
+    lm_model_path: Optional[str] = None
+
     # db paths
     raga_db_path: Optional[str] = None    # Auto-locates if None
 
@@ -512,6 +516,10 @@ def build_cli_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Detect mode only: requires --force and also forces stem-separation recomputation.",
     )
+    detect_parser.add_argument("--use-lm-scoring", action="store_true",
+                               help="Re-rank candidates using n-gram language model (writes lm_candidates.csv)")
+    detect_parser.add_argument("--lm-model", dest="lm_model_path", default=None,
+                               help="Path to trained n-gram model JSON (required with --use-lm-scoring)")
 
     # --- Analyze Mode ---
     analyze_parser = subparsers.add_parser("analyze", help="Phase 2: Analysis only")
@@ -698,6 +706,8 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         pitch_only=getattr(args, 'pitch_only', False),
         transcription_only=getattr(args, 'transcription_only', False),
         raga_db_path=getattr(args, 'raga_db', None),
+        use_lm_scoring=getattr(args, 'use_lm_scoring', False),
+        lm_model_path=getattr(args, 'lm_model_path', None),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),

@@ -915,6 +915,107 @@ def run_pipeline(
             print("  [WARN] Raga database not found, skipping matching")
         _print_timing("Step 4-5/7 raga matching", perf_counter() - step45_start, audio_duration_s)
 
+        # --- STEP 5.5: LM RE-RANKING (optional) ---
+        if config.use_lm_scoring and config.mode == "detect" and len(results.candidates) > 0:
+            step55_start = perf_counter()
+            print("\n[STEP 5.5/7] LM re-ranking...")
+
+            import json as _json
+            from raga_pipeline.language_model import NgramModel
+            from raga_pipeline.sequence import tokenize_notes_for_lm
+
+            # Load LM
+            lm_path = config.lm_model_path
+            if not lm_path or not os.path.exists(lm_path):
+                print(f"  [ERROR] --lm-model not found: {lm_path}")
+            else:
+                with open(lm_path, "r", encoding="utf-8") as _fh:
+                    lm_model = NgramModel.from_dict(_json.load(_fh))
+                print(f"  Loaded LM: {len(lm_model.ragas())} ragas, order {lm_model.order}")
+
+                # Run chromatic transcription on melody pitch data
+                pitch_data = results.pitch_data_vocals
+                raw_notes = transcription.transcribe_to_notes(
+                    pitch_hz=pitch_data.pitch_hz,
+                    timestamps=pitch_data.timestamps,
+                    voicing_mask=pitch_data.voiced_mask,
+                    tonic=results.detected_tonic or 0,
+                    energy=pitch_data.energy,
+                    energy_threshold=config.energy_threshold,
+                    smoothing_sigma_ms=config.transcription_smoothing_ms,
+                    min_event_duration=config.transcription_min_duration,
+                    derivative_threshold=config.transcription_derivative_threshold,
+                    snap_mode='chromatic',
+                    transcription_min_duration=config.transcription_min_duration,
+                    bias_cents=results.gmm_bias_cents or 0.0,
+                )
+                print(f"  Chromatic transcription: {len(raw_notes)} notes")
+
+                # Get unique tonics from candidates
+                unique_tonics = sorted(results.candidates["tonic"].unique())
+
+                # For each (tonic, raga): correct, tokenize, score.
+                # Candidates may have comma-grouped raga names (e.g.
+                # "Basant, Puriya Dhanashree, Shri"); split and score each
+                # raga individually against the LM.
+                lm_rows = []
+                for _, cand_row in results.candidates.iterrows():
+                    cand_tonic = int(cand_row["tonic"])
+                    raga_group = str(cand_row["raga"])
+                    hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
+
+                    # Split comma-grouped raga names
+                    individual_ragas = [r.strip() for r in raga_group.split(",") if r.strip()]
+
+                    for cand_raga in individual_ragas:
+                        # Apply this raga's correction
+                        try:
+                            corrected_notes, corr_stats, _ = apply_raga_correction_to_notes(
+                                raw_notes, raga_db, cand_raga, cand_tonic,
+                                max_distance=1.0, keep_impure=False,
+                            )
+                        except Exception:
+                            continue  # Raga not in DB
+                        total = corr_stats.get("total", len(raw_notes))
+                        discarded = corr_stats.get("discarded", 0)
+                        deletion_rate = discarded / total if total > 0 else 1.0
+
+                        # Tokenize corrected notes with this tonic
+                        tonic_midi = 60.0 + cand_tonic
+                        phrases = tokenize_notes_for_lm(corrected_notes, tonic_midi)
+
+                        # Score against this raga's LM
+                        lm_score = lm_model.score_sequence(cand_raga, phrases) if phrases else -999.0
+
+                        lm_rows.append({
+                            "tonic": cand_tonic,
+                            "tonic_name": cand_row.get("tonic_name", _tonic_name(cand_tonic)),
+                            "raga": cand_raga,
+                            "histogram_score": round(hist_score, 4),
+                            "lm_score": round(lm_score, 4),
+                            "deletion_rate": round(deletion_rate, 4),
+                            "notes_before_correction": total,
+                            "notes_after_correction": total - discarded,
+                        })
+
+                # Sort by lm_score descending, write CSV
+                lm_rows.sort(key=lambda r: r["lm_score"], reverse=True)
+                for i, row in enumerate(lm_rows):
+                    row["lm_rank"] = i + 1
+
+                import pandas as pd
+                lm_df = pd.DataFrame(lm_rows)
+                lm_csv_path = os.path.join(stem_dir, "lm_candidates.csv")
+                lm_df.to_csv(lm_csv_path, index=False)
+                print(f"  Saved: {lm_csv_path}")
+
+                if lm_rows:
+                    top = lm_rows[0]
+                    print(f"  LM Top: {top['raga']} (tonic={top['tonic_name']}, "
+                          f"lm_score={top['lm_score']}, deletion_rate={top['deletion_rate']})")
+
+            _print_timing("Step 5.5/7 LM re-ranking", perf_counter() - step55_start, audio_duration_s)
+
         # --- DETECT MODE EXIT POINT ---
         if config.mode == "detect":
             step7_start = perf_counter()

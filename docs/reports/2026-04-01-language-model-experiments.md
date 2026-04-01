@@ -273,20 +273,229 @@ gate = sigmoid((threshold - deletion_rate) / temperature)
 combined = gate * lm_score
 ```
 
-### 7.5 Recommendation
+### 7.5 Initial Recommendation (Revised -- see Section 9 for updated analysis)
 
 Start with **Approach D (two-stage filtering)** as the default pipeline behavior -- it's the most interpretable and requires the least tuning. Then implement **Approach B (normalized weighted sum)** as an evaluation tool to empirically determine optimal weights via grid search on the CompMusic LOO CV. The grid search results inform what the thresholds for Approach D should be.
 
-The deletion rate is the strongest novel signal. In the Parveen Sultana case, a simple rule of "discard candidates with >20% deletion" would have eliminated the LM's false top-1 (Hansadhwani at 23.7%) while keeping the correct answer (Puriya Dhanashree at 3.5%).
+The deletion rate is the strongest novel signal. In the Parveen Sultana case, a simple rule of "discard candidates with >20% deletion" would have eliminated the LM's false top-1 (Hansadhwani at 23.7%) while keeping the correct answer (Puriya Dhanashree at 3.5%). However, as shown in Section 8, raw deletion rate is heavily confounded with raga scale size and needs normalization.
 
 ---
 
-## 8. Open Questions
+## 8. Deletion Rate Analysis: Scale-Size Confound
 
-1. **Scale-size normalization for deletion rate:** Pentatonic ragas (5 notes) naturally have higher deletion rates than heptatonic ragas (7 notes) on any recording. Should the deletion rate be normalized by the raga's scale size?
+### 8.1 Per-Raga Deletion Rate Distributions
 
-2. **Optimal n-gram order:** Corrected transcriptions favor order 6; uncorrected favor order 4-5. The multi-hypothesis pipeline applies per-hypothesis correction, so order 6 may be appropriate. Needs empirical validation.
+Analysis of the correct-raga deletion rates across all 297 CompMusic recordings reveals that the deletion rate is strongly correlated with raga scale size:
 
-3. **Training corpus size:** With ~10 recordings per raga, the model may overfit to artist/composition fingerprints rather than learning abstract raga grammar. Cross-artist evaluation (train on one set of artists, test on another) would quantify this.
+| Scale Size | Ragas | Mean Deletion Rate |
+|------------|-------|-------------------|
+| 5 notes (pentatonic) | Bhupali, Malkauns, Hansadhwani, Abhogi, Bairagi, Madhukauns | 30-42% |
+| 6 notes (hexatonic) | Marwa, Jog, Rageshri | 18-26% |
+| 7 notes (heptatonic) | Bhairav, Todi, Basant, Puriya Dhanashree, etc. | 13-22% |
+| 8 notes (octotonic) | Bihag, Maru Bihag, Desh, Gaud Malhar, etc. | 10-20% |
 
-4. **Interaction between histogram and LM scores:** Do they make independent errors? If so, their combination should improve over either alone. If they're correlated (both wrong on the same recordings), combination helps less.
+This means a raw deletion rate threshold would be heavily biased against pentatonic ragas: a 20% cutoff eliminates almost every correct pentatonic hypothesis, while most heptatonic ragas pass easily.
+
+### 8.2 Linear Regression: Deletion Rate vs Scale Size
+
+Fitting a linear model across the 28 ragas with known scale sizes:
+
+```
+expected_deletion = -0.0684 * scale_size + 0.6640
+```
+
+- **R-squared = 0.77** -- scale size explains 77% of the variance in deletion rate
+- **Slope = -6.84% per note** -- each additional note in the raga's scale reduces the expected deletion rate by ~7 percentage points
+- Actual deletion rates are always lower than naive random expectation (performers emphasize in-scale notes)
+
+### 8.3 Residual as Normalized Signal
+
+The **residual** (actual deletion - expected deletion from regression) removes the scale-size confound:
+
+```
+del_residual = actual_del - (-0.0684 * scale_size + 0.6640)
+```
+
+Per-raga residuals are mostly within +/-5%:
+- **Bhupali (+10.2%) and Gaud Malhar (+8.1%)** are outliers -- their performers use more out-of-scale notes than scale size predicts
+- **Rageshri (-7.1%) and Basant (-5.7%)** are unusually clean
+- Most ragas cluster near 0, confirming the regression captures the dominant effect
+
+### 8.4 Distribution Shape Concerns
+
+With only ~10 recordings per raga, per-raga distributions are noisy:
+- Most ragas are roughly symmetric (skew near 0)
+- **Malkauns (skew 1.39)** and **Bilaskhani Todi (skew 1.16)** have long right tails
+- **Gaud Malhar** appears bimodal (8-12% cluster and 23-32% cluster)
+- Nearly every raga has at least one outlier recording
+
+Z-score normalization per raga would be fragile with 10 samples. The regression-based residual is more robust because it uses a known quantity (scale size) rather than estimated per-raga statistics.
+
+### 8.5 Implication for Signal Combination
+
+The raw deletion rate should **not** be used directly in any combination formula. Instead, use the scale-normalized residual. This ensures that a pentatonic raga at 35% deletion (normal for its scale) is treated equivalently to a heptatonic raga at 15% deletion (also normal for its scale).
+
+---
+
+## 9. Updated Signal Combination Strategies
+
+Based on the deletion rate analysis and the Parveen Sultana case study, here is the full set of combination strategies under consideration. The three signals are:
+- **Histogram score** (`hist`): pitch class distribution match, strongest at tonic detection and eliminating impossible ragas
+- **LM score** (`lm`): n-gram sequence likelihood, captures raga grammar but biased toward small-scale ragas
+- **Deletion residual** (`del_resid`): scale-normalized correction rate, captures how well the raw chromatic content fits the hypothesis
+
+### 9.1 Rank Fusion (Simplest)
+
+Sum ranks across signals. No parameters. Ignores score magnitudes.
+
+```
+combined_rank = hist_rank + lm_rank + del_resid_rank
+```
+
+**Variant:** Reciprocal rank fusion: `combined = 1/(k + hist_rank) + 1/(k + lm_rank) + 1/(k + del_rank)` with k=60.
+
+**Pros:** Zero parameters, robust to outliers.
+**Cons:** A candidate that's rank 1 by a huge margin is treated identically to rank 1 by a tiny margin.
+
+### 9.2 Normalized Weighted Sum
+
+Min-max normalize each signal to [0,1] per recording, then combine with tunable weights:
+
+```
+norm(x) = (x - min) / (max - min)    per signal, per recording
+combined = alpha * norm(hist) + beta * norm(lm) - gamma * norm(del_resid)
+```
+
+Negative sign on `del_resid` because positive residual = bad fit.
+
+**Pros:** Interpretable. Grid-searchable.
+**Cons:** Linear assumption. Requires tuning.
+
+### 9.3 Log-Linear
+
+```
+combined = alpha * hist + beta * lm + gamma * log(1 - del_resid_clipped + eps)
+```
+
+Where `del_resid_clipped = max(0, del_resid)` to avoid log of values > 1. Exponential penalty for high deletion residual.
+
+**Pros:** Better-calibrated than linear for probability-like scores.
+**Cons:** Slightly harder to interpret.
+
+### 9.4 Two-Stage Filtering
+
+Use signals sequentially:
+1. **Stage 1 (Histogram):** Keep candidates where `hist_score > 0` or top-K
+2. **Stage 2 (Deletion residual):** Discard candidates with `del_resid > threshold`
+3. **Stage 3 (LM):** Rank survivors by LM score
+
+**Pros:** Each signal handles what it's best at. Interpretable.
+**Cons:** Hard cutoffs lose information.
+
+### 9.5 Residual-Based Deletion + Weighted Sum
+
+Use the regression residual directly:
+
+```
+combined = alpha * norm(hist) + beta * norm(lm) - gamma * del_resid
+```
+
+No normalization needed on the residual since it's already centered at 0 across the corpus.
+
+**Pros:** Scale-fair. Simple.
+**Cons:** The residual has different variance across scale sizes (pentatonic std ~6%, heptatonic std ~4%).
+
+### 9.6 Deletion Residual as Bayesian Prior
+
+Treat the deletion residual as a prior and the LM score as the likelihood:
+
+```
+log_posterior = lm_score + lambda * log(1 - del_resid_normalized)
+```
+
+Interpretation: the LM says "how likely is this sequence under raga X's grammar" and the deletion residual says "how likely is it that raga X generated this chromatic content." Multiplying them gives a joint probability.
+
+**Pros:** Principled probabilistic interpretation.
+**Cons:** Requires calibrating the lambda to put both terms on comparable scales.
+
+### 9.7 Histogram as Gate, LM + Deletion as Final Score
+
+The histogram is fundamentally different evidence (pitch class distribution, no sequence info). Use it purely as a filter:
+
+- Keep candidates where `hist_score > 0` or top-K by histogram
+- Among survivors, rank by `lm_score - penalty * del_resid`
+
+This acknowledges that the histogram is good at eliminating impossible tonics but bad at ranking similar ragas.
+
+**Pros:** Matches observed signal strengths (histogram for tonic, LM+deletion for raga).
+**Cons:** The hard gate may discard the correct answer if the histogram is wrong about tonic.
+
+### 9.8 Logistic Regression (Learn Weights from Data)
+
+Treat it as classification. For each (recording, candidate) pair in LOO CV, features are (hist, lm, del_resid) and label is correct/incorrect. Fit:
+
+```
+P(correct) = sigmoid(w1 * hist + w2 * lm + w3 * del_resid + b)
+```
+
+~297 recordings x ~200 candidates = ~60K training examples. Nested CV needed for honest evaluation.
+
+**Pros:** Empirically optimal weights. No manual tuning.
+**Cons:** Risk of overfitting. Requires careful cross-validation setup.
+
+### 9.9 Ensemble Voting
+
+Each signal produces its own top-K ranking. Candidates are scored by how many top-K lists they appear in:
+
+```
+votes = (1 if in hist_top10 else 0) + (1 if in lm_top10 else 0) + (1 if in del_top10 else 0)
+```
+
+Tie-break by average rank across the lists.
+
+**Pros:** Simple, interpretable, no parameters except K.
+**Cons:** Discards all information beyond "top-K or not."
+
+### 9.10 Cascade with Confidence Thresholds
+
+Use each signal only when the previous one isn't confident:
+
+- If histogram's #1 is far ahead of #2 (margin > threshold): accept, done
+- If histogram is ambiguous: use deletion residual to filter, then LM to rank
+- If everything is ambiguous: report top-3 with uncertainty flag
+
+Mirrors how a human musicologist reasons: "if the scale is obvious, I don't need to analyze the phrases."
+
+**Pros:** Fast for easy cases. Only invokes expensive LM scoring when needed.
+**Cons:** Multiple thresholds to tune. Harder to evaluate systematically.
+
+### 9.11 Assessment and Recommendation
+
+From the experiments, the three signals have distinct strengths:
+
+| Signal | Good at | Bad at |
+|--------|---------|--------|
+| Histogram | Tonic detection, eliminating impossible ragas | Distinguishing ragas that share a scale |
+| LM score | Sequential grammar discrimination | Biased toward small-scale ragas (simpler sequences = lower perplexity) |
+| Deletion residual | Measuring chromatic fit independent of scale size | Noisy with small sample sizes |
+
+The histogram and deletion residual are partially redundant (both measure pitch class fit). The LM is the only signal using sequential information.
+
+**Recommended path:**
+1. Start with **9.7 (histogram gate + LM/deletion)** as the pipeline default -- simple, matches signal strengths
+2. Implement **9.8 (logistic regression)** as an analysis tool to empirically validate whether the manual weights are near optimal
+3. Use the logistic regression coefficients to inform thresholds for the gated approach
+
+---
+
+## 10. Open Questions
+
+1. **Optimal n-gram order for multi-hypothesis pipeline:** The pipeline applies per-hypothesis correction before LM scoring, so the corrected-data optimal (order 5-6) likely applies. Needs validation.
+
+2. **Training corpus size and artist confounding:** With ~10 recordings per raga, the model may overfit to artist/composition fingerprints. Cross-artist evaluation would quantify this.
+
+3. **Interaction between histogram and LM errors:** Do they fail on the same recordings? If errors are independent, combination helps more. If correlated, less.
+
+4. **Deletion residual regression stability:** The regression coefficients (-0.0684, 0.6640) were fit on 28 ragas. How stable are they with different corpus sizes or different pitch extraction settings?
+
+5. **Computational cost at scale:** The multi-hypothesis pipeline scores ~200-500 (tonic, raga) candidates per recording, each requiring raga correction + tokenization + LM scoring. Currently ~25 seconds total. Acceptable for offline use; may need optimization for real-time applications.

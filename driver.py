@@ -150,7 +150,9 @@ def _transcribe_for_extractor(
 
     # Raga correction
     correction_summary = {}
-    if raga_db and results.detected_raga:
+    if config.skip_raga_correction:
+        notes = raw_notes
+    elif raga_db and results.detected_raga:
         strict_raga_max_cents = max(float(getattr(config, "strict_raga_max_cents", 35.0)), 0.0)
         raga_max_distance = (strict_raga_max_cents / 100.0) if config.strict_raga_35c_filter else 1.0
         keep_impure = config.keep_impure_notes
@@ -1057,7 +1059,10 @@ def run_pipeline(
             
         # Apply Raga Correction
         correction_summary = {}
-        if raga_db and results.detected_raga:
+        if config.skip_raga_correction:
+            results.notes = raw_notes
+            print("  Raga correction skipped (--skip-raga-correction)")
+        elif raga_db and results.detected_raga:
             print(f"  Applying raga correction for {results.detected_raga}...")
             strict_raga_max_cents = max(float(getattr(config, "strict_raga_max_cents", 35.0)), 0.0)
             raga_max_distance = (strict_raga_max_cents / 100.0) if config.strict_raga_35c_filter else 1.0
@@ -1071,9 +1076,9 @@ def run_pipeline(
             if config.strict_raga_35c_filter:
                 print(f"  [INFO] Strict raga filter window: +/-{strict_raga_max_cents:.1f} cents")
             corrected_notes, correction_stats, _ = apply_raga_correction_to_notes(
-                raw_notes, 
-                raga_db, 
-                results.detected_raga, 
+                raw_notes,
+                raga_db,
+                results.detected_raga,
                 results.detected_tonic,
                 max_distance=raga_max_distance,
                 keep_impure=keep_impure_notes,

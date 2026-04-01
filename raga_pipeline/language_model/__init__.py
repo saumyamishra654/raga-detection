@@ -64,12 +64,23 @@ class NgramModel:
     # Building the model
     # ------------------------------------------------------------------
 
-    def add_sequence(self, raga: str, tokens: List[str]) -> None:
-        """Add a tokenised recording to the model for *raga*.
+    def add_sequence(self, raga: str, phrases: List[List[str]]) -> None:
+        """Add a tokenised recording (as phrase-separated sequences) to the model.
 
-        Empty sequences are silently ignored (no raga entry is created).
+        *phrases* is a list of phrase token lists, each starting with ``<BOS>``.
+        N-grams are counted within each phrase only -- never crossing phrase
+        boundaries.
+
+        Also accepts a flat ``List[str]`` for backwards compatibility (treated
+        as a single phrase).
+
+        Empty input is silently ignored (no raga entry is created).
         """
-        if not tokens:
+        # Backwards compat: flat list of strings -> single phrase
+        if phrases and isinstance(phrases[0], str):
+            phrases = [phrases]  # type: ignore[list-item]
+
+        if not phrases or all(len(p) == 0 for p in phrases):
             return
 
         # Initialise per-raga structures on first access.
@@ -85,21 +96,22 @@ class NgramModel:
         counts = self._counts[raga]
         ctx_counts = self._context_counts[raga]
 
-        for i, token in enumerate(tokens):
-            self._vocabulary.add(token)
-            self._token_counts[raga] += 1
+        for phrase in phrases:
+            for i, token in enumerate(phrase):
+                self._vocabulary.add(token)
+                self._token_counts[raga] += 1
 
-            # Count n-grams of every order that end at position i.
-            for n in range(1, self.order + 1):
-                if i - n + 1 < 0:
-                    break
-                ngram = tuple(tokens[i - n + 1 : i + 1])
-                counts[n][ngram] += 1
+                # Count n-grams of every order that end at position i.
+                for n in range(1, self.order + 1):
+                    if i - n + 1 < 0:
+                        break
+                    ngram = tuple(phrase[i - n + 1 : i + 1])
+                    counts[n][ngram] += 1
 
-                # Context count: the (n-1)-gram that precedes the last token.
-                if n >= 2:
-                    context = ngram[:-1]
-                    ctx_counts[n][context] += 1
+                    # Context count: the (n-1)-gram that precedes the last token.
+                    if n >= 2:
+                        context = ngram[:-1]
+                        ctx_counts[n][context] += 1
 
     def finalize(self) -> None:
         """Mark the model as ready for scoring.  No-op if already finalised."""
@@ -181,35 +193,42 @@ class NgramModel:
             return -1e30
         return math.log(interpolated)
 
-    def score_sequence(self, raga: str, tokens: List[str]) -> float:
-        """Return the average log-likelihood per token for *tokens* under *raga*.
+    def score_sequence(self, raga: str, phrases: List[List[str]]) -> float:
+        """Return the average log-likelihood per token under *raga*.
 
-        Tokens at position i are scored using the preceding (order-1) tokens
-        as context.  The sequence must have at least 2 tokens to be meaningful.
+        *phrases* is a list of phrase token lists (each starting with
+        ``<BOS>``).  Scoring is done within each phrase -- context never
+        crosses phrase boundaries.
 
-        Returns 0.0 for sequences shorter than 2 tokens.
+        Also accepts a flat ``List[str]`` for backwards compatibility
+        (treated as a single phrase).
+
+        Returns 0.0 for empty or trivially short input.
         """
-        if len(tokens) < 2:
-            return 0.0
+        # Backwards compat: flat list -> single phrase
+        if phrases and isinstance(phrases[0], str):
+            phrases = [phrases]  # type: ignore[list-item]
 
         total_ll = 0.0
         scored = 0
-        for i in range(1, len(tokens)):
-            token = tokens[i]
-            # Context: up to (order-1) preceding tokens.
-            ctx_start = max(0, i - (self.order - 1))
-            context = tuple(tokens[ctx_start:i])
-            total_ll += self.log_prob(raga, token, context)
-            scored += 1
+        for phrase in phrases:
+            if len(phrase) < 2:
+                continue
+            for i in range(1, len(phrase)):
+                token = phrase[i]
+                ctx_start = max(0, i - (self.order - 1))
+                context = tuple(phrase[ctx_start:i])
+                total_ll += self.log_prob(raga, token, context)
+                scored += 1
 
         return total_ll / scored if scored > 0 else 0.0
 
-    def rank_ragas(self, tokens: List[str]) -> List[Tuple[str, float]]:
+    def rank_ragas(self, phrases: List[List[str]]) -> List[Tuple[str, float]]:
         """Score *tokens* against every raga; return sorted (raga, score) pairs.
 
         Highest score first.
         """
-        scores = [(raga, self.score_sequence(raga, tokens)) for raga in self.ragas()]
+        scores = [(raga, self.score_sequence(raga, phrases)) for raga in self.ragas()]
         return sorted(scores, key=lambda x: x[1], reverse=True)
 
     # ------------------------------------------------------------------
@@ -327,8 +346,8 @@ def _find_col(fieldnames: Sequence[str], aliases: Sequence[str]) -> Optional[str
     return None
 
 
-def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[str]:
-    """Read a transcription CSV, build Note objects, and return LM tokens.
+def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
+    """Read a transcription CSV, build Note objects, and return phrase-separated LM tokens.
 
     Supports flexible column names:
         - start time: ``start``, ``start_time``
@@ -337,6 +356,7 @@ def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[str]:
         - sargam: ``sargam``
 
     Delegates to :func:`raga_pipeline.sequence.tokenize_notes_for_lm`.
+    Returns a list of phrase token lists.
     """
     from raga_pipeline.sequence import Note, tokenize_notes_for_lm  # lazy import
 
@@ -454,16 +474,18 @@ def score_transcription(
     except (OSError, KeyError, ValueError) as exc:
         return {"error": f"failed to load model: {exc}"}
 
-    # Tokenize transcription.
+    # Tokenize transcription (phrase-separated).
     tonic_midi = _tonic_name_to_midi(tonic)
     trans_path = Path(transcription_path)
-    tokens = _load_notes_from_csv(trans_path, tonic_midi)
+    phrases = _load_notes_from_csv(trans_path, tonic_midi)
 
-    if not tokens:
+    if not phrases:
         return {"error": "no tokens extracted from transcription"}
 
+    total_tokens = sum(len(p) for p in phrases)
+
     # Whole-recording ranking.
-    ranked = model.rank_ragas(tokens)
+    ranked = model.rank_ragas(phrases)
     rankings = [
         {"raga": raga, "score": round(score, 4), "rank": i + 1}
         for i, (raga, score) in enumerate(ranked[:top_k])
@@ -471,60 +493,43 @@ def score_transcription(
 
     result: Dict[str, Any] = {"rankings": rankings}
 
-    # Segment-level scoring.
+    # Segment-level scoring: group consecutive phrases into windows of
+    # ~segment_window tokens, score each window as a unit.
     if segments:
-        # Build a parallel list that maps each token index to a note timestamp.
-        # Tokens contain <BOS> markers interspersed among note tokens.
-        # We need to resolve each token position to a time span.
         timestamps = _load_note_timestamps_from_csv(trans_path)
 
-        # Walk the token list and record a (start_time, end_time) for every
-        # token.  <BOS> tokens get the timestamp of the next note; the last
-        # <BOS> (if any) at the very end gets the last note's end time.
-        token_times: List[Tuple[float, float]] = []
+        # Build per-phrase time spans from note timestamps.
         note_idx = 0
-        n_tokens = len(tokens)
-
-        for tok_idx, tok in enumerate(tokens):
-            if tok == "<BOS>":
-                # Look ahead to find the next note token's start time.
-                lookahead_note_idx = note_idx  # note_idx hasn't advanced yet
-                # Count ahead in the token list to find next non-BOS token.
-                future_note_offset = 0
-                for future_tok in tokens[tok_idx + 1:]:
-                    if future_tok != "<BOS>":
-                        break
-                    future_note_offset += 1
-
-                idx = lookahead_note_idx + future_note_offset
-                if idx < len(timestamps):
-                    token_times.append(timestamps[idx])
-                elif timestamps:
-                    token_times.append(timestamps[-1])
-                else:
-                    token_times.append((0.0, 0.0))
+        phrase_times: List[Tuple[float, float]] = []
+        for phrase in phrases:
+            n_notes = len([t for t in phrase if t != "<BOS>"])
+            if n_notes > 0 and note_idx < len(timestamps):
+                p_start = timestamps[note_idx][0]
+                p_end = timestamps[min(note_idx + n_notes - 1, len(timestamps) - 1)][1]
+                phrase_times.append((p_start, p_end))
             else:
-                if note_idx < len(timestamps):
-                    token_times.append(timestamps[note_idx])
-                elif timestamps:
-                    token_times.append(timestamps[-1])
-                else:
-                    token_times.append((0.0, 0.0))
-                note_idx += 1
+                phrase_times.append((0.0, 0.0))
+            note_idx += n_notes
 
-        # Slide a window of segment_window tokens with 50 % overlap.
-        step = max(1, segment_window // 2)
         seg_results: List[Dict[str, Any]] = []
+        i = 0
+        while i < len(phrases):
+            # Accumulate phrases until we reach ~segment_window tokens.
+            window_phrases: List[List[str]] = []
+            window_tokens = 0
+            j = i
+            while j < len(phrases) and window_tokens < segment_window:
+                window_phrases.append(phrases[j])
+                window_tokens += len(phrases[j])
+                j += 1
 
-        start = 0
-        while start < n_tokens:
-            end = min(start + segment_window, n_tokens)
-            seg_tokens = tokens[start:end]
+            if not window_phrases:
+                break
 
-            seg_start_time = token_times[start][0] if start < len(token_times) else 0.0
-            seg_end_time = token_times[end - 1][1] if (end - 1) < len(token_times) else 0.0
+            seg_start_time = phrase_times[i][0]
+            seg_end_time = phrase_times[j - 1][1]
 
-            seg_ranked = model.rank_ragas(seg_tokens)
+            seg_ranked = model.rank_ragas(window_phrases)
             top_ragas = [
                 {"raga": r, "score": round(s, 4)}
                 for r, s in seg_ranked[:3]
@@ -533,13 +538,14 @@ def score_transcription(
             seg_results.append({
                 "start_time": seg_start_time,
                 "end_time": seg_end_time,
-                "token_range": [start, end],
+                "phrase_range": [i, j],
+                "token_count": window_tokens,
                 "top_ragas": top_ragas,
             })
 
-            if end == n_tokens:
-                break
-            start += step
+            # Advance by half the phrases in the window (50% overlap).
+            step = max(1, (j - i) // 2)
+            i += step
 
         result["segments"] = seg_results
 

@@ -1669,8 +1669,8 @@ def tokenize_notes_for_lm(
     notes: List[Note],
     tonic_midi: float,
     phrase_gap_sec: float = 0.25,
-) -> List[str]:
-    """Convert note list to LM tokens with octave markers and phrase boundaries.
+) -> List[List[str]]:
+    """Convert note list to phrase-separated LM token sequences.
 
     Token format:
         - Middle octave (containing tonic): bare sargam, e.g. ``Sa``, ``Re``
@@ -1679,24 +1679,29 @@ def tokenize_notes_for_lm(
         - Beyond: clipped to nearest boundary octave
 
     Phrase boundaries (gaps > *phrase_gap_sec* between consecutive notes)
-    insert a ``<BOS>`` token.
+    start a new phrase. Each phrase begins with a ``<BOS>`` token.
+    N-grams should be counted within phrases only -- never crossing
+    phrase boundaries.
 
     Returns:
-        List of string tokens, e.g.
-        ``['<BOS>', 'Sa', 'Re', 'Ga', '<BOS>', 'Ni\\'', 'Re', ...]``
+        List of phrase token lists, e.g.
+        ``[['<BOS>', 'Sa', 'Re', 'Ga'], ['<BOS>', 'Ni\\'', 'Re', ...]]``
     """
     if not notes:
         return []
 
     tonic_rounded = int(round(tonic_midi))
 
-    tokens: List[str] = []
+    phrases: List[List[str]] = []
+    current_phrase: List[str] = []
     prev_end: Optional[float] = None
 
     for note in notes:
-        # Insert phrase boundary on gap or at start
+        # Start a new phrase on gap or at start
         if prev_end is None or (note.start - prev_end) > phrase_gap_sec:
-            tokens.append("<BOS>")
+            if current_phrase:
+                phrases.append(current_phrase)
+            current_phrase = ["<BOS>"]
 
         midi_rounded = int(round(note.pitch_midi))
         offset = (midi_rounded - tonic_rounded) % 12
@@ -1712,7 +1717,10 @@ def tokenize_notes_for_lm(
             sargam += "''"
         # else: middle octave, bare sargam
 
-        tokens.append(sargam)
+        current_phrase.append(sargam)
         prev_end = note.end
 
-    return tokens
+    if current_phrase:
+        phrases.append(current_phrase)
+
+    return phrases

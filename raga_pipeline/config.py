@@ -163,6 +163,7 @@ class PipelineConfig:
     keep_impure_notes: bool = False
     strict_raga_35c_filter: bool = False
     strict_raga_max_cents: float = 35.0
+    skip_raga_correction: bool = False
 
     def __post_init__(self):
         """Validate and normalize paths."""
@@ -517,6 +518,8 @@ def build_cli_parser() -> argparse.ArgumentParser:
     _add_common_args(analyze_parser, required=True)
     analyze_parser.add_argument("--tonic", required=True, help="Tonic (e.g. C, D#)")
     analyze_parser.add_argument("--raga", required=True, help="Raga name")
+    analyze_parser.add_argument("--skip-raga-correction", action="store_true",
+                                   help="Skip post-transcription raga correction (keep chromatic transcription as-is)")
     analyze_parser.add_argument("--keep-impure-notes", action="store_true", help="Keep notes not in raga (default: remove)")
     analyze_parser.add_argument(
         "--strict-raga-35c-filter",
@@ -698,6 +701,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),
+        skip_raga_correction=getattr(args, 'skip_raga_correction', False),
         keep_impure_notes=getattr(args, 'keep_impure_notes', False),
         strict_raga_35c_filter=getattr(args, 'strict_raga_35c_filter', False),
         strict_raga_max_cents=getattr(args, 'strict_raga_max_cents', 35.0),

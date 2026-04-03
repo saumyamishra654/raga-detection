@@ -601,16 +601,44 @@ The three-signal formula used in the pipeline (`alpha * norm(hist) + beta * norm
 
 ---
 
-## 12. Updated Summary of All Results
+## 12. Experiment 7: Histogram-Only Baseline
 
-| # | Experiment | Condition | Best Top-1 | Best Top-3 | Best Order |
-|---|-----------|-----------|-----------|-----------|------------|
-| 1 | Flat n-grams | Corrected transcriptions | 97.0% | 99.0% | 6 |
-| 2 | Flat n-grams | Uncorrected transcriptions | 88.6% | 95.6% | 4 |
-| 3a | Phrase-aware | Corrected transcriptions | 96.6% | 99.0% | 6 |
-| 3b | Phrase-aware | Uncorrected transcriptions | 87.2% | 94.3% | 5 |
-| 5 | Pipeline combined (3 signals) | Unseen recording (Parveen Sultana) | Rank 1 correct | -- | 5 |
-| 6 | LOO combined (LM + deletion, no histogram) | Corrected, lambda=2.0 | 79.5% | 92.6% | 5 |
+### 12.1 Method
+
+Evaluated the existing detect pipeline's histogram scorer (8-coefficient `RagaScorer`) alone on all 298 CompMusic recordings with existing `candidates.csv` files. Checked whether the correct raga appeared at rank 1 and top-3 in the histogram ranking. Also tested with and without vocal/gender metadata, and with full 78-raga DB vs our 30-raga subset.
+
+### 12.2 Results
+
+| Condition | Top-1 | Top-3 | Tonic Top-1 | Tonic Top-3 |
+|-----------|-------|-------|-------------|-------------|
+| With metadata, full DB | 48.0% | 65.8% | 62.1% | 91.3% |
+| With metadata, 30-raga filter | 50.7% | 67.4% | -- | -- |
+| Without metadata, full DB | 48.0% | 65.8% | 62.1% | 91.3% |
+| Without metadata, 30-raga filter | 50.3% | 66.1% | -- | -- |
+
+### 12.3 Key Findings
+
+- **Vocal/gender metadata makes no difference** on this all-vocal corpus. The tonic bias from metadata is redundant.
+- **Tonic detection is strong** (62% top-1, 91% top-3) but **raga discrimination is weak** (48-51% top-1). The histogram identifies the scale but cannot distinguish ragas that share one.
+- Ragas at 0% histogram accuracy: Bageshri, Bhairav, Bihag, Shri -- all share their scale with other ragas in the DB.
+- The 30-raga filter gives only a ~2pp improvement, meaning the main confusion is within our subset, not with ragas outside it.
+
+---
+
+## 13. Updated Summary of All Results
+
+| # | Experiment | Condition | Best Top-1 | Best Top-3 | Notes |
+|---|-----------|-----------|-----------|-----------|-------|
+| 1 | Flat n-grams (LM-only) | Corrected transcriptions | 97.0% | 99.0% | Order 6 |
+| 2 | Flat n-grams (LM-only) | Uncorrected transcriptions | 88.6% | 95.6% | Order 4 |
+| 3a | Phrase-aware (LM-only) | Corrected transcriptions | 96.6% | 99.0% | Order 6 |
+| 3b | Phrase-aware (LM-only) | Uncorrected transcriptions | 87.2% | 94.3% | Order 5 |
+| 5 | Three-signal pipeline | Parveen Sultana (unseen) | Rank 1 | -- | Single case study |
+| 6 | LM+deletion (LOO, no histogram) | Corrected, lambda=2.0 | 79.5% | 92.6% | Order 5 |
+| 6b | LM+deletion (LOO, lambda=0) | Per-hypothesis correction | 88.9% | -- | Order 5; lambda sweep running |
+| 7 | Histogram only | With/without metadata | 48-51% | 66-67% | 30-raga filter |
+
+Within-corpus LOO accuracy; artist/composition overlap likely inflates generalization estimates.
 
 ---
 

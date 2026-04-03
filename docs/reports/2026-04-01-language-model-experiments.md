@@ -644,22 +644,18 @@ Within-corpus LOO accuracy; artist/composition overlap likely inflates generaliz
 
 ## 14. Open Questions
 
-1. **Lambda sweep results (running):** Testing lambda values 0, 0.5, 1.0, 2.0, 5.0 in LOO combined mode. Lambda=0 should match pure LM baseline. Results will determine if there's any lambda value where deletion residual helps without histogram gating.
+1. **Lambda sweep results (running):** Testing lambda values 0, 0.5, 1.0, 2.0, 5.0 in LOO LM+deletion mode. Lambda=0 gives the per-hypothesis-correction baseline (88.9%). Results will determine if there's any lambda value where deletion residual helps without histogram gating.
 
-2. **Full pipeline evaluation:** The three-signal formula needs to be tested on the full corpus by running detect with `--use-lm-scoring` on all 297 recordings. This would provide the histogram scores needed for the combined formula.
+2. **Full pipeline evaluation:** The three-signal formula needs to be tested on the full corpus by running detect with `--use-lm-scoring` on all 297 recordings. This would provide the histogram scores needed for the three-signal combined formula.
 
-3. **Training corpus size and artist confounding:** With ~10 recordings per raga, the model may overfit to artist/composition fingerprints. Cross-artist evaluation would quantify this.
+3. **Artist/composition confounding:** With ~10 recordings per raga, the model may overfit to artist/composition fingerprints. Cross-artist grouped CV would quantify this.
 
-4. **Deletion residual regression stability:** The regression coefficients (-0.0684, 0.6640) were fit on 28 ragas. How stable are they with different corpus sizes or different pitch extraction settings?
+4. **Logistic regression weight optimization:** Running Strategy 9.8 (logistic regression on the three signals from the full pipeline) would empirically determine optimal alpha/beta/gamma weights.
 
-5. **Logistic regression weight optimization:** Running Strategy 9.8 (logistic regression on the three signals from the full pipeline) would empirically determine optimal alpha/beta/gamma weights and validate the manual choices.
+5. **Optimal n-gram order for multi-hypothesis pipeline:** The pipeline applies per-hypothesis correction before LM scoring, so the corrected-data optimal (order 5-6) likely applies. Needs validation.
 
-1. **Optimal n-gram order for multi-hypothesis pipeline:** The pipeline applies per-hypothesis correction before LM scoring, so the corrected-data optimal (order 5-6) likely applies. Needs validation.
+6. **Interaction between histogram and LM errors:** Do they fail on the same recordings? If errors are independent, combination helps more. If correlated, less.
 
-2. **Training corpus size and artist confounding:** With ~10 recordings per raga, the model may overfit to artist/composition fingerprints. Cross-artist evaluation would quantify this.
+7. **Deletion residual regression stability:** The coefficients (-0.0684, 0.6640) were fit on 28 ragas. How stable are they across different corpus sizes or pitch extraction settings?
 
-3. **Interaction between histogram and LM errors:** Do they fail on the same recordings? If errors are independent, combination helps more. If correlated, less.
-
-4. **Deletion residual regression stability:** The regression coefficients (-0.0684, 0.6640) were fit on 28 ragas. How stable are they with different corpus sizes or different pitch extraction settings?
-
-5. **Computational cost at scale:** The multi-hypothesis pipeline scores ~200-500 (tonic, raga) candidates per recording, each requiring raga correction + tokenization + LM scoring. Currently ~25 seconds total. Acceptable for offline use; may need optimization for real-time applications.
+8. **Computational cost at scale:** The multi-hypothesis pipeline scores ~200-500 candidates per recording. Currently ~25 seconds total. Acceptable offline; may need optimization for real-time use.

@@ -810,7 +810,7 @@ def _run_leave_one_out_lm_deletion(
     lm_deletion_slope: float = -0.0684,
     lm_deletion_intercept: float = 0.6640,
 ) -> List[Dict[str, Any]]:
-    """LOO CV with combined histogram-gate + LM + deletion-residual scoring.
+    """LOO CV with LM + deletion-residual scoring (no histogram).
 
     For each held-out recording, trains an NgramModel on the rest, then
     for each candidate raga: applies raga correction, computes deletion
@@ -855,7 +855,7 @@ def _run_leave_one_out_lm_deletion(
         if not model.ragas():
             continue
 
-        # Score each candidate raga with combined scoring
+        # Score each candidate raga with LM + deletion-residual scoring
         tonic_pc = _TONIC_MAP.get(held_tonic.strip(), 0) if isinstance(held_tonic, str) else int(held_tonic)
         tonic_midi = 60.0 + tonic_pc
         candidate_scores: List[Tuple[str, float]] = []
@@ -1041,7 +1041,7 @@ def evaluate_model(
 
         recordings[filename] = (raga, tonic, tokens)
 
-    # For combined scoring: also load raw notes and raga DB
+    # For lm-deletion scoring: also load raw notes and raga DB
     raw_notes_map: Dict[str, list] = {}
     raga_db = None
     if scoring_mode == "lm-deletion":
@@ -1059,7 +1059,7 @@ def evaluate_model(
         if raga_db_path:
             raga_db = RagaDatabase(raga_db_path)
         else:
-            raise ValueError("--raga-db required for scoring-mode=combined (auto-discovery failed)")
+            raise ValueError("--raga-db required for scoring-mode=lm-deletion (auto-discovery failed)")
 
         # Load raw notes for each recording
         for row in gt_rows:

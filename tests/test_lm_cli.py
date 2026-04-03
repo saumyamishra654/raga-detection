@@ -85,5 +85,26 @@ class TestLMCli(unittest.TestCase):
             self.assertTrue(eval_path.exists())
 
 
+class TestLambdaParsing(unittest.TestCase):
+    """Tests for lambda CLI parsing and order convention."""
+
+    def test_lambda_parsing_reverses_order(self):
+        """CLI lambdas are highest-order-first; model expects unigram-first."""
+        from raga_pipeline.language_model.__main__ import _parse_lambdas
+        result = _parse_lambdas("0.6,0.3,0.1", order=3)
+        # 0.6 is highest-order (trigram), should become index 2
+        # 0.1 is unigram, should become index 0
+        self.assertEqual(result, [0.1, 0.3, 0.6])
+
+    def test_lambda_none_returns_none(self):
+        from raga_pipeline.language_model.__main__ import _parse_lambdas
+        self.assertIsNone(_parse_lambdas(None, order=3))
+
+    def test_lambda_wrong_count_raises(self):
+        from raga_pipeline.language_model.__main__ import _parse_lambdas
+        with self.assertRaises(ValueError):
+            _parse_lambdas("0.5,0.5", order=3)
+
+
 if __name__ == "__main__":
     unittest.main()

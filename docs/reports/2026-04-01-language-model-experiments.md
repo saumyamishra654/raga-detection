@@ -642,7 +642,7 @@ Within-corpus LOO accuracy; artist/composition overlap likely inflates generaliz
 
 ---
 
-## 13. Open Questions
+## 14. Open Questions
 
 1. **Lambda sweep results (running):** Testing lambda values 0, 0.5, 1.0, 2.0, 5.0 in LOO combined mode. Lambda=0 should match pure LM baseline. Results will determine if there's any lambda value where deletion residual helps without histogram gating.
 

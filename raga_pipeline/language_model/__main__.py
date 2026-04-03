@@ -56,9 +56,9 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--scoring-mode", choices=["lm", "lm-deletion"], default="lm",
                           help="'lm' = pure LM ranking, 'lm-deletion' = LM + deletion residual (default: lm)")
     evaluate.add_argument("--raga-db", default=None,
-                          help="Path to raga_list_final.csv (auto-discovered if omitted; required for combined)")
+                          help="Path to raga_list_final.csv (auto-discovered if omitted; required for lm-deletion)")
     evaluate.add_argument("--lm-deletion-lambda", type=float, default=2.0,
-                          help="Weight for deletion residual in combined scoring (default: 2.0)")
+                          help="Weight for deletion residual in lm-deletion scoring (default: 2.0)")
     evaluate.add_argument("--lm-deletion-slope", type=float, default=-0.0684)
     evaluate.add_argument("--lm-deletion-intercept", type=float, default=0.6640)
     evaluate.add_argument("--quiet", action="store_true")

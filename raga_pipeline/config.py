@@ -143,6 +143,9 @@ class PipelineConfig:
     # LM scoring (detect mode)
     use_lm_scoring: bool = False
     lm_model_path: Optional[str] = None
+    lm_deletion_lambda: float = 2.0
+    lm_deletion_slope: float = -0.0684
+    lm_deletion_intercept: float = 0.6640
 
     # db paths
     raga_db_path: Optional[str] = None    # Auto-locates if None
@@ -520,6 +523,12 @@ def build_cli_parser() -> argparse.ArgumentParser:
                                help="Re-rank candidates using n-gram language model (writes lm_candidates.csv)")
     detect_parser.add_argument("--lm-model", dest="lm_model_path", default=None,
                                help="Path to trained n-gram model JSON (required with --use-lm-scoring)")
+    detect_parser.add_argument("--lm-deletion-lambda", type=float, default=2.0,
+                               help="Weight for deletion residual in combined LM scoring (default: 2.0)")
+    detect_parser.add_argument("--lm-deletion-slope", type=float, default=-0.0684,
+                               help="Regression slope for expected deletion vs scale size (default: -0.0684)")
+    detect_parser.add_argument("--lm-deletion-intercept", type=float, default=0.6640,
+                               help="Regression intercept for expected deletion vs scale size (default: 0.6640)")
 
     # --- Analyze Mode ---
     analyze_parser = subparsers.add_parser("analyze", help="Phase 2: Analysis only")
@@ -708,6 +717,9 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         raga_db_path=getattr(args, 'raga_db', None),
         use_lm_scoring=getattr(args, 'use_lm_scoring', False),
         lm_model_path=getattr(args, 'lm_model_path', None),
+        lm_deletion_lambda=getattr(args, 'lm_deletion_lambda', 2.0),
+        lm_deletion_slope=getattr(args, 'lm_deletion_slope', -0.0684),
+        lm_deletion_intercept=getattr(args, 'lm_deletion_intercept', 0.6640),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),

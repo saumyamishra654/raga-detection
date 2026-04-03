@@ -48,6 +48,7 @@ from raga_pipeline.raga import (
     _parse_tonic,
     _parse_tonic_list,
     apply_raga_correction_to_notes,
+    get_raga_notes,
     get_tonic_candidates,
     build_aaroh_avroh_subset,
     load_aaroh_avroh_patterns,
@@ -980,6 +981,11 @@ def run_pipeline(
                         discarded = corr_stats.get("discarded", 0)
                         deletion_rate = discarded / total if total > 0 else 1.0
 
+                        # Scale-normalized deletion residual
+                        scale_size = len(get_raga_notes(raga_db, cand_raga, cand_tonic))
+                        expected_del = config.lm_deletion_slope * scale_size + config.lm_deletion_intercept
+                        del_residual = deletion_rate - expected_del
+
                         # Tokenize corrected notes with this tonic
                         tonic_midi = 60.0 + cand_tonic
                         phrases = tokenize_notes_for_lm(corrected_notes, tonic_midi)
@@ -994,12 +1000,31 @@ def run_pipeline(
                             "histogram_score": round(hist_score, 4),
                             "lm_score": round(lm_score, 4),
                             "deletion_rate": round(deletion_rate, 4),
+                            "scale_size": scale_size,
+                            "expected_deletion": round(expected_del, 4),
+                            "del_residual": round(del_residual, 4),
                             "notes_before_correction": total,
                             "notes_after_correction": total - discarded,
                         })
 
-                # Sort by lm_score descending, write CSV
-                lm_rows.sort(key=lambda r: r["lm_score"], reverse=True)
+                # Histogram gate: keep candidates with positive histogram score.
+                # If none pass, keep top 20 by histogram score as fallback.
+                gated = [r for r in lm_rows if r["histogram_score"] > 0]
+                if not gated:
+                    gated = sorted(lm_rows, key=lambda r: r["histogram_score"], reverse=True)[:20]
+                gated_ragas = {(r["tonic"], r["raga"]) for r in gated}
+
+                # Combined score: LM - lambda * deletion_residual
+                lam = config.lm_deletion_lambda
+                for row in lm_rows:
+                    is_gated = (row["tonic"], row["raga"]) in gated_ragas
+                    row["gated"] = is_gated
+                    row["combined_score"] = round(
+                        row["lm_score"] - lam * row["del_residual"], 4
+                    ) if is_gated else -999.0
+
+                # Sort by combined_score descending, assign ranks
+                lm_rows.sort(key=lambda r: r["combined_score"], reverse=True)
                 for i, row in enumerate(lm_rows):
                     row["lm_rank"] = i + 1
 
@@ -1012,7 +1037,8 @@ def run_pipeline(
                 if lm_rows:
                     top = lm_rows[0]
                     print(f"  LM Top: {top['raga']} (tonic={top['tonic_name']}, "
-                          f"lm_score={top['lm_score']}, deletion_rate={top['deletion_rate']})")
+                          f"combined={top['combined_score']}, lm={top['lm_score']}, "
+                          f"del_resid={top['del_residual']})")
 
             _print_timing("Step 5.5/7 LM re-ranking", perf_counter() - step55_start, audio_duration_s)
 

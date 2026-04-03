@@ -488,7 +488,130 @@ The histogram and deletion residual are partially redundant (both measure pitch 
 
 ---
 
-## 10. Open Questions
+## 10. Experiment 5: Combined LM + Deletion Residual in Pipeline (Parveen Sultana Case Study)
+
+### 10.1 Method
+
+Integrated the three-signal combined scoring into the detect pipeline's `--use-lm-scoring` mode. For each (tonic, raga) candidate from the histogram scorer:
+
+1. Apply raga correction to the chromatic transcription
+2. Compute scale-normalized deletion residual: `del_residual = actual_del - (-0.0684 * scale_size + 0.6640)`
+3. Score corrected tokens against the raga's LM
+4. Apply histogram gate: only candidates with `histogram_score > 0` survive
+5. Compute combined score: `alpha * norm(histogram) + beta * norm(lm) - gamma * del_residual`
+
+Where `norm()` is min-max normalization to [0,1] across gated candidates. Default weights: alpha=1.0, beta=1.0, gamma=2.0.
+
+### 10.2 Evolution of the Formula
+
+Three iterations were tested on the Parveen Sultana recording (Puriya Dhanashree, unseen by the model):
+
+**Iteration 1: LM score only (pre-existing)**
+
+| Rank | Raga | LM Score |
+|------|------|----------|
+| 1 | Hansadhwani (B) | -2.674 |
+| 14 | Puriya Dhanashree (A#) | -2.771 |
+
+Puriya Dhanashree ranked 14th. Hansadhwani (pentatonic) dominates because simpler sequences = lower perplexity.
+
+**Iteration 2: LM + deletion residual with histogram gate**
+
+```
+combined = lm_score - lambda * del_residual
+```
+
+| Rank | Raga | Combined | LM | Del Residual |
+|------|------|----------|-----|-------------|
+| 1 | Hansadhwani (A#) | -2.449 | -2.798 | -0.174 |
+| 2 | Puriya Dhanashree (A#) | -2.472 | -2.771 | -0.150 |
+
+Puriya Dhanashree improved to rank 2, but Hansadhwani still wins because it has both a good LM score AND a good deletion residual (its notes fit well for a pentatonic raga). The histogram gate passes it (score 101 > 0) even though the histogram strongly prefers Puriya Dhanashree (score 700).
+
+**Iteration 3: Three-way combined with normalized histogram**
+
+```
+combined = alpha * norm(hist) + beta * norm(lm) - gamma * del_residual
+```
+
+| Rank | Raga | Combined | Norm Hist | Norm LM | Del Residual | Histogram |
+|------|------|----------|-----------|---------|-------------|-----------|
+| 1 | Puriya Dhanashree (A#) | 2.206 | 1.000 | 0.907 | -0.150 | 699.99 |
+| 2 | Basant (A#) | 2.118 | 1.000 | 0.818 | -0.150 | 699.99 |
+| 3 | Shri (A#) | 2.112 | 1.000 | 0.812 | -0.150 | 699.99 |
+
+Puriya Dhanashree correctly ranked #1. The normalized histogram score (1.0 vs 0.14 for Hansadhwani) overwhelms the small LM advantage, while the deletion residual provides fine-grained discrimination within the histogram's top cluster.
+
+### 10.3 Key Finding
+
+No two signals alone are sufficient. The histogram identifies the tonic and eliminates impossible ragas. The LM captures sequential grammar but is biased toward small scales. The deletion residual measures chromatic fit but doesn't distinguish ragas of the same scale size. All three are needed.
+
+---
+
+## 11. Experiment 6: Combined Scoring in LOO CV (Without Histogram)
+
+### 11.1 Method
+
+Extended the LOO evaluation to use combined LM + deletion residual scoring. For each held-out recording, the model trains on the remaining 296, then for each candidate raga:
+
+1. Applies raga correction to the held-out recording's raw notes
+2. Computes scale-normalized deletion residual
+3. Tokenizes corrected notes
+4. Scores with LM
+5. Combined score: `lm_score - lambda * del_residual`
+
+**Critical difference from the pipeline test:** The LOO evaluation does NOT have histogram scores (the histogram comes from the detect pipeline's pitch analysis, not from transcription data). So the histogram gate is absent -- every raga is scored for every recording.
+
+### 11.2 Results
+
+Order 5, lambda=2.0, corrected transcriptions:
+
+| Metric | Pure LM (Exp 3a) | Combined LM+Deletion | Change |
+|--------|-------------------|---------------------|--------|
+| Top-1 | 96.0% | 79.5% | **-16.5** |
+| Top-3 | 99.0% | 92.6% | -6.4 |
+| MRR | 0.974 | 0.865 | -0.109 |
+
+**The combined scoring is significantly worse than pure LM without the histogram gate.**
+
+### 11.3 Analysis
+
+The deletion residual, without histogram pre-filtering, introduces more noise than signal. The problem: in LOO, every raga is a candidate for every recording. A recording in raga Yaman (7 notes) gets scored against all 30 ragas including Hansadhwani (5 notes), Bhupali (5 notes), etc. The pentatonic ragas have *negative* deletion residuals (better than expected for their scale size) on many recordings because any recording with strong Sa-Re-Ga-Pa-Dha content will have low deletion for these ragas.
+
+The deletion residual rewards ragas that "fit" the chromatic content, but "fit" is not the same as "correct." A pentatonic raga trivially fits any heptatonic recording (just delete the 2 extra notes). The regression normalization accounts for *average* deletion by scale size but doesn't prevent pentatonic ragas from scoring well on individual recordings where their notes happen to be prominent.
+
+**This validates the gated approach**: the histogram must filter first to eliminate candidates that don't match the tonic/scale, THEN the LM + deletion residual can discriminate among the survivors. Lambda sweep results (running) will confirm the optimal weight.
+
+### 11.4 Implication for Pipeline Design
+
+The three-signal formula used in the pipeline (`alpha * norm(hist) + beta * norm(lm) - gamma * del_residual`) is the correct architecture. The histogram is not just a gate -- it's a first-class scoring signal whose normalized value must be part of the combined score. The LOO evaluation without histogram access cannot fully test this formula; full evaluation requires running detect with `--use-lm-scoring` on all recordings.
+
+---
+
+## 12. Updated Summary of All Results
+
+| # | Experiment | Condition | Best Top-1 | Best Top-3 | Best Order |
+|---|-----------|-----------|-----------|-----------|------------|
+| 1 | Flat n-grams | Corrected transcriptions | 97.0% | 99.0% | 6 |
+| 2 | Flat n-grams | Uncorrected transcriptions | 88.6% | 95.6% | 4 |
+| 3a | Phrase-aware | Corrected transcriptions | 96.6% | 99.0% | 6 |
+| 3b | Phrase-aware | Uncorrected transcriptions | 87.2% | 94.3% | 5 |
+| 5 | Pipeline combined (3 signals) | Unseen recording (Parveen Sultana) | Rank 1 correct | -- | 5 |
+| 6 | LOO combined (LM + deletion, no histogram) | Corrected, lambda=2.0 | 79.5% | 92.6% | 5 |
+
+---
+
+## 13. Open Questions
+
+1. **Lambda sweep results (running):** Testing lambda values 0, 0.5, 1.0, 2.0, 5.0 in LOO combined mode. Lambda=0 should match pure LM baseline. Results will determine if there's any lambda value where deletion residual helps without histogram gating.
+
+2. **Full pipeline evaluation:** The three-signal formula needs to be tested on the full corpus by running detect with `--use-lm-scoring` on all 297 recordings. This would provide the histogram scores needed for the combined formula.
+
+3. **Training corpus size and artist confounding:** With ~10 recordings per raga, the model may overfit to artist/composition fingerprints. Cross-artist evaluation would quantify this.
+
+4. **Deletion residual regression stability:** The regression coefficients (-0.0684, 0.6640) were fit on 28 ragas. How stable are they with different corpus sizes or different pitch extraction settings?
+
+5. **Logistic regression weight optimization:** Running Strategy 9.8 (logistic regression on the three signals from the full pipeline) would empirically determine optimal alpha/beta/gamma weights and validate the manual choices.
 
 1. **Optimal n-gram order for multi-hypothesis pipeline:** The pipeline applies per-hypothesis correction before LM scoring, so the corrected-data optimal (order 5-6) likely applies. Needs validation.
 

@@ -40,6 +40,10 @@ class NgramModel:
         self.smoothing = smoothing
         self.smoothing_k = smoothing_k
 
+        # Lambda convention: index 0 = unigram weight, index 1 = bigram, ...,
+        # index (order-1) = highest-order weight.  The CLI presents these in
+        # reversed order (highest-order-first) and __main__._parse_lambdas
+        # reverses them before passing here.
         if lambdas is not None:
             if len(lambdas) != order:
                 raise ValueError("lambdas must have length == order")
@@ -792,7 +796,7 @@ def _run_leave_one_out(
     return results
 
 
-def _run_leave_one_out_combined(
+def _run_leave_one_out_lm_deletion(
     gt_rows: list,
     recordings: Dict[str, Tuple[str, str, List[List[str]]]],
     raw_notes_map: Dict[str, list],
@@ -1040,7 +1044,7 @@ def evaluate_model(
     # For combined scoring: also load raw notes and raga DB
     raw_notes_map: Dict[str, list] = {}
     raga_db = None
-    if scoring_mode == "combined":
+    if scoring_mode == "lm-deletion":
         from raga_pipeline.raga import RagaDatabase
         if raga_db_path is None:
             # Auto-discover raga DB
@@ -1076,8 +1080,8 @@ def evaluate_model(
 
     # Choose LOO function based on scoring mode
     def _run_loo(o: int, lam: Optional[List[float]]) -> List[Dict[str, Any]]:
-        if scoring_mode == "combined" and raga_db is not None:
-            return _run_leave_one_out_combined(
+        if scoring_mode == "lm-deletion" and raga_db is not None:
+            return _run_leave_one_out_lm_deletion(
                 gt_rows=gt_rows, recordings=recordings,
                 raw_notes_map=raw_notes_map, order=o,
                 smoothing=smoothing, smoothing_k=smoothing_k,

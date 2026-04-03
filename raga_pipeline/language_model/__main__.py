@@ -24,7 +24,7 @@ def _build_parser() -> argparse.ArgumentParser:
     train.add_argument("--results-dir", required=True, help="Root directory with transcription CSVs.")
     train.add_argument("--output", default="raga_ngram_model.json", help="Output model JSON path.")
     train.add_argument("--order", type=int, default=5, help="Maximum n-gram order (default: 5).")
-    train.add_argument("--smoothing", choices=["add-k", "kneser-ney"], default="add-k")
+    train.add_argument("--smoothing", choices=["add-k"], default="add-k")
     train.add_argument("--smoothing-k", type=float, default=0.01)
     train.add_argument("--min-recordings", type=int, default=3)
     train.add_argument("--lambdas", default=None,
@@ -47,14 +47,14 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--results-dir", required=True)
     evaluate.add_argument("--output", default="eval_results.csv")
     evaluate.add_argument("--order", type=int, default=5)
-    evaluate.add_argument("--smoothing", choices=["add-k", "kneser-ney"], default="add-k")
+    evaluate.add_argument("--smoothing", choices=["add-k"], default="add-k")
     evaluate.add_argument("--smoothing-k", type=float, default=0.01)
     evaluate.add_argument("--min-recordings", type=int, default=3)
     evaluate.add_argument("--lambdas", default=None)
     evaluate.add_argument("--sweep-orders", default=None,
                           help="Comma-separated orders to sweep.")
-    evaluate.add_argument("--scoring-mode", choices=["lm", "combined"], default="lm",
-                          help="'lm' = pure LM ranking, 'combined' = LM + deletion residual (default: lm)")
+    evaluate.add_argument("--scoring-mode", choices=["lm", "lm-deletion"], default="lm",
+                          help="'lm' = pure LM ranking, 'lm-deletion' = LM + deletion residual (default: lm)")
     evaluate.add_argument("--raga-db", default=None,
                           help="Path to raga_list_final.csv (auto-discovered if omitted; required for combined)")
     evaluate.add_argument("--lm-deletion-lambda", type=float, default=2.0,
@@ -67,12 +67,19 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _parse_lambdas(raw: Optional[str], order: int) -> Optional[list[float]]:
+    """Parse comma-separated lambda weights (highest-order-first on CLI).
+
+    The CLI convention is highest-order-first (e.g., ``0.6,0.3,0.1`` means
+    trigram=0.6, bigram=0.3, unigram=0.1 for order=3).  NgramModel expects
+    index 0 = unigram, so we reverse before returning.
+    """
     if raw is None:
         return None
     parts = [float(x.strip()) for x in raw.split(",")]
     if len(parts) != order:
         raise ValueError(f"--lambdas must have {order} values, got {len(parts)}")
-    return parts
+    # Reverse: CLI is highest-order-first, model is unigram-first (index 0).
+    return list(reversed(parts))
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

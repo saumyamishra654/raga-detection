@@ -242,6 +242,11 @@ class PipelineConfig:
         if self.mode == "detect" and self.force_stem_recompute and not self.force_recompute:
             raise ValueError("Detect mode with --force-stems requires --force.")
 
+        if self.use_lm_scoring and not self.lm_model_path:
+            raise ValueError("--use-lm-scoring requires --lm-model (path to trained n-gram model JSON)")
+        if self.use_lm_scoring and self.lm_model_path and not os.path.exists(self.lm_model_path):
+            raise ValueError(f"--lm-model path does not exist: {self.lm_model_path}")
+
         if self.mode == "detect" and self.skip_separation:
             tonic_tokens = [
                 token.strip()

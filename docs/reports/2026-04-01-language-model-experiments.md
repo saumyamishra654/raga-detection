@@ -339,6 +339,19 @@ The raw deletion rate should **not** be used directly in any combination formula
 
 ## 9. Updated Signal Combination Strategies
 
+### Terminology: Scoring Modes
+
+| Name | Formula | Available in | Notes |
+|------|---------|-------------|-------|
+| **LM-only** | `model.rank_ragas(phrases)` | LOO CV, pipeline | Pure n-gram perplexity |
+| **LM+deletion** | `lm_score - lambda * del_residual` | LOO CV, pipeline | No histogram; testable in LOO |
+| **Three-signal pipeline** | `alpha * norm(hist) + beta * norm(lm) - gamma * del_residual` | Pipeline only | Requires histogram from detect; cannot be tested in LOO |
+
+### Limitations
+
+- All LOO accuracies reported are **within-corpus** estimates on the 300-song CompMusic subset. Artist/composition overlap between folds likely inflates these numbers relative to true generalization accuracy.
+- The three-signal pipeline formula has been validated on a single unseen recording (Parveen Sultana). Corpus-level evaluation requires running full detect with `--use-lm-scoring` on all recordings.
+
 Based on the deletion rate analysis and the Parveen Sultana case study, here is the full set of combination strategies under consideration. The three signals are:
 - **Histogram score** (`hist`): pitch class distribution match, strongest at tonic detection and eliminating impossible ragas
 - **LM score** (`lm`): n-gram sequence likelihood, captures raga grammar but biased toward small-scale ragas
@@ -544,7 +557,7 @@ Puriya Dhanashree correctly ranked #1. The normalized histogram score (1.0 vs 0.
 
 ### 10.3 Key Finding
 
-No two signals alone are sufficient. The histogram identifies the tonic and eliminates impossible ragas. The LM captures sequential grammar but is biased toward small scales. The deletion residual measures chromatic fit but doesn't distinguish ragas of the same scale size. All three are needed.
+In this case study, all three signals contribute complementary information. The histogram identifies the tonic and eliminates impossible ragas. The LM captures sequential grammar but is biased toward small scales. The deletion residual measures chromatic fit but doesn't distinguish ragas of the same scale size. Corpus-level validation of the three-signal formula is pending (requires running detect with LM scoring on all 297 recordings).
 
 ---
 

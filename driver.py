@@ -986,6 +986,13 @@ def run_pipeline(
                         expected_del = config.lm_deletion_slope * scale_size + config.lm_deletion_intercept
                         del_residual = deletion_rate - expected_del
 
+                        # Match training pipeline: merge consecutive notes
+                        # (same post-processing analyze applies before saving CSV)
+                        corrected_notes = merge_consecutive_notes(
+                            corrected_notes, max_gap=0.1, pitch_tolerance=0.7,
+                            max_dropout_gap=0.18, dropout_fragment_duration=0.12,
+                        )
+
                         # Tokenize corrected notes with this tonic
                         tonic_midi = 60.0 + cand_tonic
                         phrases = tokenize_notes_for_lm(corrected_notes, tonic_midi)

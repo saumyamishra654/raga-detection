@@ -1014,14 +1014,41 @@ def run_pipeline(
                     gated = sorted(lm_rows, key=lambda r: r["histogram_score"], reverse=True)[:20]
                 gated_ragas = {(r["tonic"], r["raga"]) for r in gated}
 
-                # Combined score: LM - lambda * deletion_residual
+                # Normalize histogram scores within gated candidates to [0, 1].
+                gated_hist = [r["histogram_score"] for r in gated]
+                hist_min = min(gated_hist) if gated_hist else 0.0
+                hist_max = max(gated_hist) if gated_hist else 1.0
+                hist_range = hist_max - hist_min if hist_max > hist_min else 1.0
+
+                # Normalize LM scores within gated candidates to [0, 1].
+                gated_lm = [r["lm_score"] for r in lm_rows
+                            if (r["tonic"], r["raga"]) in gated_ragas and r["lm_score"] > -900]
+                lm_min = min(gated_lm) if gated_lm else 0.0
+                lm_max = max(gated_lm) if gated_lm else 1.0
+                lm_range = lm_max - lm_min if lm_max > lm_min else 1.0
+
+                # Combined score:
+                #   alpha * norm(histogram) + beta * norm(lm) - gamma * del_residual
+                # Defaults: alpha=1.0, beta=1.0, gamma=2.0 (lambda)
+                # norm(histogram) and norm(lm) are in [0,1]; del_residual is ~[-0.2, +0.2]
                 lam = config.lm_deletion_lambda
+                alpha = 1.0  # histogram weight
+                beta = 1.0   # LM weight
                 for row in lm_rows:
                     is_gated = (row["tonic"], row["raga"]) in gated_ragas
                     row["gated"] = is_gated
-                    row["combined_score"] = round(
-                        row["lm_score"] - lam * row["del_residual"], 4
-                    ) if is_gated else -999.0
+                    if is_gated:
+                        norm_hist = (row["histogram_score"] - hist_min) / hist_range
+                        norm_lm = (row["lm_score"] - lm_min) / lm_range
+                        row["norm_histogram"] = round(norm_hist, 4)
+                        row["norm_lm"] = round(norm_lm, 4)
+                        row["combined_score"] = round(
+                            alpha * norm_hist + beta * norm_lm - lam * row["del_residual"], 4
+                        )
+                    else:
+                        row["norm_histogram"] = 0.0
+                        row["norm_lm"] = 0.0
+                        row["combined_score"] = -999.0
 
                 # Sort by combined_score descending, assign ranks
                 lm_rows.sort(key=lambda r: r["combined_score"], reverse=True)

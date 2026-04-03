@@ -346,21 +346,14 @@ def _find_col(fieldnames: Sequence[str], aliases: Sequence[str]) -> Optional[str
     return None
 
 
-def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
-    """Read a transcription CSV, build Note objects, and return phrase-separated LM tokens.
+def _load_raw_notes_from_csv(csv_path: Path) -> List:
+    """Read a transcription CSV and return raw Note objects (no tokenization).
 
-    Supports flexible column names:
-        - start time: ``start``, ``start_time``
-        - end time: ``end``, ``end_time``
-        - pitch: ``pitch_midi``, ``midi``
-        - sargam: ``sargam``
-
-    Delegates to :func:`raga_pipeline.sequence.tokenize_notes_for_lm`.
-    Returns a list of phrase token lists.
+    Returns an empty list on any read/parse error.
     """
-    from raga_pipeline.sequence import Note, tokenize_notes_for_lm  # lazy import
+    from raga_pipeline.sequence import Note  # lazy import
 
-    notes: List[Note] = []
+    notes: List = []
     try:
         with csv_path.open("r", encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
@@ -376,7 +369,6 @@ def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
                     end = float(row[end_col]) if end_col else 0.0
                     pitch_midi = float(row[midi_col]) if midi_col else 60.0
                     sargam = str(row[sargam_col]).strip() if sargam_col else ""
-                    # pitch_hz is not used by the tokenizer but required by the dataclass.
                     pitch_hz = 440.0 * (2.0 ** ((pitch_midi - 69.0) / 12.0))
                     notes.append(
                         Note(
@@ -393,6 +385,20 @@ def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
     except OSError:
         return []
 
+    return notes
+
+
+def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
+    """Read a transcription CSV and return phrase-separated LM tokens.
+
+    Delegates to :func:`_load_raw_notes_from_csv` then
+    :func:`raga_pipeline.sequence.tokenize_notes_for_lm`.
+    """
+    from raga_pipeline.sequence import tokenize_notes_for_lm  # lazy import
+
+    notes = _load_raw_notes_from_csv(csv_path)
+    if not notes:
+        return []
     return tokenize_notes_for_lm(notes, tonic_midi)
 
 
@@ -786,6 +792,117 @@ def _run_leave_one_out(
     return results
 
 
+def _run_leave_one_out_combined(
+    gt_rows: list,
+    recordings: Dict[str, Tuple[str, str, List[List[str]]]],
+    raw_notes_map: Dict[str, list],
+    order: int,
+    smoothing: str,
+    smoothing_k: float,
+    lambdas: Optional[List[float]],
+    min_recordings: int,
+    raga_db: Any,
+    lm_deletion_lambda: float = 2.0,
+    lm_deletion_slope: float = -0.0684,
+    lm_deletion_intercept: float = 0.6640,
+) -> List[Dict[str, Any]]:
+    """LOO CV with combined histogram-gate + LM + deletion-residual scoring.
+
+    For each held-out recording, trains an NgramModel on the rest, then
+    for each candidate raga: applies raga correction, computes deletion
+    residual, tokenizes, scores with LM, and combines the signals.
+    """
+    from raga_pipeline.raga import apply_raga_correction_to_notes, get_raga_notes
+    from raga_pipeline.sequence import tokenize_notes_for_lm
+
+    raga_to_filenames: Dict[str, List[str]] = defaultdict(list)
+    for fname, (raga, tonic, tokens) in recordings.items():
+        raga_to_filenames[raga].append(fname)
+
+    results: List[Dict[str, Any]] = []
+    filenames = list(recordings.keys())
+
+    for held_out in filenames:
+        held_raga, held_tonic, held_tokens = recordings[held_out]
+        held_raw_notes = raw_notes_map.get(held_out, [])
+        if not held_tokens or not held_raw_notes:
+            continue
+
+        # Build model excluding held-out recording
+        model = NgramModel(
+            order=order, smoothing=smoothing,
+            smoothing_k=smoothing_k, lambdas=lambdas,
+        )
+        raga_counts: Dict[str, int] = defaultdict(int)
+        for fname, (raga, tonic, tokens) in recordings.items():
+            if fname == held_out:
+                continue
+            if tokens:
+                model.add_sequence(raga, tokens)
+                raga_counts[raga] += 1
+
+        # Remove ragas below threshold
+        for raga in list(model._counts.keys()):
+            if raga_counts.get(raga, 0) < min_recordings:
+                del model._counts[raga]
+                del model._context_counts[raga]
+        model.finalize()
+
+        if not model.ragas():
+            continue
+
+        # Score each candidate raga with combined scoring
+        tonic_pc = _TONIC_MAP.get(held_tonic.strip(), 0) if isinstance(held_tonic, str) else int(held_tonic)
+        tonic_midi = 60.0 + tonic_pc
+        candidate_scores: List[Tuple[str, float]] = []
+
+        for cand_raga in model.ragas():
+            try:
+                corrected_notes, corr_stats, _ = apply_raga_correction_to_notes(
+                    held_raw_notes, raga_db, cand_raga, tonic_pc,
+                    max_distance=1.0, keep_impure=False,
+                )
+            except Exception:
+                continue
+
+            total = corr_stats.get("total", len(held_raw_notes))
+            discarded = corr_stats.get("discarded", 0)
+            deletion_rate = discarded / total if total > 0 else 1.0
+
+            scale_size = len(get_raga_notes(raga_db, cand_raga, tonic_pc))
+            expected_del = lm_deletion_slope * scale_size + lm_deletion_intercept
+            del_residual = deletion_rate - expected_del
+
+            phrases = tokenize_notes_for_lm(corrected_notes, tonic_midi)
+            lm_score = model.score_sequence(cand_raga, phrases) if phrases else -999.0
+
+            combined = lm_score - lm_deletion_lambda * del_residual
+            candidate_scores.append((cand_raga, combined))
+
+        if not candidate_scores:
+            continue
+
+        candidate_scores.sort(key=lambda x: x[1], reverse=True)
+        raga_names = [r for r, _ in candidate_scores]
+        true_rank = (raga_names.index(held_raga) + 1) if held_raga in raga_names else len(raga_names) + 1
+
+        results.append({
+            "filename": held_out,
+            "true_raga": held_raga,
+            "predicted_raga": candidate_scores[0][0] if candidate_scores else "",
+            "correct": candidate_scores[0][0] == held_raga if candidate_scores else False,
+            "true_raga_rank": true_rank,
+            "score_top1": round(candidate_scores[0][1], 4) if candidate_scores else 0.0,
+            "raga_top1": candidate_scores[0][0] if candidate_scores else "",
+            "raga_top2": candidate_scores[1][0] if len(candidate_scores) > 1 else "",
+            "raga_top3": candidate_scores[2][0] if len(candidate_scores) > 2 else "",
+            "score_top2": round(candidate_scores[1][1], 4) if len(candidate_scores) > 1 else 0.0,
+            "score_top3": round(candidate_scores[2][1], 4) if len(candidate_scores) > 2 else 0.0,
+        })
+
+    return results
+
+
 def _compute_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Compute top-1 accuracy, top-3 accuracy, and MRR from per-recording results."""
     total = len(results)
@@ -831,6 +948,11 @@ def evaluate_model(
     transcription_source: str = "auto",
     sweep_orders: Optional[List[int]] = None,
     quiet: bool = False,
+    scoring_mode: str = "lm",
+    raga_db_path: Optional[str] = None,
+    lm_deletion_lambda: float = 2.0,
+    lm_deletion_slope: float = -0.0684,
+    lm_deletion_intercept: float = 0.6640,
 ) -> Dict[str, Any]:
     """Evaluate a per-raga n-gram model using leave-one-out cross-validation.
 
@@ -915,22 +1037,67 @@ def evaluate_model(
 
         recordings[filename] = (raga, tonic, tokens)
 
+    # For combined scoring: also load raw notes and raga DB
+    raw_notes_map: Dict[str, list] = {}
+    raga_db = None
+    if scoring_mode == "combined":
+        from raga_pipeline.raga import RagaDatabase
+        if raga_db_path is None:
+            # Auto-discover raga DB
+            for candidate_path in [
+                Path("main notebooks/raga_list_final.csv"),
+                Path(__file__).parent.parent / "raga_list_final.csv",
+                Path(__file__).parent.parent.parent / "main notebooks" / "raga_list_final.csv",
+            ]:
+                if candidate_path.exists():
+                    raga_db_path = str(candidate_path)
+                    break
+        if raga_db_path:
+            raga_db = RagaDatabase(raga_db_path)
+        else:
+            raise ValueError("--raga-db required for scoring-mode=combined (auto-discovery failed)")
+
+        # Load raw notes for each recording
+        for row in gt_rows:
+            filename = row.filename
+            if filename not in recordings:
+                continue
+            base = os.path.basename(filename)
+            stem = Path(base).stem.lower()
+            candidates_list = stem_map.get(stem) or basename_map.get(base.lower())
+            if not candidates_list or len(candidates_list) != 1:
+                continue
+            csv_path, _ = candidates_list[0].resolve(transcription_source)
+            if csv_path and csv_path.exists():
+                raw_notes_map[filename] = _load_raw_notes_from_csv(csv_path)
+
     if not quiet:
         print(f"[evaluate_model] loaded={len(recordings)} skipped={skipped}")
+
+    # Choose LOO function based on scoring mode
+    def _run_loo(o: int, lam: Optional[List[float]]) -> List[Dict[str, Any]]:
+        if scoring_mode == "combined" and raga_db is not None:
+            return _run_leave_one_out_combined(
+                gt_rows=gt_rows, recordings=recordings,
+                raw_notes_map=raw_notes_map, order=o,
+                smoothing=smoothing, smoothing_k=smoothing_k,
+                lambdas=lam, min_recordings=min_recordings,
+                raga_db=raga_db,
+                lm_deletion_lambda=lm_deletion_lambda,
+                lm_deletion_slope=lm_deletion_slope,
+                lm_deletion_intercept=lm_deletion_intercept,
+            )
+        return _run_leave_one_out(
+            gt_rows=gt_rows, recordings=recordings, order=o,
+            smoothing=smoothing, smoothing_k=smoothing_k,
+            lambdas=lam, min_recordings=min_recordings,
+        )
 
     if sweep_orders is not None:
         sweep_results: List[Dict[str, Any]] = []
         last_loo_results: List[Dict[str, Any]] = []
         for sweep_order in sweep_orders:
-            loo_results = _run_leave_one_out(
-                gt_rows=gt_rows,
-                recordings=recordings,
-                order=sweep_order,
-                smoothing=smoothing,
-                smoothing_k=smoothing_k,
-                lambdas=None,  # lambdas are order-specific; use default for each
-                min_recordings=min_recordings,
-            )
+            loo_results = _run_loo(sweep_order, None)
             order_summary = _compute_summary(loo_results)
             order_summary["order"] = sweep_order
             sweep_results.append(order_summary)
@@ -949,15 +1116,7 @@ def evaluate_model(
         return summary
 
     else:
-        loo_results = _run_leave_one_out(
-            gt_rows=gt_rows,
-            recordings=recordings,
-            order=order,
-            smoothing=smoothing,
-            smoothing_k=smoothing_k,
-            lambdas=lambdas,
-            min_recordings=min_recordings,
-        )
+        loo_results = _run_loo(order, lambdas)
         _write_eval_csv(out_path, loo_results)
         summary = _compute_summary(loo_results)
 

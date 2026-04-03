@@ -53,6 +53,14 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--lambdas", default=None)
     evaluate.add_argument("--sweep-orders", default=None,
                           help="Comma-separated orders to sweep.")
+    evaluate.add_argument("--scoring-mode", choices=["lm", "combined"], default="lm",
+                          help="'lm' = pure LM ranking, 'combined' = LM + deletion residual (default: lm)")
+    evaluate.add_argument("--raga-db", default=None,
+                          help="Path to raga_list_final.csv (auto-discovered if omitted; required for combined)")
+    evaluate.add_argument("--lm-deletion-lambda", type=float, default=2.0,
+                          help="Weight for deletion residual in combined scoring (default: 2.0)")
+    evaluate.add_argument("--lm-deletion-slope", type=float, default=-0.0684)
+    evaluate.add_argument("--lm-deletion-intercept", type=float, default=0.6640)
     evaluate.add_argument("--quiet", action="store_true")
 
     return parser
@@ -98,7 +106,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             output=args.output, order=args.order, smoothing=args.smoothing,
             smoothing_k=args.smoothing_k, lambdas=lambdas,
             min_recordings=args.min_recordings, sweep_orders=sweep,
-            quiet=args.quiet)
+            quiet=args.quiet,
+            scoring_mode=args.scoring_mode,
+            raga_db_path=args.raga_db,
+            lm_deletion_lambda=args.lm_deletion_lambda,
+            lm_deletion_slope=args.lm_deletion_slope,
+            lm_deletion_intercept=args.lm_deletion_intercept)
         return 0
 
     parser.error(f"Unknown command: {args.command}")

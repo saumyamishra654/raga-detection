@@ -80,19 +80,12 @@ spleeter_output/
 # Transcription outputs
 **/transcription.txt
 
-# Raga Pipeline Documentation
-raga_pipeline/LLM_REFERENCE.md
-raga_pipeline/CHANGELOG.md
-raga_pipeline/NOTEBOOK_VS_PIPELINE_COMPARISON.md
-raga_pipeline/DOCUMENTATION.md
+# Markdown files (keep only README.md)
+*.md
+!README.md
+
 raga_pipeline/motif_index.json
 primer/
-
-# Implementation Plans (Working Documents)
-*_PLAN.md
-*-plan.md
-aaroh-avroh-reconstruction.md
-LOCAL_APP_INTERFACE_EXPLAINER.md
 
 # Trained models
 *.pkl
@@ -110,9 +103,6 @@ raga_weights.json
 !main notebooks/raga_hash_table_processed.csv
 !main notebooks/ragadb.xlsx
 !raga_rename_suggestions.csv
-
-# Claude Code
-CLAUDE.md
 
 # OS-specific
 .DS_Store

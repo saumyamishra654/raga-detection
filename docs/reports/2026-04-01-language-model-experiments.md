@@ -642,7 +642,247 @@ Within-corpus LOO accuracy; artist/composition overlap likely inflates generaliz
 
 ---
 
-## 14. Open Questions
+## 14. Experiment 8: Lambda Sweep for LM+Deletion Mode (Partial)
+
+### 14.1 Method
+
+Swept the deletion-residual weight (lambda) in the LM+deletion LOO evaluation to determine whether any lambda value improves over pure LM scoring without histogram gating. All runs at order 5, corrected transcriptions, min_recordings=3.
+
+In LM+deletion mode, each held-out recording is scored against every candidate raga by: applying that raga's correction to the raw notes, computing the scale-normalized deletion residual, tokenizing, scoring with the LM, and combining as `lm_score - lambda * del_residual`.
+
+Note: even at lambda=0, this mode differs from pure LM (Experiment 3a) because it re-corrects per hypothesis rather than using the pre-corrected CSV. This means the "baseline" for this mode is 88.9%, not 96.6%.
+
+### 14.2 Results
+
+| Lambda | Top-1 Accuracy | Change from lambda=0 |
+|--------|---------------|---------------------|
+| 0.0 | 88.9% (264/297) | baseline |
+| 0.5 | 87.5% (260/297) | -1.4 |
+| 1.0 | 85.5% (254/297) | -3.4 |
+| 2.0 | 79.5% (236/297) | -9.4 |
+| 5.0 | running... | -- |
+
+### 14.3 Key Finding
+
+**Increasing lambda monotonically decreases accuracy.** The deletion residual hurts rather than helps when used without histogram pre-filtering. This is because the deletion residual rewards ragas whose scale happens to cover the recording's prominent pitch classes -- pentatonic ragas trivially "fit" any recording by deleting the extra notes, and their deletion residuals are often better-than-expected (negative), which inflates their combined score.
+
+This confirms that the histogram gate is essential: it must eliminate impossible tonic/raga candidates before deletion residual scoring is applied. The deletion residual is only useful for fine-grained discrimination within a set of candidates that already have reasonable histogram evidence.
+
+---
+
+## 15. Experiment 9: Tonic Sensitivity Analysis
+
+### 15.1 Method
+
+For the 3 recordings with the worst LOO rankings (Malkauns_3 at rank 29, Marva_6 at rank 20, Puriya Dhanashri_7 at rank 9), tested alternative tonics by scoring each recording individually against the trained model with different tonic values.
+
+### 15.2 Results
+
+**Malkauns_3 (GT tonic: A#):**
+- Tonic A# with full model (not LOO): rank 1 (score -1.35, runner-up -1.89)
+- Tonic D: rank 5 (much worse)
+
+**Marva_6 (GT tonic: D#):**
+- Tonic D# with full model: rank 1 (score -1.56)
+- Tonic D: rank 1 (score -1.70, slightly worse but still correct)
+- Tonic E: rank >5
+
+**Puriya Dhanashri_7 (GT tonic: D):**
+- Tonic D with full model: rank 1 (score -1.37)
+- Tonic C#: rank 1 (score -1.49, slightly worse)
+- Tonic Eb: rank >5
+
+### 15.3 Key Finding
+
+All 3 recordings classify correctly when scored against the full (non-LOO) model with their GT tonics, revealing that these failures are **LOO sensitivity** issues rather than tonic problems. The model's representation of these ragas depends heavily on specific recordings -- removing one tips the balance. This also exposed a concern about memorization vs generalization (the model scoring well on its own training data is not evidence of correctness).
+
+### 15.4 Modified Tonic LOO Evaluation
+
+Re-ran full LOO at order 6 with modified tonics (Malkauns_3: A#->D, Puriya Dhanashri_7: D->C#):
+
+| Metric | Original tonics | Modified tonics |
+|--------|----------------|-----------------|
+| Top-1 | 97.0% | 97.0% (same) |
+| Top-3 | 99.0% | 99.3% (slightly better) |
+| MRR | 0.979 | 0.981 |
+
+The tonic changes fixed 2 Puriya Dhanashree errors but broke 2 Basant recordings (Basant and Puriya Dhanashree are extremely similar ragas -- a zero-sum trade).
+
+---
+
+## 16. Development Timeline and Code Changes
+
+### 16.1 Chronological Summary
+
+**2026-03-30 (Saturday): Design and initial implementation**
+
+- Brainstormed the language modelling approach for raga detection (inspired by language identification from romanized text)
+- Designed three approaches: (1) character n-gram LMs, (2) variable-length Markov (PPM), (3) discriminative reweighting
+- Wrote design spec (`docs/superpowers/specs/2026-03-30-ngram-language-model-raga-detection.md`)
+- Wrote implementation plan with 9 tasks
+- Implemented all 9 tasks via subagent-driven development:
+  - Task 1: Shared tokenizer `tokenize_notes_for_lm` in `sequence.py`
+  - Task 2: `NgramModel` class with add-k smoothing and interpolated scoring
+  - Task 3: Model serialization round-trip (JSON with counts)
+  - Task 4: `train_model` function (corpus training from GT CSV + transcription CSVs)
+  - Task 5: `score_transcription` function with segment-level confidence
+  - Task 6: `evaluate_model` with LOO CV and order sweep
+  - Task 7: CLI entry point (`python -m raga_pipeline.language_model train|score|evaluate`)
+  - Task 8: Documentation updates
+  - Task 9: Full test suite verification
+- Code review found critical octave-marking bug (MIDI octave boundaries vs tonic-relative)
+- Fixed octave bug, added non-C tonic tests
+
+**2026-03-31 (Sunday): Corpus evaluation**
+
+- Created filtered GT CSV (`compmusic_gt.csv`: 300 songs, 30 ragas from CompMusic DB)
+- Trained model on CompMusic corpus: 297 recordings, 30 ragas, order 5
+- Ran LOO evaluation with order sweep (2-6): **97.0% top-1 at order 6**
+- Analyzed 9 misclassifications: Bilawal/Desh/Malhar cluster, Puriya Dhanashree confusion, 2 likely bad transcriptions
+- Tested alternative tonics on worst recordings
+- Discovered raga correction bias: transcriptions were pre-filtered to match the correct raga, inflating accuracy
+
+**2026-04-01 (Monday): Unbiased evaluation and multi-hypothesis pipeline**
+
+- Added `--skip-raga-correction` flag to analyze mode
+- Created symlinked output directory for uncorrected transcriptions
+- Re-ran analyze on all 297 recordings without raga correction (note counts increased 15-71%)
+- Re-evaluated on uncorrected transcriptions: **88.6% top-1** (8-12pp drop from corrected)
+- Discovered 49% of n-grams crossed phrase boundaries -- fixed tokenizer to return `List[List[str]]` (phrase-separated)
+- Re-evaluated with phrase-aware n-grams: 96.6% corrected, 87.2% uncorrected
+- Designed multi-hypothesis detect pipeline (`--use-lm-scoring`)
+- Implemented STEP 5.5 in detect: chromatic transcription -> per-candidate raga correction -> tokenize -> LM score
+- Tested on Parveen Sultana (YouTube, unseen): LM alone ranked Puriya Dhanashree 14th
+- Analyzed deletion rates: strong linear relationship with scale size (R^2=0.77)
+- Developed scale-normalized deletion residual: `del_residual = actual_del - (-0.0684 * scale_size + 0.6640)`
+- Implemented histogram gate + LM + deletion scoring in pipeline
+- Tested three-signal formula: Puriya Dhanashree correctly ranked #1
+- Implemented LOO evaluation with LM+deletion mode: 79.5% (worse than pure LM without histogram)
+- Wrote comprehensive experiment report
+
+**2026-04-02-04 (Tuesday-Thursday): Audit, fixes, baselines**
+
+- Evaluated histogram-only baseline: **48% top-1, 66% top-3**
+- Compared with/without vocal/gender metadata: no difference on all-vocal corpus
+- Tonic detection: 62% top-1, 91% top-3
+- Received detailed technical audit identifying 7 issues
+- Fixed lambda order inconsistency (CLI highest-order-first vs model unigram-first)
+- Removed unimplemented kneser-ney from CLI choices
+- Renamed LOO "combined" to "lm-deletion" to distinguish from pipeline three-signal scoring
+- Fixed train-infer mismatch (added merge_consecutive_notes to STEP 5.5)
+- Added early validation for `--lm-model` path
+- Cleaned stale docstrings and help text
+- Fixed report section numbering and deduplicated open questions
+- Added 5 new tests (lambda parsing reversal, lm-deletion smoke test, lambda variation)
+- Started lambda sweep (0.0-5.0): increasing lambda monotonically decreases accuracy without histogram gating
+
+### 16.2 Complete Commit Log
+
+| SHA | Date | Description |
+|-----|------|-------------|
+| `dddb18b` | Mar 30 | docs: n-gram LM design spec |
+| `b1af57b` | Mar 30 | docs: implementation plan (9 tasks) |
+| `ae3892e` | Mar 30 | feat: tokenize_notes_for_lm shared tokenizer |
+| `1c4acdb` | Mar 30 | feat: NgramModel class with counting/smoothing/scoring |
+| `a9ff01e` | Mar 30 | feat: train_model for corpus-level training |
+| `f28312d` | Mar 30 | feat: score_transcription with segment-level scoring |
+| `87d0540` | Mar 30 | feat: evaluate_model with LOO CV and order sweep |
+| `ca10bbc` | Mar 30 | feat: CLI entry point (train/score/evaluate) |
+| `09f6891` | Mar 30 | fix: mypy type errors in _find_col signature |
+| `2251b3a` | Mar 31 | fix: tonic-relative octave boundaries in tokenizer |
+| `7c77f19` | Apr 1 | feat: phrase-aware n-grams + --skip-raga-correction flag |
+| `fc131f2` | Apr 1 | feat: --use-lm-scoring detect mode with multi-hypothesis re-ranking |
+| `66980c1` | Apr 1 | docs: comprehensive experiment report |
+| `1539d19` | Apr 1 | docs: deletion rate analysis and 10 combination strategies |
+| `2171b23` | Apr 3 | feat: histogram gate + combined LM/deletion scoring |
+| `d6269ec` | Apr 3 | feat: normalized histogram score in combined formula |
+| `5373872` | Apr 3 | feat: combined scoring mode in LM evaluation (LOO CV) |
+| `ad57959` | Apr 3 | docs: pipeline combined scoring and LOO combined results |
+| `42272d7` | Apr 4 | fix: audit findings (lambda order, kneser-ney, naming, train-infer) |
+| `d932e51` | Apr 4 | docs: histogram-only baseline and metadata comparison |
+| `786e224` | Apr 4 | fix: stale references, test coverage for lm-deletion and lambda |
+| `8ac5ac1` | Apr 4 | docs: final reference cleanup and open question dedup |
+
+### 16.3 Files Created
+
+| File | Purpose |
+|------|---------|
+| `raga_pipeline/language_model/__init__.py` | NgramModel, train_model, score_transcription, evaluate_model, LOO functions |
+| `raga_pipeline/language_model/__main__.py` | CLI: `python -m raga_pipeline.language_model train\|score\|evaluate` |
+| `tests/test_lm_tokenizer.py` | 11 tests for tokenize_notes_for_lm |
+| `tests/test_ngram_model.py` | 9 tests for NgramModel class |
+| `tests/test_lm_train.py` | 2 tests for train_model |
+| `tests/test_lm_score.py` | 2 tests for score_transcription |
+| `tests/test_lm_evaluate.py` | 4 tests for evaluate_model (including lm-deletion) |
+| `tests/test_lm_cli.py` | 5 tests for CLI (including lambda parsing) |
+| `compmusic_gt.csv` | Filtered 300-song CompMusic ground truth |
+| `compmusic_ngram_model.json` | v1 trained model (flat n-grams, order 5) |
+| `compmusic_ngram_model_v2.json` | v2 trained model (phrase-aware, order 5) |
+| `docs/reports/2026-04-01-language-model-experiments.md` | This report |
+| `docs/language-model-raga-detection-approaches.md` | Overview of 3 LM approaches |
+| `docs/superpowers/specs/2026-03-30-ngram-language-model-raga-detection.md` | Design spec |
+| `docs/superpowers/specs/2026-04-01-lm-enhanced-detect-design.md` | LM detect integration spec |
+| `docs/superpowers/specs/2026-04-01-multi-hypothesis-detect-design.md` | Multi-hypothesis pipeline spec |
+| `run_uncorrected_batch.py` | Batch script for uncorrected transcription runs |
+| `run_detect_nometa_batch.py` | Batch script for no-metadata detect runs |
+
+### 16.4 Files Modified
+
+| File | Changes |
+|------|---------|
+| `raga_pipeline/sequence.py` | Added `tokenize_notes_for_lm` (phrase-separated, octave-marked, tonic-relative) |
+| `raga_pipeline/config.py` | Added `skip_raga_correction`, `use_lm_scoring`, `lm_model_path`, `lm_deletion_lambda/slope/intercept`, early validation |
+| `driver.py` | Added STEP 5.5 (LM re-ranking with histogram gate + three-signal combined scoring), conditional raga correction skip, `get_raga_notes` import, merge step in STEP 5.5 |
+| `CLAUDE.md` | Added language_model module references |
+
+### 16.5 Test Coverage Summary
+
+33 new tests across 6 test files:
+- Tokenizer: 11 tests (middle/lower/upper octave, phrase boundaries, empty, komal/shuddha, clipping, non-C tonic, multiple phrases)
+- NgramModel: 9 tests (counting, accumulation, smoothing, scoring, serialization round-trip, metadata)
+- Training: 2 tests (basic training, min_recordings filter)
+- Scoring: 2 tests (correct raga ranks first, segment-level output)
+- Evaluation: 4 tests (basic LOO, order sweep, lm-deletion smoke, lambda variation)
+- CLI: 5 tests (train+score smoke, evaluate smoke, lambda reversal, lambda None, lambda wrong count)
+
+---
+
+## 17. Updated Summary of All Results
+
+| # | Experiment | Condition | Best Top-1 | Best Top-3 | MRR | Notes |
+|---|-----------|-----------|-----------|-----------|-----|-------|
+| 1 | Flat n-grams (LM-only) | Corrected transcriptions | 97.0% | 99.0% | 0.979 | Order 6; biased by raga correction |
+| 2 | Flat n-grams (LM-only) | Uncorrected transcriptions | 88.6% | 95.6% | 0.924 | Order 4; honest unbiased baseline |
+| 3a | Phrase-aware (LM-only) | Corrected transcriptions | 96.6% | 99.0% | 0.977 | Order 6 |
+| 3b | Phrase-aware (LM-only) | Uncorrected transcriptions | 87.2% | 94.3% | 0.913 | Order 5 |
+| 5 | Three-signal pipeline | Parveen Sultana (unseen) | Rank 1 | -- | -- | Single case study |
+| 6 | LM+deletion (LOO, no hist) | Corrected, lambda=2.0 | 79.5% | 92.6% | 0.865 | Deletion hurts without histogram |
+| 7 | Histogram only | With/without metadata | 48-51% | 66-67% | 0.61 | Tonic: 62% top-1, 91% top-3 |
+| 8 | Lambda sweep (LM+deletion) | lambda=0 to 5.0 | 88.9% (lam=0) | -- | -- | Monotonically decreasing with lambda |
+
+Within-corpus LOO accuracy; artist/composition overlap likely inflates generalization estimates.
+
+---
+
+## 18. Open Questions
+
+1. **Lambda=5.0 result (running):** Final lambda sweep value still computing. Expected to continue the decreasing trend.
+
+2. **Full pipeline evaluation:** The three-signal formula (`alpha * norm(hist) + beta * norm(lm) - gamma * del_residual`) needs corpus-wide testing by running detect with `--use-lm-scoring` on all 297 recordings.
+
+3. **Artist/composition confounding:** Cross-artist grouped CV would quantify how much the 87-97% accuracy reflects genuine raga grammar learning vs artist/composition memorization.
+
+4. **Logistic regression weight optimization:** Fit `P(correct) = sigmoid(w1*hist + w2*lm + w3*del_resid + b)` on three-signal pipeline output to determine optimal weights empirically.
+
+5. **Optimal n-gram order for multi-hypothesis pipeline:** Per-hypothesis correction may favor higher orders (5-6). Needs validation.
+
+6. **Histogram-LM error independence:** Do the histogram and LM fail on the same recordings? If errors are independent, their combination should improve substantially over either alone.
+
+7. **Deletion residual regression stability:** Coefficients (-0.0684, 0.6640) were fit on 28 ragas. Stability across different corpora/settings unknown.
+
+8. **Richer tokenization:** Duration bins, direction markers, ornament proxies could improve LM discriminative power.
+
+9. **Soft histogram gating:** Replace the hard `hist_score > 0` gate with a sigmoid-weighted soft gate to avoid over-pruning when the histogram is uncertain.
 
 1. **Lambda sweep results (running):** Testing lambda values 0, 0.5, 1.0, 2.0, 5.0 in LOO LM+deletion mode. Lambda=0 gives the per-hypothesis-correction baseline (88.9%). Results will determine if there's any lambda value where deletion residual helps without histogram gating.
 

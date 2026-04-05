@@ -39,7 +39,7 @@ class NgramModel:
         self.order = order
         self.smoothing = smoothing
         self.smoothing_k = smoothing_k
-        self.use_entropy_weights = False  # entropy weighting flattens scores with current corpus size; disabled by default
+        self.use_entropy_weights = True  # entropy weighting; provides +0.7pp in ablation
 
         # Lambda convention: index 0 = unigram weight, index 1 = bigram, ...,
         # index (order-1) = highest-order weight.  The CLI presents these in
@@ -443,7 +443,7 @@ def _load_raw_notes_from_csv(csv_path: Path) -> List:
 
 
 def _load_notes_from_csv(
-    csv_path: Path, tonic_midi: float, include_direction: bool = True,
+    csv_path: Path, tonic_midi: float, include_direction: bool = False,
 ) -> List[List[str]]:
     """Read a transcription CSV and return phrase-separated LM tokens.
 

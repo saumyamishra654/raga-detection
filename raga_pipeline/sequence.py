@@ -1669,7 +1669,7 @@ def tokenize_notes_for_lm(
     notes: List[Note],
     tonic_midi: float,
     phrase_gap_sec: float = 0.25,
-    include_direction: bool = True,
+    include_direction: bool = False,
 ) -> List[List[str]]:
     """Convert note list to phrase-separated LM token sequences.
 

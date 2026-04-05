@@ -932,7 +932,8 @@ def run_pipeline(
             else:
                 with open(lm_path, "r", encoding="utf-8") as _fh:
                     lm_model = NgramModel.from_dict(_json.load(_fh))
-                print(f"  Loaded LM: {len(lm_model.ragas())} ragas, order {lm_model.order}")
+                lm_raga_set = set(lm_model.ragas())
+                print(f"  Loaded LM: {len(lm_raga_set)} ragas, order {lm_model.order}")
 
                 # Run chromatic transcription on melody pitch data
                 pitch_data = results.pitch_data_vocals
@@ -977,6 +978,8 @@ def run_pipeline(
                         raga_group = str(cand_row["raga"])
                         hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
                         individual_ragas = [r.strip() for r in raga_group.split(",") if r.strip()]
+                        # Filter to ragas the LM knows
+                        individual_ragas = [r for r in individual_ragas if r in lm_raga_set]
                         phrases = tonic_phrases_cache.get(cand_tonic, [])
 
                         for cand_raga in individual_ragas:
@@ -1001,6 +1004,8 @@ def run_pipeline(
                         raga_group = str(cand_row["raga"])
                         hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
                         individual_ragas = [r.strip() for r in raga_group.split(",") if r.strip()]
+                        # Filter to ragas the LM knows
+                        individual_ragas = [r for r in individual_ragas if r in lm_raga_set]
 
                         for cand_raga in individual_ragas:
                             try:

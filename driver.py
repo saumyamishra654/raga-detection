@@ -955,64 +955,90 @@ def run_pipeline(
                 # Get unique tonics from candidates
                 unique_tonics = sorted(results.candidates["tonic"].unique())
 
-                # For each (tonic, raga): correct, tokenize, score.
-                # Candidates may have comma-grouped raga names (e.g.
-                # "Basant, Puriya Dhanashree, Shri"); split and score each
-                # raga individually against the LM.
+                # Merge raw notes (match training pipeline post-processing)
+                merged_notes = merge_consecutive_notes(
+                    raw_notes, max_gap=0.1, pitch_tolerance=0.7,
+                    max_dropout_gap=0.18, dropout_fragment_duration=0.12,
+                )
+
+                # Build candidate list: split comma-grouped raga names
                 lm_rows = []
-                for _, cand_row in results.candidates.iterrows():
-                    cand_tonic = int(cand_row["tonic"])
-                    raga_group = str(cand_row["raga"])
-                    hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
 
-                    # Split comma-grouped raga names
-                    individual_ragas = [r.strip() for r in raga_group.split(",") if r.strip()]
+                if config.lm_skip_correction:
+                    # OPTION A: No per-raga correction. Tokenize once per
+                    # tonic, score against every raga in the LM. Much faster.
+                    tonic_phrases_cache: Dict[int, list] = {}
+                    for tonic_pc in unique_tonics:
+                        tonic_midi = 60.0 + tonic_pc
+                        tonic_phrases_cache[tonic_pc] = tokenize_notes_for_lm(merged_notes, tonic_midi)
 
-                    for cand_raga in individual_ragas:
-                        # Apply this raga's correction
-                        try:
-                            corrected_notes, corr_stats, _ = apply_raga_correction_to_notes(
-                                raw_notes, raga_db, cand_raga, cand_tonic,
-                                max_distance=1.0, keep_impure=False,
+                    for _, cand_row in results.candidates.iterrows():
+                        cand_tonic = int(cand_row["tonic"])
+                        raga_group = str(cand_row["raga"])
+                        hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
+                        individual_ragas = [r.strip() for r in raga_group.split(",") if r.strip()]
+                        phrases = tonic_phrases_cache.get(cand_tonic, [])
+
+                        for cand_raga in individual_ragas:
+                            lm_score = lm_model.score_sequence(cand_raga, phrases) if phrases else -999.0
+                            lm_rows.append({
+                                "tonic": cand_tonic,
+                                "tonic_name": cand_row.get("tonic_name", _tonic_name(cand_tonic)),
+                                "raga": cand_raga,
+                                "histogram_score": round(hist_score, 4),
+                                "lm_score": round(lm_score, 4),
+                                "deletion_rate": 0.0,
+                                "scale_size": 0,
+                                "expected_deletion": 0.0,
+                                "del_residual": 0.0,
+                                "notes_before_correction": len(merged_notes),
+                                "notes_after_correction": len(merged_notes),
+                            })
+                else:
+                    # OPTION B / original: Per-raga correction + scoring.
+                    for _, cand_row in results.candidates.iterrows():
+                        cand_tonic = int(cand_row["tonic"])
+                        raga_group = str(cand_row["raga"])
+                        hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
+                        individual_ragas = [r.strip() for r in raga_group.split(",") if r.strip()]
+
+                        for cand_raga in individual_ragas:
+                            try:
+                                corrected_notes, corr_stats, _ = apply_raga_correction_to_notes(
+                                    raw_notes, raga_db, cand_raga, cand_tonic,
+                                    max_distance=1.0, keep_impure=False,
+                                )
+                            except Exception:
+                                continue
+                            total = corr_stats.get("total", len(raw_notes))
+                            discarded = corr_stats.get("discarded", 0)
+                            deletion_rate = discarded / total if total > 0 else 1.0
+
+                            scale_size = len(get_raga_notes(raga_db, cand_raga, cand_tonic))
+                            expected_del = config.lm_deletion_slope * scale_size + config.lm_deletion_intercept
+                            del_residual = deletion_rate - expected_del
+
+                            corrected_merged = merge_consecutive_notes(
+                                corrected_notes, max_gap=0.1, pitch_tolerance=0.7,
+                                max_dropout_gap=0.18, dropout_fragment_duration=0.12,
                             )
-                        except Exception:
-                            continue  # Raga not in DB
-                        total = corr_stats.get("total", len(raw_notes))
-                        discarded = corr_stats.get("discarded", 0)
-                        deletion_rate = discarded / total if total > 0 else 1.0
+                            tonic_midi = 60.0 + cand_tonic
+                            phrases = tokenize_notes_for_lm(corrected_merged, tonic_midi)
+                            lm_score = lm_model.score_sequence(cand_raga, phrases) if phrases else -999.0
 
-                        # Scale-normalized deletion residual
-                        scale_size = len(get_raga_notes(raga_db, cand_raga, cand_tonic))
-                        expected_del = config.lm_deletion_slope * scale_size + config.lm_deletion_intercept
-                        del_residual = deletion_rate - expected_del
-
-                        # Match training pipeline: merge consecutive notes
-                        # (same post-processing analyze applies before saving CSV)
-                        corrected_notes = merge_consecutive_notes(
-                            corrected_notes, max_gap=0.1, pitch_tolerance=0.7,
-                            max_dropout_gap=0.18, dropout_fragment_duration=0.12,
-                        )
-
-                        # Tokenize corrected notes with this tonic
-                        tonic_midi = 60.0 + cand_tonic
-                        phrases = tokenize_notes_for_lm(corrected_notes, tonic_midi)
-
-                        # Score against this raga's LM
-                        lm_score = lm_model.score_sequence(cand_raga, phrases) if phrases else -999.0
-
-                        lm_rows.append({
-                            "tonic": cand_tonic,
-                            "tonic_name": cand_row.get("tonic_name", _tonic_name(cand_tonic)),
-                            "raga": cand_raga,
-                            "histogram_score": round(hist_score, 4),
-                            "lm_score": round(lm_score, 4),
-                            "deletion_rate": round(deletion_rate, 4),
-                            "scale_size": scale_size,
-                            "expected_deletion": round(expected_del, 4),
-                            "del_residual": round(del_residual, 4),
-                            "notes_before_correction": total,
-                            "notes_after_correction": total - discarded,
-                        })
+                            lm_rows.append({
+                                "tonic": cand_tonic,
+                                "tonic_name": cand_row.get("tonic_name", _tonic_name(cand_tonic)),
+                                "raga": cand_raga,
+                                "histogram_score": round(hist_score, 4),
+                                "lm_score": round(lm_score, 4),
+                                "deletion_rate": round(deletion_rate, 4),
+                                "scale_size": scale_size,
+                                "expected_deletion": round(expected_del, 4),
+                                "del_residual": round(del_residual, 4),
+                                "notes_before_correction": total,
+                                "notes_after_correction": total - discarded,
+                            })
 
                 # Histogram gate: keep candidates with positive histogram score.
                 # If none pass, keep top 20 by histogram score as fallback.

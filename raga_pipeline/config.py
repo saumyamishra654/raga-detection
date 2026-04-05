@@ -143,6 +143,7 @@ class PipelineConfig:
     # LM scoring (detect mode)
     use_lm_scoring: bool = False
     lm_model_path: Optional[str] = None
+    lm_skip_correction: bool = False
     lm_deletion_lambda: float = 2.0
     lm_deletion_slope: float = -0.0684
     lm_deletion_intercept: float = 0.6640
@@ -528,6 +529,9 @@ def build_cli_parser() -> argparse.ArgumentParser:
                                help="Re-rank candidates using n-gram language model (writes lm_candidates.csv)")
     detect_parser.add_argument("--lm-model", dest="lm_model_path", default=None,
                                help="Path to trained n-gram model JSON (required with --use-lm-scoring)")
+    detect_parser.add_argument("--lm-skip-correction", action="store_true",
+                               help="Score uncorrected chromatic transcription (no per-raga correction). "
+                                    "Use with a model trained on uncorrected transcriptions.")
     detect_parser.add_argument("--lm-deletion-lambda", type=float, default=2.0,
                                help="Weight for deletion residual in combined LM scoring (default: 2.0)")
     detect_parser.add_argument("--lm-deletion-slope", type=float, default=-0.0684,
@@ -722,6 +726,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         raga_db_path=getattr(args, 'raga_db', None),
         use_lm_scoring=getattr(args, 'use_lm_scoring', False),
         lm_model_path=getattr(args, 'lm_model_path', None),
+        lm_skip_correction=getattr(args, 'lm_skip_correction', False),
         lm_deletion_lambda=getattr(args, 'lm_deletion_lambda', 2.0),
         lm_deletion_slope=getattr(args, 'lm_deletion_slope', -0.0684),
         lm_deletion_intercept=getattr(args, 'lm_deletion_intercept', 0.6640),

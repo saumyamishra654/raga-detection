@@ -1669,6 +1669,7 @@ def tokenize_notes_for_lm(
     notes: List[Note],
     tonic_midi: float,
     phrase_gap_sec: float = 0.25,
+    include_direction: bool = True,
 ) -> List[List[str]]:
     """Convert note list to phrase-separated LM token sequences.
 
@@ -1677,6 +1678,9 @@ def tokenize_notes_for_lm(
         - One octave below: single apostrophe suffix, e.g. ``Ni'``, ``Dha'``
         - One octave above: double apostrophe suffix, e.g. ``Sa''``
         - Beyond: clipped to nearest boundary octave
+        - Direction suffix (when *include_direction* is True):
+          ``/U`` = ascending from previous note, ``/D`` = descending,
+          ``/=`` = same pitch.  First note after ``<BOS>`` has no direction.
 
     Phrase boundaries (gaps > *phrase_gap_sec* between consecutive notes)
     start a new phrase. Each phrase begins with a ``<BOS>`` token.
@@ -1685,7 +1689,7 @@ def tokenize_notes_for_lm(
 
     Returns:
         List of phrase token lists, e.g.
-        ``[['<BOS>', 'Sa', 'Re', 'Ga'], ['<BOS>', 'Ni\\'', 'Re', ...]]``
+        ``[['<BOS>', 'Sa', 'Re/U', 'Ga/U'], ['<BOS>', 'Ni\\'', 'Re/U', ...]]``
     """
     if not notes:
         return []
@@ -1695,6 +1699,7 @@ def tokenize_notes_for_lm(
     phrases: List[List[str]] = []
     current_phrase: List[str] = []
     prev_end: Optional[float] = None
+    prev_midi: Optional[int] = None
 
     for note in notes:
         # Start a new phrase on gap or at start
@@ -1702,6 +1707,7 @@ def tokenize_notes_for_lm(
             if current_phrase:
                 phrases.append(current_phrase)
             current_phrase = ["<BOS>"]
+            prev_midi = None  # reset direction at phrase boundary
 
         midi_rounded = int(round(note.pitch_midi))
         offset = (midi_rounded - tonic_rounded) % 12
@@ -1717,7 +1723,17 @@ def tokenize_notes_for_lm(
             sargam += "''"
         # else: middle octave, bare sargam
 
+        # Direction suffix
+        if include_direction and prev_midi is not None:
+            if midi_rounded > prev_midi:
+                sargam += "/U"
+            elif midi_rounded < prev_midi:
+                sargam += "/D"
+            else:
+                sargam += "/="
+
         current_phrase.append(sargam)
+        prev_midi = midi_rounded
         prev_end = note.end
 
     if current_phrase:

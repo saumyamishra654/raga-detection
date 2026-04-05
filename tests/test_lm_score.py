@@ -8,10 +8,11 @@ from raga_pipeline.language_model import NgramModel, score_transcription
 
 
 def _make_model_file(tmp_path: Path) -> Path:
-    """Create a trained model JSON for testing."""
+    """Create a trained model JSON for testing (with direction tokens)."""
     model = NgramModel(order=3, smoothing="add-k", smoothing_k=0.01)
-    model.add_sequence("Yaman", ["<BOS>", "Sa", "Re", "Ga", "ma", "Pa"] * 50)
-    model.add_sequence("Bhairav", ["<BOS>", "Sa", "re", "Ga", "ma", "dha"] * 50)
+    # Tokens with direction markers matching what the tokenizer produces
+    model.add_sequence("Yaman", [["<BOS>", "Sa", "Re/U", "Ga/U", "ma/U", "Pa/U"]] * 100)
+    model.add_sequence("Bhairav", [["<BOS>", "Sa", "re/U", "Ga/U", "ma/U", "dha/U"]] * 100)
     model.finalize()
     model_path = tmp_path / "model.json"
     with model_path.open("w") as f:

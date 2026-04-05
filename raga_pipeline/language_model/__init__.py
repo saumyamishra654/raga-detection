@@ -118,7 +118,43 @@ class NgramModel:
                         ctx_counts[n][context] += 1
 
     def finalize(self) -> None:
-        """Mark the model as ready for scoring.  No-op if already finalised."""
+        """Compute per-n-gram entropy weights and mark ready for scoring.
+
+        For each n-gram seen across ragas, computes Shannon entropy of its
+        distribution across ragas.  The entropy weight is ``1 / (1 + H)``
+        where H is the entropy.  N-grams unique to one raga get weight ~1.0;
+        n-grams spread uniformly across all ragas get weight close to 0.
+        """
+        # Build global n-gram -> per-raga count for entropy computation.
+        self._entropy_weights: Dict[int, Dict[tuple, float]] = {}
+        all_ragas = list(self._counts.keys())
+        if len(all_ragas) < 2:
+            self._finalized = True
+            return
+
+        for n in range(1, self.order + 1):
+            # Collect all n-grams across ragas with their per-raga counts.
+            ngram_raga_counts: Dict[tuple, Dict[str, int]] = defaultdict(dict)
+            for raga in all_ragas:
+                for ngram, count in self._counts[raga].get(n, {}).items():
+                    ngram_raga_counts[ngram][raga] = count
+
+            weights: Dict[tuple, float] = {}
+            for ngram, raga_counts in ngram_raga_counts.items():
+                total = sum(raga_counts.values())
+                if total == 0:
+                    weights[ngram] = 1.0
+                    continue
+                # Shannon entropy across ragas.
+                H = 0.0
+                for c in raga_counts.values():
+                    p = c / total
+                    if p > 0:
+                        H -= p * math.log2(p)
+                # Weight: high entropy (common) -> low weight; low entropy (specific) -> high weight.
+                weights[ngram] = 1.0 / (1.0 + H)
+            self._entropy_weights[n] = weights
+
         self._finalized = True
 
     # ------------------------------------------------------------------
@@ -214,7 +250,7 @@ class NgramModel:
             phrases = [phrases]  # type: ignore[list-item]
 
         total_ll = 0.0
-        scored = 0
+        total_weight = 0.0
         for phrase in phrases:
             if len(phrase) < 2:
                 continue
@@ -222,10 +258,23 @@ class NgramModel:
                 token = phrase[i]
                 ctx_start = max(0, i - (self.order - 1))
                 context = tuple(phrase[ctx_start:i])
-                total_ll += self.log_prob(raga, token, context)
-                scored += 1
+                ll = self.log_prob(raga, token, context)
 
-        return total_ll / scored if scored > 0 else 0.0
+                # Entropy weight: use the highest-order n-gram that has a weight.
+                w = 1.0
+                if hasattr(self, '_entropy_weights') and self._entropy_weights:
+                    ngram = context + (token,)
+                    for n in range(min(len(ngram), self.order), 0, -1):
+                        sub = ngram[-n:]
+                        ew = self._entropy_weights.get(n, {}).get(sub)
+                        if ew is not None:
+                            w = ew
+                            break
+
+                total_ll += w * ll
+                total_weight += w
+
+        return total_ll / total_weight if total_weight > 0 else 0.0
 
     def rank_ragas(self, phrases: List[List[str]]) -> List[Tuple[str, float]]:
         """Score *tokens* against every raga; return sorted (raga, score) pairs.
@@ -308,7 +357,7 @@ class NgramModel:
                     ctx_tuple = tuple(key.split(cls._KEY_SEP))
                     model._context_counts[raga][n][ctx_tuple] = count
 
-        model._finalized = True
+        model.finalize()
         return model
 
 

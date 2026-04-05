@@ -39,7 +39,7 @@ class NgramModel:
         self.order = order
         self.smoothing = smoothing
         self.smoothing_k = smoothing_k
-        self.use_entropy_weights = True  # can be set False to disable entropy weighting
+        self.use_entropy_weights = False  # entropy weighting flattens scores with current corpus size; disabled by default
 
         # Lambda convention: index 0 = unigram weight, index 1 = bigram, ...,
         # index (order-1) = highest-order weight.  The CLI presents these in

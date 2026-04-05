@@ -1070,8 +1070,8 @@ def run_pipeline(
                 # Defaults: alpha=1.0, beta=1.0, gamma=2.0 (lambda)
                 # norm(histogram) and norm(lm) are in [0,1]; del_residual is ~[-0.2, +0.2]
                 lam = config.lm_deletion_lambda
-                alpha = 1.0  # histogram weight
-                beta = 1.0   # LM weight
+                alpha = 0.5  # histogram weight
+                beta = 2.0   # LM weight
                 for row in lm_rows:
                     is_gated = (row["tonic"], row["raga"]) in gated_ragas
                     row["gated"] = is_gated

@@ -59,7 +59,7 @@ DEFAULT_SCORING_PARAMS = ScoringParams()
 TONIC_BIAS = {
     # Vocalist gender (biases toward typical vocal ranges)
     "vocal_female": [7, 8, 9, 10, 11, 0],     # G, G#, A, A#, B, C (bias around A-A#)
-    "vocal_male": [11, 0, 1, 2, 3, 4, 5],     # B, C, C#, D, D#, E, F (bias around D-D#)
+    "vocal_male": [0, 1, 2, 3, 4, 5],           # C, C#, D, D#, E, F (bias around D-D#)
     
     # Instrument-specific tonic ranges
     "sarod": [10, 11, 0, 1, 2],               # A#, B, C, C#, D

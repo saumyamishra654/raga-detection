@@ -39,6 +39,7 @@ class NgramModel:
         self.order = order
         self.smoothing = smoothing
         self.smoothing_k = smoothing_k
+        self.use_entropy_weights = True  # can be set False to disable entropy weighting
 
         # Lambda convention: index 0 = unigram weight, index 1 = bigram, ...,
         # index (order-1) = highest-order weight.  The CLI presents these in
@@ -262,7 +263,7 @@ class NgramModel:
 
                 # Entropy weight: use the highest-order n-gram that has a weight.
                 w = 1.0
-                if hasattr(self, '_entropy_weights') and self._entropy_weights:
+                if self.use_entropy_weights and hasattr(self, '_entropy_weights') and self._entropy_weights:
                     ngram = context + (token,)
                     for n in range(min(len(ngram), self.order), 0, -1):
                         sub = ngram[-n:]
@@ -441,7 +442,9 @@ def _load_raw_notes_from_csv(csv_path: Path) -> List:
     return notes
 
 
-def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
+def _load_notes_from_csv(
+    csv_path: Path, tonic_midi: float, include_direction: bool = True,
+) -> List[List[str]]:
     """Read a transcription CSV and return phrase-separated LM tokens.
 
     Delegates to :func:`_load_raw_notes_from_csv` then
@@ -452,7 +455,7 @@ def _load_notes_from_csv(csv_path: Path, tonic_midi: float) -> List[List[str]]:
     notes = _load_raw_notes_from_csv(csv_path)
     if not notes:
         return []
-    return tokenize_notes_for_lm(notes, tonic_midi)
+    return tokenize_notes_for_lm(notes, tonic_midi, include_direction=include_direction)
 
 
 def _load_note_timestamps_from_csv(csv_path: Path) -> List[Tuple[float, float]]:

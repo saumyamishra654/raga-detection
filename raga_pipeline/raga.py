@@ -41,6 +41,7 @@ class ScoringParams:
     COMPLEX_PENALTY: float = 0.1       # complexity penalty (-ve)
     MATCH_SIZE_GAMMA: float = 0.25     # size mismatch coefficient
     TONIC_SALIENCE_WEIGHT: float = 0.12  # tonic salience weight
+    SAPAPAIR_WEIGHT: float = 0.20         # Sa-Pa accompaniment pair boost
     SCALE: float = 1000.0
     USE_PRESENCE_MEAN: bool = True     # mean vs sum/sqrt
     USE_NORM_PRIMARY: bool = True
@@ -682,6 +683,11 @@ def score_candidates_full(
             # Tonic salience boost
             tonic_sal_norm = tonic_sal / (max_acc + EPS)
             fit_norm += params.TONIC_SALIENCE_WEIGHT * tonic_sal_norm
+
+            # Sa-Pa accompaniment pair boost: tanpura drones Sa and Pa
+            pa_sal = float(H_acc[(tonic + 7) % 12])
+            sapapair_norm = (tonic_sal + pa_sal) / (max_acc + EPS)
+            fit_norm += params.SAPAPAIR_WEIGHT * sapapair_norm
             
             fit_norm = max(-1.0, min(1.0, fit_norm))
             fit_score = float(fit_norm * params.SCALE)

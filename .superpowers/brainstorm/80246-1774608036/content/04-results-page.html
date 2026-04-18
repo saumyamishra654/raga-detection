@@ -1,0 +1,344 @@
+<h2>Results Page - /song/[id]</h2>
+<p class="subtitle">Full analysis view. This is a long scrolling page - showing all sections top to bottom.</p>
+
+<div class="mockup">
+  <div class="mockup-header">/ song / raga-yaman-pt-jasraj</div>
+  <div class="mockup-body" style="background: #1a1208; color: #e0d5c4; padding: 0; font-family: system-ui, sans-serif;">
+
+    <!-- Top bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid #3a2a14;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="color: #7a6040; cursor: pointer; font-size: 14px;">&#8592; Library</div>
+      </div>
+      <div style="font-size: 20px; font-weight: 600; color: #f5e6d0;">Raga Detection</div>
+      <div style="width: 32px; height: 32px; border-radius: 50%; background: #4a3520; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #c4a882;">SM</div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 1: HERO - Raga Identity + Correction -->
+    <!-- ============================================ -->
+    <div style="padding: 28px 24px 0; max-width: 960px; margin: 0 auto;">
+
+      <!-- Correction bar (collapsed by default) -->
+      <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="color: #7a6040; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+          <span>Think the results are wrong?</span>
+        </div>
+        <div style="color: #bf6e13; font-size: 13px; font-weight: 500; cursor: pointer;">Adjust &amp; Re-analyze &#9654;</div>
+      </div>
+
+      <!-- Raga name + confidence -->
+      <div style="text-align: center; margin-bottom: 8px;">
+        <div style="color: #7a6040; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Detected Raga</div>
+        <div style="font-size: 42px; font-weight: 800; color: #f5e6d0; margin-bottom: 6px;">Yaman</div>
+        <div style="display: inline-flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+          <span style="background: #3a2808; color: #d4942a; padding: 4px 12px; border-radius: 6px; font-size: 13px; border: 1px solid #5a3a10;">Tonic: C#</span>
+          <span style="background: #1a2e1a; color: #4ade80; padding: 4px 12px; border-radius: 6px; font-size: 13px; border: 1px solid #2a4a2a;">High confidence</span>
+        </div>
+      </div>
+
+      <!-- Song title + metadata -->
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 18px; font-weight: 600; color: #c4a882;">Raga Yaman - Pt. Jasraj</div>
+        <div style="color: #7a6040; font-size: 13px; margin-top: 4px;">YouTube &middot; 23:45 &middot; Analyzed Mar 25, 2026</div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION 2: RAGA CONTEXT (Educational)       -->
+      <!-- ============================================ -->
+      <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 12px; padding: 20px; margin-bottom: 28px;">
+        <div style="font-size: 16px; font-weight: 600; color: #f5e6d0; margin-bottom: 12px;">About Raga Yaman</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div>
+            <div style="color: #7a6040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Aroha (Ascending)</div>
+            <div style="color: #d4942a; font-size: 15px; font-family: monospace; letter-spacing: 1px;">N R G M' P D N S'</div>
+          </div>
+          <div>
+            <div style="color: #7a6040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Avroh (Descending)</div>
+            <div style="color: #d4942a; font-size: 15px; font-family: monospace; letter-spacing: 1px;">S' N D P M' G R S</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="color: #7a6040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Distinguishing Notes</div>
+          <div style="color: #c4a882; font-size: 13px;">Uses <span style="color: #d4942a; font-weight: 600;">tivra Ma (M')</span> -- this is the key note that separates Yaman from Bilawal (which uses shuddha Ma). All other notes are shuddha (natural).</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="color: #7a6040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Characteristic Phrases</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span style="background: #2e1f0e; color: #c4a882; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-family: monospace; border: 1px solid #3a2a14;">N R G</span>
+            <span style="background: #2e1f0e; color: #c4a882; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-family: monospace; border: 1px solid #3a2a14;">R G M' P</span>
+            <span style="background: #2e1f0e; color: #c4a882; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-family: monospace; border: 1px solid #3a2a14;">N R S'</span>
+            <span style="background: #3a2808; color: #d4942a; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-family: monospace; border: 1px solid #5a3a10;">found in recording</span>
+            <span style="background: #2e1f0e; color: #5a4a30; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-family: monospace; border: 1px solid #3a2a14; text-decoration: line-through;">not found</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="color: #7a6040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Time of Day</div>
+          <div style="color: #c4a882; font-size: 13px;">Evening raga, traditionally performed at dusk (sandhya prakar)</div>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION 3: YOUTUBE EMBED (if available)      -->
+      <!-- ============================================ -->
+      <div style="margin-bottom: 28px;">
+        <div style="font-size: 16px; font-weight: 600; color: #f5e6d0; margin-bottom: 12px;">Performance</div>
+        <div style="background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center;">
+          <div style="text-align: center; color: #555;">
+            <div style="font-size: 48px;">&#9654;</div>
+            <div style="font-size: 13px; margin-top: 8px;">Embedded YouTube player</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION 4: SYNCED PLAYER + PITCH PLOT        -->
+      <!-- ============================================ -->
+      <div style="margin-bottom: 28px;">
+        <div style="font-size: 16px; font-weight: 600; color: #f5e6d0; margin-bottom: 12px;">Pitch Analysis</div>
+
+        <!-- Stem toggle + transport controls -->
+        <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 10px 10px 0 0; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; gap: 8px;">
+            <div style="background: #bf6e13; color: #fff; padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;">Original</div>
+            <div style="background: #2e1f0e; color: #c4a882; padding: 5px 14px; border-radius: 6px; font-size: 12px; border: 1px solid #4a3520;">Vocals</div>
+            <div style="background: #2e1f0e; color: #c4a882; padding: 5px 14px; border-radius: 6px; font-size: 12px; border: 1px solid #4a3520;">Accompaniment</div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; color: #c4a882;">
+            <span style="font-size: 20px; cursor: pointer;">&#9664;&#9664;</span>
+            <span style="font-size: 28px; cursor: pointer; color: #bf6e13;">&#9654;</span>
+            <span style="font-size: 20px; cursor: pointer;">&#9654;&#9654;</span>
+            <span style="font-size: 13px; font-family: monospace; color: #7a6040; min-width: 80px;">02:34 / 23:45</span>
+          </div>
+        </div>
+
+        <!-- Pitch contour plot area -->
+        <div style="background: #0d0a04; border: 1px solid #3a2a14; border-top: none; border-radius: 0 0 10px 10px; height: 280px; position: relative; overflow: hidden;">
+          <!-- Y-axis labels (sargam) -->
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 40px; background: #140f06; display: flex; flex-direction: column; justify-content: space-between; padding: 8px 0;">
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">S'</span>
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">N</span>
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">D</span>
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">P</span>
+            <span style="color: #d4942a; font-size: 10px; text-align: right; padding-right: 6px; font-weight: 600;">M'</span>
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">G</span>
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">R</span>
+            <span style="color: #5a4a30; font-size: 10px; text-align: right; padding-right: 6px;">S</span>
+          </div>
+
+          <!-- Plot area with fake pitch contour -->
+          <div style="position: absolute; left: 40px; right: 0; top: 0; bottom: 30px;">
+            <!-- Horizontal grid lines -->
+            <div style="position: absolute; left: 0; right: 0; top: 12.5%; border-top: 1px solid #1a1408; height: 0;"></div>
+            <div style="position: absolute; left: 0; right: 0; top: 25%; border-top: 1px solid #1a1408; height: 0;"></div>
+            <div style="position: absolute; left: 0; right: 0; top: 37.5%; border-top: 1px solid #1a1408; height: 0;"></div>
+            <div style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid #2a1f0a; height: 0;"></div>
+            <div style="position: absolute; left: 0; right: 0; top: 62.5%; border-top: 1px solid #1a1408; height: 0;"></div>
+            <div style="position: absolute; left: 0; right: 0; top: 75%; border-top: 1px solid #1a1408; height: 0;"></div>
+            <div style="position: absolute; left: 0; right: 0; top: 87.5%; border-top: 1px solid #1a1408; height: 0;"></div>
+
+            <!-- Playhead -->
+            <div style="position: absolute; left: 18%; top: 0; bottom: 0; width: 2px; background: #bf6e13; z-index: 2;"></div>
+
+            <!-- Fake pitch data (SVG-like colored segments) -->
+            <svg viewBox="0 0 800 200" style="width: 100%; height: 100%;" preserveAspectRatio="none">
+              <path d="M 20,150 Q 40,145 60,130 T 100,120 T 140,100 T 180,90 T 200,85 T 220,95 T 260,110 T 300,130 T 340,140 T 360,120 T 400,90 T 440,70 T 460,65 T 480,75 T 520,100 T 560,120 T 600,140 T 640,130 T 680,100 T 720,80 T 760,90" fill="none" stroke="#bf6e13" stroke-width="2.5" opacity="0.9"/>
+              <path d="M 20,155 Q 40,150 60,135 T 100,125 T 140,105 T 180,95" fill="none" stroke="#d4942a" stroke-width="1.5" opacity="0.4"/>
+            </svg>
+
+            <!-- Transcribed note overlay -->
+            <div style="position: absolute; left: 10%; top: 55%; background: rgba(191, 110, 19, 0.15); border: 1px solid rgba(191, 110, 19, 0.3); border-radius: 3px; padding: 1px 6px; font-size: 9px; color: #d4942a;">G</div>
+            <div style="position: absolute; left: 22%; top: 38%; background: rgba(191, 110, 19, 0.15); border: 1px solid rgba(191, 110, 19, 0.3); border-radius: 3px; padding: 1px 6px; font-size: 9px; color: #d4942a;">P</div>
+            <div style="position: absolute; left: 35%; top: 60%; background: rgba(191, 110, 19, 0.15); border: 1px solid rgba(191, 110, 19, 0.3); border-radius: 3px; padding: 1px 6px; font-size: 9px; color: #d4942a;">R</div>
+          </div>
+
+          <!-- Time axis -->
+          <div style="position: absolute; left: 40px; right: 0; bottom: 0; height: 30px; background: #140f06; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+            <span style="color: #5a4a30; font-size: 10px;">0:00</span>
+            <span style="color: #5a4a30; font-size: 10px;">5:00</span>
+            <span style="color: #5a4a30; font-size: 10px;">10:00</span>
+            <span style="color: #5a4a30; font-size: 10px;">15:00</span>
+            <span style="color: #5a4a30; font-size: 10px;">20:00</span>
+            <span style="color: #5a4a30; font-size: 10px;">23:45</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION 5: KARAOKE TRANSCRIPTION              -->
+      <!-- ============================================ -->
+      <div style="margin-bottom: 28px;">
+        <div style="font-size: 16px; font-weight: 600; color: #f5e6d0; margin-bottom: 12px;">Transcription</div>
+        <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 12px; padding: 20px; font-family: monospace;">
+          <div style="color: #7a6040; font-size: 11px; margin-bottom: 12px;">Synced to playback -- current phrase highlighted</div>
+
+          <!-- Phrase lines -->
+          <div style="margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(191, 110, 19, 0.1); border-left: 3px solid #bf6e13;">
+            <span style="color: #7a6040; font-size: 10px; margin-right: 8px;">0:34</span>
+            <span style="color: #f5e6d0; font-size: 14px; letter-spacing: 2px;">N R G &middot; R G <span style="color: #d4942a; font-weight: 700;">M'</span> P &middot; D N S'</span>
+          </div>
+          <div style="margin-bottom: 8px; padding: 6px 10px; border-radius: 6px;">
+            <span style="color: #7a6040; font-size: 10px; margin-right: 8px;">0:48</span>
+            <span style="color: #c4a882; font-size: 14px; letter-spacing: 2px;">S' N D P &middot; <span style="color: #d4942a;">M'</span> G R S</span>
+          </div>
+          <div style="margin-bottom: 8px; padding: 6px 10px; border-radius: 6px;">
+            <span style="color: #7a6040; font-size: 10px; margin-right: 8px;">1:02</span>
+            <span style="color: #c4a882; font-size: 14px; letter-spacing: 2px;">N R G <span style="color: #d4942a;">M'</span> P &middot; D N D P</span>
+          </div>
+          <div style="margin-bottom: 8px; padding: 6px 10px; border-radius: 6px;">
+            <span style="color: #7a6040; font-size: 10px; margin-right: 8px;">1:15</span>
+            <span style="color: #c4a882; font-size: 14px; letter-spacing: 2px;"><span style="color: #d4942a;">M'</span> G R S &middot; N R S</span>
+          </div>
+          <div style="padding: 6px 10px; border-radius: 6px;">
+            <span style="color: #5a4a30; font-size: 10px; margin-right: 8px;">...</span>
+            <span style="color: #5a4a30; font-size: 13px;">+ 47 more phrases</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION 6: DEEP ANALYSIS (Collapsible)       -->
+      <!-- ============================================ -->
+      <div style="margin-bottom: 28px;">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 12px;">
+          <span style="color: #7a6040; font-size: 12px;">&#9660;</span>
+          <div style="font-size: 16px; font-weight: 600; color: #f5e6d0;">Deep Analysis</div>
+        </div>
+
+        <!-- Histograms side by side -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 10px; overflow: hidden;">
+            <div style="padding: 12px 16px; border-bottom: 1px solid #3a2a14;">
+              <div style="color: #c4a882; font-size: 13px; font-weight: 500;">Vocal Pitch Histogram</div>
+            </div>
+            <div style="height: 180px; display: flex; align-items: flex-end; justify-content: space-around; padding: 16px 12px 8px;">
+              <!-- Fake histogram bars -->
+              <div style="width: 7%; background: #bf6e13; height: 80%; border-radius: 2px 2px 0 0; opacity: 0.9;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 45%; border-radius: 2px 2px 0 0; opacity: 0.7;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 60%; border-radius: 2px 2px 0 0; opacity: 0.8;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 90%; border-radius: 2px 2px 0 0; opacity: 0.95;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 35%; border-radius: 2px 2px 0 0; opacity: 0.6;"></div>
+              <div style="width: 7%; background: #d4942a; height: 70%; border-radius: 2px 2px 0 0; opacity: 0.85;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 55%; border-radius: 2px 2px 0 0; opacity: 0.75;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 100%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 40%; border-radius: 2px 2px 0 0; opacity: 0.65;"></div>
+              <div style="width: 7%; background: #bf6e13; height: 75%; border-radius: 2px 2px 0 0; opacity: 0.85;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-around; padding: 0 12px 8px;">
+              <span style="color: #5a4a30; font-size: 9px;">S</span>
+              <span style="color: #5a4a30; font-size: 9px;">r</span>
+              <span style="color: #5a4a30; font-size: 9px;">R</span>
+              <span style="color: #5a4a30; font-size: 9px;">G</span>
+              <span style="color: #5a4a30; font-size: 9px;">m</span>
+              <span style="color: #d4942a; font-size: 9px; font-weight: 600;">M'</span>
+              <span style="color: #5a4a30; font-size: 9px;">P</span>
+              <span style="color: #5a4a30; font-size: 9px;">D</span>
+              <span style="color: #5a4a30; font-size: 9px;">n</span>
+              <span style="color: #5a4a30; font-size: 9px;">N</span>
+            </div>
+          </div>
+
+          <!-- Transition matrix -->
+          <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 10px; overflow: hidden;">
+            <div style="padding: 12px 16px; border-bottom: 1px solid #3a2a14;">
+              <div style="color: #c4a882; font-size: 13px; font-weight: 500;">Note Transition Matrix</div>
+            </div>
+            <div style="height: 210px; display: flex; align-items: center; justify-content: center;">
+              <div style="text-align: center; color: #5a4a30;">
+                <div style="display: grid; grid-template-columns: repeat(8, 24px); gap: 2px;">
+                  <!-- Row labels + cells -->
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.9;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.3;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.5;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.8;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.2;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.6;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.15;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.7;"></div>
+
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.2;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.7;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.9;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.3;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.5;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.1;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.6;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.4;"></div>
+
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.6;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.8;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.2;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.5;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.7;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.3;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.4;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.15;"></div>
+
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.4;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.15;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.85;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.25;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.6;"></div>
+                  <div style="background: #bf6e13; width: 24px; height: 24px; border-radius: 2px; opacity: 0.7;"></div>
+                  <div style="background: #2e1f0e; width: 24px; height: 24px; border-radius: 2px; opacity: 0.2;"></div>
+                  <div style="background: #3a2808; width: 24px; height: 24px; border-radius: 2px; opacity: 0.5;"></div>
+                </div>
+                <div style="font-size: 10px; color: #5a4a30; margin-top: 8px;">S &nbsp; R &nbsp; G &nbsp; M' &nbsp; P &nbsp; D &nbsp; N &nbsp; S'</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raga candidates table -->
+        <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 10px; overflow: hidden;">
+          <div style="padding: 12px 16px; border-bottom: 1px solid #3a2a14;">
+            <div style="color: #c4a882; font-size: 13px; font-weight: 500;">Raga Candidates</div>
+          </div>
+          <div style="padding: 0;">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 8px 16px; border-bottom: 1px solid #2e1f0e; color: #7a6040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>Raga</span><span>Score</span><span>Notes Match</span><span>Phrases</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 16px; border-bottom: 1px solid #2e1f0e; background: rgba(191, 110, 19, 0.08);">
+              <span style="color: #d4942a; font-weight: 600; font-size: 13px;">Yaman</span>
+              <span style="color: #4ade80; font-size: 13px;">0.94</span>
+              <span style="color: #c4a882; font-size: 13px;">7/7</span>
+              <span style="color: #c4a882; font-size: 13px;">12/15</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 16px; border-bottom: 1px solid #2e1f0e;">
+              <span style="color: #c4a882; font-size: 13px;">Yaman Kalyan</span>
+              <span style="color: #c4a882; font-size: 13px;">0.78</span>
+              <span style="color: #c4a882; font-size: 13px;">7/7</span>
+              <span style="color: #c4a882; font-size: 13px;">8/15</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 16px;">
+              <span style="color: #c4a882; font-size: 13px;">Kedar</span>
+              <span style="color: #c4a882; font-size: 13px;">0.61</span>
+              <span style="color: #c4a882; font-size: 13px;">6/7</span>
+              <span style="color: #c4a882; font-size: 13px;">5/15</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 24px;"></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Section breakdown (top to bottom)</h3>
+  <ol>
+    <li><strong>Correction bar</strong> - subtle banner at top: "Think the results are wrong? Adjust & Re-analyze". Expands to show tonic/raga/instrument dropdowns + re-run button</li>
+    <li><strong>Hero</strong> - raga name (large), tonic pill, confidence badge, song title + metadata</li>
+    <li><strong>Raga context (educational)</strong> - aroha/avroh, distinguishing notes with explanation, characteristic phrases (highlighted if found in recording), time of day</li>
+    <li><strong>YouTube embed</strong> - independent player, only shown for YT-sourced songs</li>
+    <li><strong>Pitch analysis</strong> - stem toggle buttons (Original/Vocals/Accompaniment), transport controls, synced pitch contour with sargam Y-axis, playhead, note overlays</li>
+    <li><strong>Karaoke transcription</strong> - phrase-by-phrase sargam, synced to playback (current phrase highlighted), distinguishing notes marked in accent color</li>
+    <li><strong>Deep analysis (collapsible)</strong> - histogram, transition matrix, raga candidates table with scores</li>
+  </ol>
+</div>

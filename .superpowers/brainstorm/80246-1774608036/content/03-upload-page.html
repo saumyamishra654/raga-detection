@@ -1,0 +1,173 @@
+<h2>Upload Page</h2>
+<p class="subtitle">Reached via "+ Upload" button or by dragging a file onto the library. Two entry modes: file upload or YouTube URL.</p>
+
+<div class="mockup">
+  <div class="mockup-header">/ upload</div>
+  <div class="mockup-body" style="background: #1a1208; color: #e0d5c4; padding: 0; font-family: system-ui, sans-serif;">
+
+    <!-- Top bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid #3a2a14;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="color: #7a6040; cursor: pointer; font-size: 14px;">&#8592; Back to Library</div>
+      </div>
+      <div style="font-size: 20px; font-weight: 600; color: #f5e6d0;">Raga Detection</div>
+      <div style="width: 32px; height: 32px; border-radius: 50%; background: #4a3520; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #c4a882;">SM</div>
+    </div>
+
+    <div style="max-width: 640px; margin: 0 auto; padding: 32px 24px;">
+
+      <div style="font-size: 24px; font-weight: 700; color: #f5e6d0; margin-bottom: 4px;">Upload a Recording</div>
+      <div style="color: #7a6040; font-size: 14px; margin-bottom: 28px;">Upload an MP3 file or paste a YouTube link. We'll analyze it and identify the raga.</div>
+
+      <!-- Source tabs -->
+      <div style="display: flex; margin-bottom: 24px; border-bottom: 2px solid #2e1f0e;">
+        <div style="padding: 10px 24px; color: #f5e6d0; font-size: 14px; font-weight: 600; border-bottom: 2px solid #bf6e13; margin-bottom: -2px;">Upload File</div>
+        <div style="padding: 10px 24px; color: #7a6040; font-size: 14px;">YouTube URL</div>
+      </div>
+
+      <!-- File drop zone (active tab) -->
+      <div style="border: 2px dashed #4a3520; border-radius: 12px; padding: 40px; text-align: center; margin-bottom: 24px; background: #241a0c;">
+        <div style="color: #7a6040; font-size: 36px; margin-bottom: 8px;">&#8593;</div>
+        <div style="color: #c4a882; font-size: 15px; font-weight: 500; margin-bottom: 4px;">Drag and drop your audio file here</div>
+        <div style="color: #7a6040; font-size: 13px; margin-bottom: 12px;">or</div>
+        <div style="display: inline-block; background: #2e1f0e; color: #c4a882; padding: 8px 20px; border-radius: 8px; font-size: 13px; border: 1px solid #4a3520; cursor: pointer;">Browse files</div>
+        <div style="color: #5a4a30; font-size: 11px; margin-top: 12px;">Supports MP3, WAV, FLAC, M4A</div>
+      </div>
+
+      <!-- Song title -->
+      <div style="margin-bottom: 20px;">
+        <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Title</div>
+        <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #f5e6d0; font-size: 14px;">Raga Yaman - Pt. Jasraj</div>
+      </div>
+
+      <!-- Two-column row: Tonic + Raga -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div>
+          <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Tonic <span style="color: #5a4a30; font-weight: 400;">(optional)</span></div>
+          <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #7a6040; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Auto-detect</span>
+            <span style="font-size: 10px;">&#9660;</span>
+          </div>
+        </div>
+        <div>
+          <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Raga <span style="color: #5a4a30; font-weight: 400;">(optional)</span></div>
+          <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #7a6040; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Auto-detect</span>
+            <span style="font-size: 10px;">&#9660;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-column row: Instrument + Vocalist Gender -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div>
+          <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Instrument <span style="color: #5a4a30; font-weight: 400;">(optional)</span></div>
+          <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #7a6040; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Vocal (default)</span>
+            <span style="font-size: 10px;">&#9660;</span>
+          </div>
+        </div>
+        <div>
+          <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Vocalist Gender <span style="color: #5a4a30; font-weight: 400;">(optional)</span></div>
+          <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #7a6040; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Auto-detect</span>
+            <span style="font-size: 10px;">&#9660;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced options (collapsed) -->
+      <div style="margin-bottom: 28px;">
+        <div style="color: #7a6040; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 10px;">&#9654;</span> Advanced options
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display: flex; gap: 12px;">
+        <div style="background: #bf6e13; color: #fff; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; text-align: center;">Start Analysis</div>
+        <div style="background: #2e1f0e; color: #7a6040; padding: 12px 24px; border-radius: 8px; font-size: 15px; border: 1px solid #4a3520; cursor: pointer; text-align: center;">Cancel</div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- YouTube tab variant -->
+<div style="margin-top: 32px;">
+<div class="mockup">
+  <div class="mockup-header">/ upload (YouTube tab)</div>
+  <div class="mockup-body" style="background: #1a1208; color: #e0d5c4; padding: 0; font-family: system-ui, sans-serif;">
+
+    <div style="max-width: 640px; margin: 0 auto; padding: 32px 24px;">
+
+      <!-- Source tabs -->
+      <div style="display: flex; margin-bottom: 24px; border-bottom: 2px solid #2e1f0e;">
+        <div style="padding: 10px 24px; color: #7a6040; font-size: 14px;">Upload File</div>
+        <div style="padding: 10px 24px; color: #f5e6d0; font-size: 14px; font-weight: 600; border-bottom: 2px solid #bf6e13; margin-bottom: -2px;">YouTube URL</div>
+      </div>
+
+      <!-- YouTube URL input -->
+      <div style="margin-bottom: 20px;">
+        <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">YouTube URL</div>
+        <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #f5e6d0; font-size: 14px;">https://youtube.com/watch?v=...</div>
+      </div>
+
+      <!-- Preview (shown after valid URL) -->
+      <div style="background: #241a0c; border: 1px solid #3a2a14; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
+        <div style="background: #2e1f0e; height: 160px; display: flex; align-items: center; justify-content: center;">
+          <div style="text-align: center; color: #5a4a30;">
+            <div style="font-size: 40px;">&#9654;</div>
+            <div style="font-size: 12px; margin-top: 4px;">YouTube thumbnail preview</div>
+          </div>
+        </div>
+        <div style="padding: 12px 14px;">
+          <div style="color: #f5e6d0; font-size: 14px; font-weight: 500;">Video title auto-populated here</div>
+          <div style="color: #7a6040; font-size: 12px; margin-top: 2px;">Channel Name &middot; 45:23</div>
+        </div>
+      </div>
+
+      <!-- Same optional fields as file upload -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div>
+          <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Tonic <span style="color: #5a4a30; font-weight: 400;">(optional)</span></div>
+          <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #7a6040; font-size: 14px;">Auto-detect</div>
+        </div>
+        <div>
+          <div style="color: #c4a882; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Raga <span style="color: #5a4a30; font-weight: 400;">(optional)</span></div>
+          <div style="background: #2e1f0e; border: 1px solid #4a3520; border-radius: 8px; padding: 10px 14px; color: #7a6040; font-size: 14px;">Auto-detect</div>
+        </div>
+      </div>
+
+      <!-- Advanced + Submit -->
+      <div style="margin-bottom: 28px;">
+        <div style="color: #7a6040; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 10px;">&#9654;</span> Advanced options
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <div style="background: #bf6e13; color: #fff; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; text-align: center;">Start Analysis</div>
+        <div style="background: #2e1f0e; color: #7a6040; padding: 12px 24px; border-radius: 8px; font-size: 15px; border: 1px solid #4a3520; cursor: pointer; text-align: center;">Cancel</div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Key elements</h3>
+  <ul>
+    <li><strong>Two tabs</strong> - "Upload File" and "YouTube URL", sharing the same form fields below</li>
+    <li><strong>File tab</strong> - drag-and-drop zone + file browser. Pre-populated if user dragged a file onto the library</li>
+    <li><strong>YouTube tab</strong> - URL input with live preview (thumbnail, title, channel, duration) once a valid URL is pasted</li>
+    <li><strong>Title field</strong> - auto-populated from filename or YouTube title, editable</li>
+    <li><strong>All optional fields default to "Auto-detect"</strong> - tonic, raga, instrument, vocalist gender</li>
+    <li><strong>Collapsed advanced options</strong> - separator model, confidence thresholds, etc. (power user territory)</li>
+    <li><strong>"Start Analysis" submits</strong> - redirects to library where the card appears in "Processing" state</li>
+    <li><strong>Centered, narrow form</strong> - max-width 640px, clean and focused</li>
+  </ul>
+</div>

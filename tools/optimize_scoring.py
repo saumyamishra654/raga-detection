@@ -48,6 +48,15 @@ FEATURE_COLS = [
     "salience_norm",     # salience / max_salience_per_song (derived)
 ]
 
+# Extended features for MLP (includes histogram distributions + valley penalty)
+MLP_FEATURE_COLS = FEATURE_COLS + [
+    f"melody_dist_{i}" for i in range(12)
+] + [
+    f"accomp_dist_{i}" for i in range(12)
+] + [
+    "valley_penalty",
+]
+
 # Mapping from FEATURE_COLS index to ScoringParams field name.
 # Negative sign means the current formula subtracts this term.
 PARAM_MAP = [
@@ -222,11 +231,12 @@ def collect_features(results_dir: str, gt_csv_path: str, output_path: str) -> pd
 # Optimization: pairwise ranking loss
 # ---------------------------------------------------------------------------
 
-def _build_pair_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, int, int]:
+def _build_pair_matrix(df: pd.DataFrame, feature_cols: Optional[List[str]] = None) -> Tuple[np.ndarray, int, int]:
     """Build pairwise difference vectors (correct - incorrect) for all songs.
 
     Returns (X_pairs, n_songs_used, n_songs_skipped).
     """
+    cols = feature_cols or FEATURE_COLS
     pairs: List[np.ndarray] = []
     n_used = 0
     n_skipped = 0
@@ -239,15 +249,15 @@ def _build_pair_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, int, int]:
             n_skipped += 1
             continue
 
-        correct_feats = correct[FEATURE_COLS].iloc[0].values.astype(np.float64)
+        correct_feats = correct[cols].iloc[0].values.astype(np.float64)
         n_used += 1
 
         for _, inc_row in incorrect.iterrows():
-            inc_feats = inc_row[FEATURE_COLS].values.astype(np.float64)
+            inc_feats = inc_row[cols].values.astype(np.float64)
             pairs.append(correct_feats - inc_feats)
 
     if not pairs:
-        return np.empty((0, len(FEATURE_COLS))), n_used, n_skipped
+        return np.empty((0, len(cols))), n_used, n_skipped
 
     return np.array(pairs, dtype=np.float64), n_used, n_skipped
 
@@ -273,8 +283,10 @@ def compute_metrics(
     df: pd.DataFrame,
     w: np.ndarray,
     label: str = "",
+    feature_cols: Optional[List[str]] = None,
 ) -> dict:
     """Compute MRR, top-k accuracy, and rank distribution for given weights."""
+    cols = feature_cols or FEATURE_COLS
     reciprocal_ranks: List[float] = []
     ranks: List[int] = []
 
@@ -283,7 +295,7 @@ def compute_metrics(
         if correct.empty:
             continue
 
-        features = group[FEATURE_COLS].values.astype(np.float64)
+        features = group[cols].values.astype(np.float64)
         scores = features @ w
 
         correct_idx = correct.index[0] - group.index[0]
@@ -320,7 +332,7 @@ def compute_metrics(
     return metrics
 
 
-def optimize_linear(data_path: str, output_path: Optional[str] = None) -> Tuple[np.ndarray, dict]:
+def optimize_linear(data_path: str, output_path: Optional[str] = None, use_extended: bool = False) -> Tuple[np.ndarray, dict]:
     """Optimize scoring coefficients using pairwise ranking loss."""
     df = pd.read_csv(data_path)
 
@@ -332,21 +344,30 @@ def optimize_linear(data_path: str, output_path: Optional[str] = None) -> Tuple[
             lambda x: x / (x.max() + 1e-12)
         )
 
+    feature_cols = MLP_FEATURE_COLS if use_extended else FEATURE_COLS
+    missing = [c for c in feature_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns for extended features: {missing}")
+
     # Build pairs
-    X_pairs, n_used, n_skipped = _build_pair_matrix(df)
+    X_pairs, n_used, n_skipped = _build_pair_matrix(df, feature_cols=feature_cols)
     print(f"Built {len(X_pairs)} pairwise comparisons from {n_used} songs")
     if n_skipped:
         print(f"  ({n_skipped} songs skipped: correct candidate not in results)")
 
     if len(X_pairs) == 0:
         print("No pairs to optimize. Check that ground truth matches candidates.")
-        return CURRENT_WEIGHTS, {}
+        w0 = np.zeros(len(feature_cols))
+        return w0, {}
 
-    # Evaluate current weights
-    compute_metrics(df, CURRENT_WEIGHTS, label="BEFORE (current hand-tuned)")
+    # Evaluate current baseline (only meaningful for original 8 features)
+    if not use_extended:
+        compute_metrics(df, CURRENT_WEIGHTS, label="BEFORE (current hand-tuned)", feature_cols=feature_cols)
 
     # Optimize
-    w0 = CURRENT_WEIGHTS.copy()
+    w0 = np.zeros(len(feature_cols))
+    if not use_extended:
+        w0 = CURRENT_WEIGHTS.copy()
     result = minimize(
         _pairwise_loss,
         w0,
@@ -358,35 +379,34 @@ def optimize_linear(data_path: str, output_path: Optional[str] = None) -> Tuple[
     w_opt = result.x
 
     # Evaluate optimized
-    metrics_after = compute_metrics(df, w_opt, label="AFTER (optimized)")
+    metrics_after = compute_metrics(df, w_opt, label="AFTER (optimized)", feature_cols=feature_cols)
 
     # Print coefficient comparison
     print(f"\n{'='*60}")
-    print(f"  Coefficient comparison")
+    print(f"  Coefficient comparison ({len(feature_cols)} features)")
     print(f"{'='*60}")
-    print(f"  {'Feature':<25s} {'Before':>10s} {'After':>10s} {'Delta':>10s}")
-    print(f"  {'-'*55}")
-    for i, name in enumerate(FEATURE_COLS):
-        before = CURRENT_WEIGHTS[i]
-        after = w_opt[i]
-        delta = after - before
-        print(f"  {name:<25s} {before:>+10.4f} {after:>+10.4f} {delta:>+10.4f}")
+    print(f"  {'Feature':<25s} {'Weight':>10s}")
+    print(f"  {'-'*35}")
+    for i, name in enumerate(feature_cols):
+        print(f"  {name:<25s} {w_opt[i]:>+10.4f}")
 
-    # Map to ScoringParams
-    scoring_params = _weights_to_scoring_params(w_opt)
-    print(f"\n  ScoringParams equivalent:")
-    for k, v in scoring_params.items():
-        print(f"    {k}: {v}")
+    # Map to ScoringParams (only for original 8)
+    scoring_params = {}
+    if not use_extended:
+        scoring_params = _weights_to_scoring_params(w_opt)
+        print(f"\n  ScoringParams equivalent:")
+        for k, v in scoring_params.items():
+            print(f"    {k}: {v}")
 
     # Save
     if output_path:
         out = {
-            "feature_cols": FEATURE_COLS,
+            "feature_cols": list(feature_cols),
             "weights": w_opt.tolist(),
-            "scoring_params": scoring_params,
-            "metrics_before": compute_metrics(df, CURRENT_WEIGHTS),
             "metrics_after": metrics_after,
         }
+        if scoring_params:
+            out["scoring_params"] = scoring_params
         with open(output_path, "w") as f:
             json.dump(out, f, indent=2)
         print(f"\nSaved to {output_path}")
@@ -417,8 +437,8 @@ def _weights_to_scoring_params(w: np.ndarray) -> dict:
 # Evaluate with custom params
 # ---------------------------------------------------------------------------
 
-def evaluate(data_path: str, params_path: Optional[str] = None) -> dict:
-    """Evaluate MRR and top-k accuracy with given or default weights."""
+def evaluate(data_path: str, params_path: Optional[str] = None, mlp_path: Optional[str] = None) -> dict:
+    """Evaluate MRR and top-k accuracy with given or default weights, or an MLP model."""
     df = pd.read_csv(data_path)
 
     if "match_diff_norm" not in df.columns:
@@ -427,6 +447,9 @@ def evaluate(data_path: str, params_path: Optional[str] = None) -> dict:
         df["salience_norm"] = df.groupby("song_stem")["salience"].transform(
             lambda x: x / (x.max() + 1e-12)
         )
+
+    if mlp_path:
+        return _evaluate_mlp(df, mlp_path)
 
     if params_path:
         with open(params_path) as f:
@@ -438,6 +461,180 @@ def evaluate(data_path: str, params_path: Optional[str] = None) -> dict:
         label = "Current defaults"
 
     return compute_metrics(df, w, label=label)
+
+
+# ---------------------------------------------------------------------------
+# MLP Training and Evaluation
+# ---------------------------------------------------------------------------
+
+def _get_mlp_features(df: pd.DataFrame) -> np.ndarray:
+    """Extract MLP feature matrix from dataframe, using extended columns if available."""
+    # Check if new columns are present
+    has_extended = "melody_dist_0" in df.columns
+    if has_extended:
+        cols = MLP_FEATURE_COLS
+    else:
+        cols = FEATURE_COLS
+    missing = [c for c in cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns for MLP features: {missing}")
+    return df[cols].values.astype(np.float64), cols
+
+
+def _evaluate_mlp(df: pd.DataFrame, mlp_path: str) -> dict:
+    """Evaluate MLP model using ranking metrics."""
+    import joblib
+    bundle = joblib.load(mlp_path)
+    clf = bundle["model"]
+    scaler = bundle["scaler"]
+    feature_cols = bundle.get("feature_cols", FEATURE_COLS)
+
+    missing = [c for c in feature_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns in dataset for MLP: {missing}")
+
+    X = df[feature_cols].values.astype(np.float64)
+    X_scaled = scaler.transform(X)
+    probs = clf.predict_proba(X_scaled)[:, 1]
+
+    songs = df.groupby("song_stem")
+    reciprocal_ranks = []
+    ranks = []
+
+    for stem, group in songs:
+        correct_mask = group["is_correct"].values.astype(bool)
+        if not correct_mask.any():
+            continue
+        song_probs = probs[group.index]
+        correct_prob = song_probs[correct_mask].max()
+        rank = 1 + int(np.sum(song_probs > correct_prob))
+        reciprocal_ranks.append(1.0 / rank)
+        ranks.append(rank)
+
+    ranks_arr = np.array(ranks)
+    label = f"MLP ({mlp_path})"
+    print(f"\n{'='*60}")
+    print(f"  {label}")
+    print(f"{'='*60}")
+    print(f"  MRR:         {np.mean(reciprocal_ranks):.4f}")
+    print(f"  Top-1:       {np.mean(ranks_arr == 1):.2%}")
+    print(f"  Top-3:       {np.mean(ranks_arr <= 3):.2%}")
+    print(f"  Top-5:       {np.mean(ranks_arr <= 5):.2%}")
+    print(f"  Top-10:      {np.mean(ranks_arr <= 10):.2%}")
+    print(f"  Median rank: {int(np.median(ranks_arr))}")
+    print(f"  Mean rank:   {np.mean(ranks_arr):.1f}")
+    print(f"  Songs:       {len(ranks)}")
+
+    return {
+        "mrr": float(np.mean(reciprocal_ranks)),
+        "top1": float(np.mean(ranks_arr == 1)),
+        "top5": float(np.mean(ranks_arr <= 5)),
+        "top10": float(np.mean(ranks_arr <= 10)),
+        "n_songs": len(ranks),
+    }
+
+
+def train_mlp(
+    data_path: str,
+    output_path: str = "mlp_scorer.pkl",
+    hidden_layers: Tuple[int, ...] = (64, 32),
+    test_size: float = 0.2,
+    max_iter: int = 1000,
+) -> dict:
+    """Train an MLP binary classifier on the scoring dataset."""
+    import joblib
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+
+    df = pd.read_csv(data_path)
+
+    # Ensure derived features
+    if "match_diff_norm" not in df.columns:
+        df["match_diff_norm"] = df["match_diff"] / 4.0
+    if "salience_norm" not in df.columns:
+        df["salience_norm"] = df.groupby("song_stem")["salience"].transform(
+            lambda x: x / (x.max() + 1e-12)
+        )
+
+    X, feature_cols = _get_mlp_features(df)
+    y = df["is_correct"].astype(int).values
+
+    print(f"Dataset: {len(X)} candidates, {y.sum()} correct, {len(feature_cols)} features")
+    print(f"Features: {feature_cols}")
+
+    # Split by song (not by row) to avoid leakage
+    song_stems = df["song_stem"].unique()
+    train_songs, test_songs = train_test_split(song_stems, test_size=test_size, random_state=42)
+    train_mask = df["song_stem"].isin(train_songs)
+    test_mask = df["song_stem"].isin(test_songs)
+
+    X_train, y_train = X[train_mask], y[train_mask]
+    X_test, y_test = X[test_mask], y[test_mask]
+
+    print(f"Train: {len(X_train)} rows ({train_mask.sum()} candidates, {len(train_songs)} songs)")
+    print(f"Test:  {len(X_test)} rows ({test_mask.sum()} candidates, {len(test_songs)} songs)")
+
+    scaler = StandardScaler()
+    X_train_s = scaler.fit_transform(X_train)
+    X_test_s = scaler.transform(X_test)
+
+    clf = MLPClassifier(
+        hidden_layer_sizes=hidden_layers,
+        activation="relu",
+        max_iter=max_iter,
+        early_stopping=True,
+        validation_fraction=0.1,
+        random_state=42,
+        verbose=True,
+    )
+    clf.fit(X_train_s, y_train)
+
+    # Classification metrics on test set
+    from sklearn.metrics import classification_report
+    y_pred = clf.predict(X_test_s)
+    print("\nClassification Report (test set):")
+    print(classification_report(y_test, y_pred, target_names=["incorrect", "correct"]))
+
+    # Save
+    bundle = {"model": clf, "scaler": scaler, "feature_cols": list(feature_cols)}
+    joblib.dump(bundle, output_path)
+    print(f"Saved MLP + scaler to {output_path}")
+
+    # Ranking evaluation on test set
+    df_test = df[test_mask].copy()
+    df_test["_mlp_prob"] = clf.predict_proba(X_test_s)[:, 1]
+
+    songs = df_test.groupby("song_stem")
+    reciprocal_ranks = []
+    ranks = []
+    for stem, group in songs:
+        correct_mask_g = group["is_correct"].values.astype(bool)
+        if not correct_mask_g.any():
+            continue
+        probs_g = group["_mlp_prob"].values
+        correct_prob = probs_g[correct_mask_g].max()
+        rank = 1 + int(np.sum(probs_g > correct_prob))
+        reciprocal_ranks.append(1.0 / rank)
+        ranks.append(rank)
+
+    ranks_arr = np.array(ranks)
+    print(f"\n{'='*60}")
+    print(f"  MLP Ranking (test set, {len(test_songs)} songs)")
+    print(f"{'='*60}")
+    print(f"  MRR:         {np.mean(reciprocal_ranks):.4f}")
+    print(f"  Top-1:       {np.mean(ranks_arr == 1):.2%}")
+    print(f"  Top-3:       {np.mean(ranks_arr <= 3):.2%}")
+    print(f"  Top-5:       {np.mean(ranks_arr <= 5):.2%}")
+    print(f"  Top-10:      {np.mean(ranks_arr <= 10):.2%}")
+    print(f"  Median rank: {int(np.median(ranks_arr))}")
+    print(f"  Mean rank:   {np.mean(ranks_arr):.1f}")
+
+    # Also evaluate linear baseline on same test split for comparison
+    print()
+    compute_metrics(df_test, CURRENT_WEIGHTS, label="Linear baseline (same test split)")
+
+    return {"output": output_path, "n_features": len(feature_cols)}
 
 
 # ---------------------------------------------------------------------------
@@ -460,20 +657,33 @@ def main():
     p_opt = sub.add_parser("optimize", help="Optimize linear scoring coefficients")
     p_opt.add_argument("--data", required=True, help="Scoring dataset CSV (from collect)")
     p_opt.add_argument("--output", default="optimized_params.json", help="Output JSON path")
+    p_opt.add_argument("--extended", action="store_true", help="Use extended 33-feature set (melody/accomp distributions + valley penalty)")
 
     # evaluate
     p_eval = sub.add_parser("evaluate", help="Evaluate scoring metrics")
     p_eval.add_argument("--data", required=True, help="Scoring dataset CSV (from collect)")
     p_eval.add_argument("--params", default=None, help="Optimized params JSON (omit for current defaults)")
+    p_eval.add_argument("--mlp", default=None, help="MLP model .pkl path (overrides --params)")
+
+    # mlp
+    p_mlp = sub.add_parser("mlp", help="Train an MLP binary classifier for scoring")
+    p_mlp.add_argument("--data", required=True, help="Scoring dataset CSV (from collect)")
+    p_mlp.add_argument("--output", default="mlp_scorer.pkl", help="Output .pkl path")
+    p_mlp.add_argument("--hidden-layers", default="64,32", help="Comma-separated hidden layer sizes (default: 64,32)")
+    p_mlp.add_argument("--test-size", type=float, default=0.2, help="Fraction of songs held out for testing (default: 0.2)")
+    p_mlp.add_argument("--max-iter", type=int, default=1000, help="Max training iterations (default: 1000)")
 
     args = parser.parse_args()
 
     if args.command == "collect":
         collect_features(args.results_dir, args.gt, args.output)
     elif args.command == "optimize":
-        optimize_linear(args.data, args.output)
+        optimize_linear(args.data, args.output, use_extended=args.extended)
     elif args.command == "evaluate":
-        evaluate(args.data, args.params)
+        evaluate(args.data, args.params, mlp_path=args.mlp)
+    elif args.command == "mlp":
+        layers = tuple(int(x) for x in args.hidden_layers.split(","))
+        train_mlp(args.data, args.output, hidden_layers=layers, test_size=args.test_size, max_iter=args.max_iter)
 
 
 if __name__ == "__main__":

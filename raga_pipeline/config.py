@@ -27,6 +27,15 @@ LEGACY_RECORD_MODE_TO_INGEST = {
 }
 TANPURA_KEYS = ["A", "Bb", "B", "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab"]
 
+# Per-extractor default confidence thresholds.
+# pYIN voiced_probs are much lower than SwiftF0 (melody median ~0.18, accomp max ~0.76).
+# These defaults are applied when the user does not explicitly pass
+# --vocal-confidence / --accomp-confidence on the CLI.
+EXTRACTOR_CONFIDENCE_DEFAULTS = {
+    "swiftf0": {"vocal": 0.95, "accomp": 0.80},
+    "pyin":    {"vocal": 0.15, "accomp": 0.05},
+}
+
 
 def _clean_optional_str(value: Optional[str]) -> Optional[str]:
     """Trim optional CLI strings and normalize empty strings to None."""
@@ -107,6 +116,11 @@ class PipelineConfig:
     energy_threshold: float = 0.0 # Per-track normalized energy threshold (0-1) for note gating
     energy_metric: str = "rms"  # 'rms' (peak-normalised) or 'log_amp' (dBFS, percentile-normalised)
 
+    # Pitch extractor selection
+    pitch_extractor: str = "swiftf0"  # "swiftf0" or "pyin"
+    pitch_hop_ms: float = 0.0         # 0 = extractor default; applies to pyin only
+    compare_extractors: bool = False  # Analyze: run both SwiftF0 and pYIN, show toggled report
+
     # Phrase detection parameters
     phrase_max_gap: float = 1.0           # Max silence between notes in phrase
     phrase_min_length: int = 1            # Minimum notes per phrase
@@ -125,6 +139,14 @@ class PipelineConfig:
     # ml params (currently unused)
     use_ml_model: bool = False  # Disabled per migration plan
     model_path: Optional[str] = None      # Path to trained model (unused)
+
+    # LM scoring (detect mode)
+    use_lm_scoring: bool = False
+    lm_model_path: Optional[str] = None
+    lm_skip_correction: bool = False
+    lm_deletion_lambda: float = 2.0
+    lm_deletion_slope: float = -0.0684
+    lm_deletion_intercept: float = 0.6640
 
     # db paths
     raga_db_path: Optional[str] = None    # Auto-locates if None
@@ -149,6 +171,7 @@ class PipelineConfig:
     keep_impure_notes: bool = False
     strict_raga_35c_filter: bool = False
     strict_raga_max_cents: float = 35.0
+    skip_raga_correction: bool = False
 
     def __post_init__(self):
         """Validate and normalize paths."""
@@ -220,6 +243,13 @@ class PipelineConfig:
         if self.mode == "detect" and self.force_stem_recompute and not self.force_recompute:
             raise ValueError("Detect mode with --force-stems requires --force.")
 
+        if self.use_lm_scoring and not self.lm_model_path:
+            self.lm_model_path = self._find_lm_model_path()
+        if self.use_lm_scoring and not self.lm_model_path:
+            raise ValueError("--use-lm-scoring requires --lm-model (path to trained n-gram model JSON)")
+        if self.use_lm_scoring and self.lm_model_path and not os.path.exists(self.lm_model_path):
+            raise ValueError(f"--lm-model path does not exist: {self.lm_model_path}")
+
         if self.mode == "detect" and self.skip_separation:
             tonic_tokens = [
                 token.strip()
@@ -248,6 +278,19 @@ class PipelineConfig:
             package_dir / "models" / "raga_mlp_model.pkl",
             package_dir / "raga_mlp_model.pkl",
             package_dir.parent / "raga_mlp_model.pkl",
+        ]
+        for path in candidates:
+            if path.exists():
+                return str(path)
+        return None
+
+    def _find_lm_model_path(self) -> Optional[str]:
+        """Find trained n-gram LM in standard locations."""
+        project_root = Path(__file__).parent.parent
+        candidates = [
+            project_root / "compmusic_ngram_model_uncorrected.json",
+            project_root / "raga_pipeline" / "models" / "compmusic_ngram_model_uncorrected.json",
+            project_root / "compmusic_ngram_model.json",
         ]
         for path in candidates:
             if path.exists():
@@ -345,13 +388,45 @@ def _add_common_args(parser: argparse.ArgumentParser, required: bool = True) -> 
     parser.add_argument(
         "--vocal-confidence",
         type=float,
-        default=0.95,
+        default=None,
         help=(
             "Confidence threshold (0-1) for melody pitch data. "
-            "Lower (0.90-0.95) to retain subtle taans; raise to suppress noisy transients."
+            "Default depends on --pitch-extractor: swiftf0=0.95, pyin=0.15. "
+            "Lower to retain subtle taans; raise to suppress noisy transients."
         ),
     )
-    parser.add_argument("--accomp-confidence", type=float, default=0.80, help="Confidence threshold (0-1) for accompaniment pitch data")
+    parser.add_argument(
+        "--accomp-confidence",
+        type=float,
+        default=None,
+        help=(
+            "Confidence threshold (0-1) for accompaniment pitch data. "
+            "Default depends on --pitch-extractor: swiftf0=0.80, pyin=0.05."
+        ),
+    )
+
+    # Pitch extractor selection
+    parser.add_argument(
+        "--pitch-extractor",
+        choices=["swiftf0", "pyin"],
+        default="swiftf0",
+        help="Pitch extraction backend. swiftf0 (default, 16ms hop fixed), "
+             "pyin (librosa, configurable hop).",
+    )
+    parser.add_argument(
+        "--pitch-hop-ms",
+        type=float,
+        default=0.0,
+        help="Pitch frame hop in milliseconds (pyin only). "
+             "0 = extractor default (~23ms). Lower for drut passages (e.g. 5).",
+    )
+    parser.add_argument(
+        "--compare-extractors",
+        action="store_true",
+        help="Analyze mode: run both SwiftF0 and pYIN, calibrate confidence "
+             "thresholds so both produce the same number of raw notes, and show "
+             "both transcriptions in the report with a toggle.",
+    )
 
     # Peak Detection settings
     parser.add_argument("--prominence-high", type=float, default=0.01, help="Prominence threshold factor for high-res peak detection")
@@ -465,12 +540,27 @@ def build_cli_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Detect mode only: requires --force and also forces stem-separation recomputation.",
     )
+    detect_parser.add_argument("--use-lm-scoring", action="store_true",
+                               help="Re-rank candidates using n-gram language model (writes lm_candidates.csv)")
+    detect_parser.add_argument("--lm-model", dest="lm_model_path", default=None,
+                               help="Path to trained n-gram model JSON (auto-discovered if omitted)")
+    detect_parser.add_argument("--lm-skip-correction", action="store_true",
+                               help="Score uncorrected chromatic transcription (no per-raga correction). "
+                                    "Use with a model trained on uncorrected transcriptions.")
+    detect_parser.add_argument("--lm-deletion-lambda", type=float, default=2.0,
+                               help="Weight for deletion residual in combined LM scoring (default: 2.0)")
+    detect_parser.add_argument("--lm-deletion-slope", type=float, default=-0.0684,
+                               help="Regression slope for expected deletion vs scale size (default: -0.0684)")
+    detect_parser.add_argument("--lm-deletion-intercept", type=float, default=0.6640,
+                               help="Regression intercept for expected deletion vs scale size (default: 0.6640)")
 
     # --- Analyze Mode ---
     analyze_parser = subparsers.add_parser("analyze", help="Phase 2: Analysis only")
     _add_common_args(analyze_parser, required=True)
     analyze_parser.add_argument("--tonic", required=True, help="Tonic (e.g. C, D#)")
     analyze_parser.add_argument("--raga", required=True, help="Raga name")
+    analyze_parser.add_argument("--skip-raga-correction", action="store_true",
+                                   help="Skip post-transcription raga correction (keep chromatic transcription as-is)")
     analyze_parser.add_argument("--keep-impure-notes", action="store_true", help="Keep notes not in raga (default: remove)")
     analyze_parser.add_argument(
         "--strict-raga-35c-filter",
@@ -609,6 +699,21 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
     # Determine effective mode (default to detect)
     mode = args.command if args.command in VALID_MODES else "detect"
 
+    # Validate --compare-extractors
+    compare_extractors = getattr(args, 'compare_extractors', False)
+    if compare_extractors and mode != "analyze":
+        parser.error("--compare-extractors is only supported in analyze mode.")
+
+    # Resolve extractor-specific confidence defaults when user did not override
+    extractor = getattr(args, 'pitch_extractor', 'swiftf0')
+    ext_defaults = EXTRACTOR_CONFIDENCE_DEFAULTS.get(
+        extractor, EXTRACTOR_CONFIDENCE_DEFAULTS["swiftf0"]
+    )
+    raw_vocal_conf = getattr(args, 'vocal_confidence', None)
+    raw_accomp_conf = getattr(args, 'accomp_confidence', None)
+    resolved_vocal_conf = raw_vocal_conf if raw_vocal_conf is not None else ext_defaults["vocal"]
+    resolved_accomp_conf = raw_accomp_conf if raw_accomp_conf is not None else ext_defaults["accomp"]
+
     return PipelineConfig(
         audio_path=getattr(args, 'audio', None),
         output_dir=getattr(args, 'output', 'batch_results'),
@@ -626,17 +731,24 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         vocalist_gender=getattr(args, 'vocalist_gender', None),
         instrument_type=getattr(args, 'instrument_type', 'autodetect'),
         skip_separation=getattr(args, 'skip_separation', False),
-        vocal_confidence=getattr(args, 'vocal_confidence', 0.95),
-        accomp_confidence=getattr(args, 'accomp_confidence', 0.80),
+        vocal_confidence=resolved_vocal_conf,
+        accomp_confidence=resolved_accomp_conf,
         force_recompute=getattr(args, 'force', False),
         force_stem_recompute=getattr(args, 'force_stem_recompute', False),
         skip_report=getattr(args, 'skip_report', False),
         pitch_only=getattr(args, 'pitch_only', False),
         transcription_only=getattr(args, 'transcription_only', False),
         raga_db_path=getattr(args, 'raga_db', None),
+        use_lm_scoring=getattr(args, 'use_lm_scoring', False),
+        lm_model_path=getattr(args, 'lm_model_path', None),
+        lm_skip_correction=getattr(args, 'lm_skip_correction', False),
+        lm_deletion_lambda=getattr(args, 'lm_deletion_lambda', 2.0),
+        lm_deletion_slope=getattr(args, 'lm_deletion_slope', -0.0684),
+        lm_deletion_intercept=getattr(args, 'lm_deletion_intercept', 0.6640),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),
+        skip_raga_correction=getattr(args, 'skip_raga_correction', False),
         keep_impure_notes=getattr(args, 'keep_impure_notes', False),
         strict_raga_35c_filter=getattr(args, 'strict_raga_35c_filter', False),
         strict_raga_max_cents=getattr(args, 'strict_raga_max_cents', 35.0),
@@ -645,6 +757,9 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         transcription_derivative_threshold=getattr(args, 'transcription_stability_threshold', 4.0),
         energy_threshold=getattr(args, 'energy_threshold', 0.0),
         energy_metric=getattr(args, 'energy_metric', 'rms'),
+        pitch_extractor=getattr(args, 'pitch_extractor', 'swiftf0'),
+        pitch_hop_ms=getattr(args, 'pitch_hop_ms', 0.0),
+        compare_extractors=compare_extractors,
         silence_threshold=getattr(args, 'silence_threshold', 0.0),
         silence_min_duration=getattr(args, 'silence_min_duration', 0.25),
         phrase_min_duration=getattr(args, 'phrase_min_duration', 0.2),

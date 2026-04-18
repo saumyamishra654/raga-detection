@@ -1,0 +1,52 @@
+{
+  "feature_cols": [
+    "match_mass",
+    "observed_note_score",
+    "loglike_norm",
+    "extra_mass",
+    "complexity_pen",
+    "match_diff_norm",
+    "primary_score",
+    "salience_norm"
+  ],
+  "weights": [
+    3.965488565019011,
+    1.0723919432621036,
+    6.574280190769325,
+    -3.969364809487921,
+    0.2520759937756977,
+    -1.2730235805008396,
+    1.3988692174839379,
+    2.5400890231239615
+  ],
+  "scoring_params": {
+    "ALPHA_MATCH": 3.965488565019011,
+    "BETA_PRESENCE": 1.0723919432621036,
+    "GAMMA_LOGLIKE": 6.574280190769325,
+    "DELTA_EXTRA": 3.969364809487921,
+    "COMPLEX_PENALTY": -0.2520759937756977,
+    "MATCH_SIZE_GAMMA": 1.2730235805008396,
+    "PRIMARY_SCORE_WEIGHT": 1.3988692174839379,
+    "TONIC_SALIENCE_WEIGHT": 2.5400890231239615
+  },
+  "metrics_before": {
+    "mrr": 0.5174458605774229,
+    "top1": 0.3917910447761194,
+    "top3": 0.5764925373134329,
+    "top5": 0.6651119402985075,
+    "top10": 0.7723880597014925,
+    "median_rank": 2,
+    "mean_rank": 30.176305970149254,
+    "n_songs": 1072
+  },
+  "metrics_after": {
+    "mrr": 0.5205937883988321,
+    "top1": 0.40671641791044777,
+    "top3": 0.5783582089552238,
+    "top5": 0.6595149253731343,
+    "top10": 0.7416044776119403,
+    "median_rank": 2,
+    "mean_rank": 28.396455223880597,
+    "n_songs": 1072
+  }
+}

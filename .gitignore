@@ -80,24 +80,23 @@ spleeter_output/
 # Transcription outputs
 **/transcription.txt
 
-# Raga Pipeline Documentation
-raga_pipeline/LLM_REFERENCE.md
-raga_pipeline/CHANGELOG.md
-raga_pipeline/NOTEBOOK_VS_PIPELINE_COMPARISON.md
-raga_pipeline/DOCUMENTATION.md
-primer/
+# Markdown files (keep only README.md)
+*.md
+!README.md
 
-# Implementation Plans (Working Documents)
-*_PLAN.md
-*-plan.md
-aaroh-avroh-reconstruction.md
-LOCAL_APP_INTERFACE_EXPLAINER.md
+raga_pipeline/motif_index.json
+primer/
 
 # Trained models
 *.pkl
 *_model.pkl
 *_scaler.pkl
 raga_weights.json
+
+# N-gram LM model variants (keep only the default uncorrected model)
+compmusic_ngram_model.json
+compmusic_ngram_model_v2.json
+compmusic_ngram_model_uncorrected_noentropy.json
 
 # CSV and Data Files
 *.csv
@@ -110,9 +109,7 @@ raga_weights.json
 !main notebooks/ragadb.xlsx
 !raga_rename_suggestions.csv
 
-# Claude Code
-CLAUDE.md
-
 # OS-specific
 .DS_Store
 Thumbs.db
+

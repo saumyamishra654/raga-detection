@@ -42,6 +42,8 @@ STAGE_SELECTORS: Dict[str, List[StageSelector]] = {
         _selector("raga_pipeline/audio.py", "function", "_separate_demucs"),
         _selector("raga_pipeline/audio.py", "function", "_separate_spleeter"),
         _selector("raga_pipeline/audio.py", "function", "extract_pitch"),
+        _selector("raga_pipeline/audio.py", "function", "_extract_swiftf0"),
+        _selector("raga_pipeline/audio.py", "function", "_extract_pyin"),
         _selector("raga_pipeline/audio.py", "function", "_resolve_demucs_device"),
         _selector("raga_pipeline/analysis.py", "function", "compute_cent_histograms_from_config"),
         _selector("raga_pipeline/analysis.py", "function", "detect_peaks_from_config"),

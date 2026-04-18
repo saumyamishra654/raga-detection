@@ -40,7 +40,11 @@ class ScoringParams:
     DELTA_EXTRA: float = 1.10          # extra mass penalty (-ve)
     COMPLEX_PENALTY: float = 0.1       # complexity penalty (-ve)
     MATCH_SIZE_GAMMA: float = 0.25     # size mismatch coefficient
-    TONIC_SALIENCE_WEIGHT: float = 0.12  # tonic salience weight
+    TONIC_SALIENCE_WEIGHT: float = 0.12  # deprecated: kept for backward compatibility
+    SAPAPAIR_WEIGHT: float = 0.20         # Sa-Pa accompaniment pair boost
+    ACC_BAND_MIN_HZ: float = 100.0        # accompaniment band-pass min frequency (Hz)
+    ACC_BAND_MAX_HZ: float = 300.0        # accompaniment band-pass max frequency (Hz, exclusive)
+    ACC_BAND_WEIGHT: float = 0.80         # band-pass tonic boost (0.80 ~= +800 after SCALE)
     SCALE: float = 1000.0
     USE_PRESENCE_MEAN: bool = True     # mean vs sum/sqrt
     USE_NORM_PRIMARY: bool = True
@@ -59,7 +63,7 @@ DEFAULT_SCORING_PARAMS = ScoringParams()
 TONIC_BIAS = {
     # Vocalist gender (biases toward typical vocal ranges)
     "vocal_female": [7, 8, 9, 10, 11, 0],     # G, G#, A, A#, B, C (bias around A-A#)
-    "vocal_male": [11, 0, 1, 2, 3, 4, 5],     # B, C, C#, D, D#, E, F (bias around D-D#)
+    "vocal_male": [0, 1, 2, 3, 4, 5, 6],         # C, C#, D, D#, E, F, F# (bias around D-D#)
     
     # Instrument-specific tonic ranges
     "sarod": [10, 11, 0, 1, 2],               # A#, B, C, C#, D
@@ -132,6 +136,9 @@ class ScoredCandidate:
     raga_size: int
     match_diff: int               # |raga_size - detected_peaks|
     complexity_pen: float
+    melody_dist: tuple = ()       # 12-bin tonic-rotated melody distribution
+    accomp_dist: tuple = ()       # 12-bin tonic-rotated accompaniment distribution
+    valley_penalty: int = 0       # Count of raga notes at valleys (not peaks)
 
 
 # =============================================================================
@@ -529,30 +536,56 @@ def score_candidates_full(
     
     note_masses_raw = np.array([mass_within_window_for_note(i) for i in range(12)], dtype=float)
     H_pc_arr = note_masses_raw.copy()
-    
+
+    # Smoothed histogram for valley detection (Gaussian, sigma=5 cents)
+    from scipy.ndimage import gaussian_filter1d
+    cent_hist_smooth = gaussian_filter1d(cent_hist.astype(float), sigma=5.0, mode='wrap')
+
     # Normalized probability distribution
     p_pc = (H_pc_arr + EPS) / (np.sum(H_pc_arr) + 12 * EPS)
     
     # === Accompaniment salience (only if accompaniment available) ===
     has_accompaniment = pitch_data_accomp is not None and len(pitch_data_accomp.midi_vals) > 0
     
+    H_acc = np.zeros(12, dtype=float)
+    H_acc_band = np.zeros(12, dtype=float)
+    max_acc = 1.0
+    max_acc_band = 1.0
+    band_frame_count = 0
     if has_accompaniment:
         assert pitch_data_accomp is not None
         midi_vals_acc = pitch_data_accomp.midi_vals
         pitch_classes_acc = np.mod(np.round(midi_vals_acc), 12).astype(int)
         H_acc, _ = np.histogram(pitch_classes_acc, bins=12, range=(0, 12))
+        acc_voiced_mask = pitch_data_accomp.voiced_mask
+        pitch_hz_acc = pitch_data_accomp.pitch_hz
+        band_mask = (
+            acc_voiced_mask
+            & np.isfinite(pitch_hz_acc)
+            & (pitch_hz_acc >= params.ACC_BAND_MIN_HZ)
+            & (pitch_hz_acc < params.ACC_BAND_MAX_HZ)
+        )
+        band_frame_count = int(np.sum(band_mask))
+        if band_frame_count > 0:
+            band_midi_vals = librosa.hz_to_midi(pitch_hz_acc[band_mask])
+            band_pitch_classes = np.mod(np.round(band_midi_vals), 12).astype(int)
+            H_acc_band, _ = np.histogram(band_pitch_classes, bins=12, range=(0, 12))
         salience_all_tonics = {t: int(H_acc[t]) for t in range(12)}
         max_acc = float(H_acc.max()) if H_acc.size and H_acc.max() > 0 else 1.0
+        max_acc_band = float(H_acc_band.max()) if H_acc_band.size and H_acc_band.max() > 0 else 1.0
         
         # Tonic filtering based on mean salience
         mean_salience = float(np.mean(list(salience_all_tonics.values())))
         surviving_tonics = [t for t, a in salience_all_tonics.items() if a > mean_salience]
         
-        print(f"[SCORING] Mean accomp salience = {mean_salience:.1f}; {len(surviving_tonics)} surviving tonics")
+        print(
+            f"[SCORING] Mean accomp salience = {mean_salience:.1f}; "
+            f"{len(surviving_tonics)} surviving tonics; "
+            f"band [{params.ACC_BAND_MIN_HZ:.0f},{params.ACC_BAND_MAX_HZ:.0f}) Hz frames = {band_frame_count}"
+        )
     else:
         # No accompaniment - use melody histogram peaks as tonic hints
         salience_all_tonics = {t: 0 for t in range(12)}
-        max_acc = 1.0
         mean_salience = 0.0
         surviving_tonics = []
         print("[SCORING] No accompaniment - using tonic bias or all tonics")
@@ -672,13 +705,62 @@ def score_candidates_full(
                 size_penalty
             )
             
-            # Tonic salience boost
+            # Normalized accompaniment diagnostics (full range + band-pass)
             tonic_sal_norm = tonic_sal / (max_acc + EPS)
-            fit_norm += params.TONIC_SALIENCE_WEIGHT * tonic_sal_norm
+            tonic_sal_band = float(H_acc_band[tonic])
+            tonic_sal_band_norm = tonic_sal_band / (max_acc_band + EPS)
+
+            # Band-pass tonic boost: replaces full-range tonic salience term.
+            fit_norm += params.ACC_BAND_WEIGHT * tonic_sal_band_norm
+
+            # Sa-Pa accompaniment pair boost: tanpura drones Sa and Pa
+            pa_sal = 0.0
+            sapapair_norm = 0.0
+            if has_accompaniment:
+                pa_sal = float(H_acc[(tonic + 7) % 12])
+                sapapair_norm = (tonic_sal + pa_sal) / (max_acc + EPS)
+                fit_norm += params.SAPAPAIR_WEIGHT * sapapair_norm
             
             fit_norm = max(-1.0, min(1.0, fit_norm))
             fit_score = float(fit_norm * params.SCALE)
-            
+
+            # --- Melody distribution (tonic-rotated, normalized) ---
+            melody_dist = tuple(float(v) for v in p_rot)
+
+            # --- Accompaniment distribution (tonic-rotated, normalized) ---
+            if has_accompaniment:
+                accomp_rot = np.roll(H_acc.astype(float), -tonic)
+                accomp_sum = float(accomp_rot.sum())
+                if accomp_sum > 0:
+                    accomp_rot = accomp_rot / accomp_sum
+                accomp_dist = tuple(float(v) for v in accomp_rot)
+            else:
+                accomp_dist = tuple(0.0 for _ in range(12))
+
+            # --- Valley penalty ---
+            # Count raga notes sitting at a valley in smoothed histogram
+            # unless that note is also a detected peak.
+            detected_peak_pcs = set()
+            # Map detected_peak_count's source pitch classes from the
+            # rotated histogram: peaks in p_rot that are among the top
+            # detected_peak_count values
+            sorted_indices = np.argsort(H_pc_arr)[::-1]
+            for idx in sorted_indices[:detected_peak_count]:
+                detected_peak_pcs.add(int(idx))
+
+            valley_count = 0
+            for note_idx in raga_note_indices:
+                # Absolute pitch class = (note_idx + tonic) % 12
+                abs_pc = (note_idx + tonic) % 12
+                center_bin = int(abs_pc * 100) % 1200
+                center_val = cent_hist_smooth[center_bin]
+                left_val = cent_hist_smooth[(center_bin - 15) % 1200]
+                right_val = cent_hist_smooth[(center_bin + 15) % 1200]
+                is_valley = center_val < left_val and center_val < right_val
+                is_peak = abs_pc in detected_peak_pcs
+                if is_valley and not is_peak:
+                    valley_count += 1
+
             final_results.append({
                 "raga": ", ".join(names),
                 "tonic": int(tonic),
@@ -693,6 +775,12 @@ def score_candidates_full(
                 "raga_size": raga_size,
                 "match_diff": size_diff,
                 "complexity_pen": complexity_pen,
+                "tonic_sal_full_norm": tonic_sal_norm,
+                "tonic_sal_band_norm": tonic_sal_band_norm,
+                "band_frame_count": int(band_frame_count),
+                **{f"melody_dist_{i}": melody_dist[i] for i in range(12)},
+                **{f"accomp_dist_{i}": accomp_dist[i] for i in range(12)},
+                "valley_penalty": valley_count,
             })
     
     df = pd.DataFrame(final_results)

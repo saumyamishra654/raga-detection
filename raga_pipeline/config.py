@@ -244,6 +244,8 @@ class PipelineConfig:
             raise ValueError("Detect mode with --force-stems requires --force.")
 
         if self.use_lm_scoring and not self.lm_model_path:
+            self.lm_model_path = self._find_lm_model_path()
+        if self.use_lm_scoring and not self.lm_model_path:
             raise ValueError("--use-lm-scoring requires --lm-model (path to trained n-gram model JSON)")
         if self.use_lm_scoring and self.lm_model_path and not os.path.exists(self.lm_model_path):
             raise ValueError(f"--lm-model path does not exist: {self.lm_model_path}")
@@ -276,6 +278,19 @@ class PipelineConfig:
             package_dir / "models" / "raga_mlp_model.pkl",
             package_dir / "raga_mlp_model.pkl",
             package_dir.parent / "raga_mlp_model.pkl",
+        ]
+        for path in candidates:
+            if path.exists():
+                return str(path)
+        return None
+
+    def _find_lm_model_path(self) -> Optional[str]:
+        """Find trained n-gram LM in standard locations."""
+        project_root = Path(__file__).parent.parent
+        candidates = [
+            project_root / "compmusic_ngram_model_uncorrected.json",
+            project_root / "raga_pipeline" / "models" / "compmusic_ngram_model_uncorrected.json",
+            project_root / "compmusic_ngram_model.json",
         ]
         for path in candidates:
             if path.exists():
@@ -528,7 +543,7 @@ def build_cli_parser() -> argparse.ArgumentParser:
     detect_parser.add_argument("--use-lm-scoring", action="store_true",
                                help="Re-rank candidates using n-gram language model (writes lm_candidates.csv)")
     detect_parser.add_argument("--lm-model", dest="lm_model_path", default=None,
-                               help="Path to trained n-gram model JSON (required with --use-lm-scoring)")
+                               help="Path to trained n-gram model JSON (auto-discovered if omitted)")
     detect_parser.add_argument("--lm-skip-correction", action="store_true",
                                help="Score uncorrected chromatic transcription (no per-raga correction). "
                                     "Use with a model trained on uncorrected transcriptions.")

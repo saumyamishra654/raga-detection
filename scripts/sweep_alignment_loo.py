@@ -432,6 +432,23 @@ def phase2_score(features_csv: Path, output_dir: Path) -> None:
 
         all_results[f"C: Z-LM - {gamma}*skip"] = _eval_method(df, n_recs, score_c, "both")
 
+    # --- Method C2: LM - w * sub_fraction (the discriminative signal) ---
+    for w_sub in [0.5, 1.0, 2.0, 5.0]:
+        def score_c2(row, stats_by_k, _w=w_sub):
+            return row["lm_per_token"] - _w * row["sub_fraction"]
+
+        all_results[f"C2: LM - {w_sub}*sub"] = _eval_method(df, n_recs, score_c2, "both")
+
+    # --- Method C3: Z-scored LM - w * sub_fraction (fold-safe z + sub penalty) ---
+    for w_sub in [0.5, 1.0, 2.0]:
+        def score_c3(row, stats_by_k, _w=w_sub):
+            k = int(row["scale_size"])
+            mu, sigma = stats_by_k.get(k, (0.0, 1.0))
+            z_lm = (row["lm_per_token"] - mu) / sigma
+            return z_lm - _w * row["sub_fraction"]
+
+        all_results[f"C3: Z-LM - {w_sub}*sub"] = _eval_method(df, n_recs, score_c3, "both")
+
     # --- Method D: RRF (hist rank + alignment LM rank) ---
     for gating_label, do_gate in [("gated", True), ("ungated", False)]:
         correct = 0
@@ -478,7 +495,7 @@ def phase2_score(features_csv: Path, output_dir: Path) -> None:
             if len(test_df) == 0:
                 continue
 
-            feature_cols = ["lm_per_token", "skip_fraction", "scale_size", "hist_score"]
+            feature_cols = ["lm_per_token", "skip_fraction", "sub_fraction", "scale_size", "hist_score"]
             X_train = train_df[feature_cols].values
             y_train = train_df["is_gt"].values
 
@@ -562,6 +579,9 @@ def phase2_score(features_csv: Path, output_dir: Path) -> None:
     print(f"  Delta (GT - non-GT):      {gt_rows['lm_per_token'].mean() - nongt_rows['lm_per_token'].mean():.4f}")
     print(f"  GT mean skip_fraction:    {gt_rows['skip_fraction'].mean():.4f}")
     print(f"  Non-GT mean skip_fraction:{nongt_rows['skip_fraction'].mean():.4f}")
+    print(f"  GT mean sub_fraction:     {gt_rows['sub_fraction'].mean():.4f}")
+    print(f"  Non-GT mean sub_fraction: {nongt_rows['sub_fraction'].mean():.4f}")
+    print(f"  Delta sub_fraction:       {gt_rows['sub_fraction'].mean() - nongt_rows['sub_fraction'].mean():.4f}")
 
     # Print results
     print("\n=== Scoring Comparison (gated | ungated) ===")

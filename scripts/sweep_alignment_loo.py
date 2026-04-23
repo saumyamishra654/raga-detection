@@ -550,6 +550,7 @@ def main():
 
     # Alignment config
     parser.add_argument("--lambda-skip", type=float, default=0.5)
+    parser.add_argument("--lambda-match", type=float, default=2.0)
     parser.add_argument("--lambda-sub", type=float, default=0.3)
     parser.add_argument("--beam-width", type=int, default=200)
     parser.add_argument("--max-sub-distance", type=int, default=2)
@@ -597,6 +598,7 @@ def main():
 
     align_config = AlignmentConfig(
         lambda_skip=args.lambda_skip,
+        lambda_match=args.lambda_match,
         lambda_sub=args.lambda_sub,
         beam_width=args.beam_width,
         max_sub_distance=args.max_sub_distance,

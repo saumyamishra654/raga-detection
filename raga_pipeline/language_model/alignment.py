@@ -141,7 +141,7 @@ def score_phrase_aligned(
 
     The DP finds the partition of observed tokens into matched, skipped,
     and substituted that maximizes:
-        SUM log P_r(z_t | ctx_t) - lambda_skip * N_skip - lambda_sub * SUM dist_t
+        SUM (log P_r(z_t | ctx_t) + lambda_match) - lambda_skip * N_skip - lambda_sub * SUM dist_t
 
     Context (ctx) is built from matched/substituted tokens only and never
     crosses phrase boundaries.  <BOS> always anchors the context start.

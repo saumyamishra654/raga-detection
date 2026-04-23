@@ -184,6 +184,18 @@ class NgramModel:
         """Return the number of distinct tokens seen across all ragas."""
         return len(self._vocabulary)
 
+    @property
+    def vocabulary(self) -> set:
+        """Return the set of distinct tokens seen across all ragas."""
+        return self._vocabulary
+
+    def remove_raga(self, raga: str) -> None:
+        """Remove a raga from the model (e.g. for LOO evaluation)."""
+        self._counts.pop(raga, None)
+        self._context_counts.pop(raga, None)
+        self._token_counts.pop(raga, None)
+        self._recording_counts.pop(raga, None)
+
     # ------------------------------------------------------------------
     # Probability computation
     # ------------------------------------------------------------------

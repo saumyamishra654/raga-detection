@@ -1,9 +1,14 @@
 import unittest
 
+from raga_pipeline.language_model import NgramModel
 from raga_pipeline.language_model.alignment import (
     token_pitch_info,
     pitch_distance,
     build_substitution_map,
+    AlignmentConfig,
+    AlignmentResult,
+    score_phrase_aligned,
+    score_sequence_aligned,
 )
 
 
@@ -93,6 +98,123 @@ class TestSubstitutionMap(unittest.TestCase):
         # Sa to Re is 2 semitones, should not be included at max_distance=1
         sa_targets = {t for t, d in smap.get("Sa", [])}
         self.assertNotIn("Re", sa_targets)
+
+
+def _build_test_model() -> NgramModel:
+    """Small model: Yaman (Sa Re Ga Ma Pa Dha Ni) vs Bhairav (Sa re ga Ma Pa dha ni)."""
+    model = NgramModel(order=3, smoothing="add-k", smoothing_k=0.01)
+    yaman_phrase = ["<BOS>", "Sa", "Re", "Ga", "Ma", "Pa", "Dha", "Ni"]
+    bhairav_phrase = ["<BOS>", "Sa", "re", "ga", "Ma", "Pa", "dha", "ni"]
+    for _ in range(50):
+        model.add_sequence("Yaman", [yaman_phrase])
+        model.add_sequence("Bhairav", [bhairav_phrase])
+    model.finalize()
+    return model
+
+
+class TestScorePhraseAligned(unittest.TestCase):
+
+    def test_clean_phrase_scores_higher_for_correct_raga(self):
+        """A clean Yaman phrase should score higher under Yaman than Bhairav."""
+        model = _build_test_model()
+        phrase = ["<BOS>", "Sa", "Re", "Ga", "Ma", "Pa"]
+        cfg = AlignmentConfig()
+
+        yaman_result = score_phrase_aligned(model, "Yaman", phrase, cfg)
+        bhairav_result = score_phrase_aligned(model, "Bhairav", phrase, cfg)
+
+        self.assertGreater(yaman_result.lm_per_token, bhairav_result.lm_per_token)
+        self.assertEqual(yaman_result.n_skipped, 0)
+
+    def test_noisy_phrase_still_identifies_correct_raga(self):
+        """A Yaman phrase with noise tokens inserted should still rank Yaman first."""
+        model = _build_test_model()
+        # Yaman core: Sa Re Ga Ma Pa, with noise "ni" and "dha" inserted
+        noisy = ["<BOS>", "Sa", "ni", "Re", "dha", "Ga", "Ma", "Pa"]
+        cfg = AlignmentConfig(lambda_skip=0.5, beam_width=100)
+
+        yaman_result = score_phrase_aligned(model, "Yaman", noisy, cfg)
+        bhairav_result = score_phrase_aligned(model, "Bhairav", noisy, cfg)
+
+        self.assertGreater(yaman_result.lm_per_token, bhairav_result.lm_per_token)
+        self.assertGreater(yaman_result.n_skipped, 0)
+
+    def test_substitution_helps(self):
+        """Substituting a near-pitch token should score better than skipping it."""
+        model = _build_test_model()
+        # "re" is 1 semitone from "Re" (Yaman uses Re, not re)
+        phrase_with_sub = ["<BOS>", "Sa", "re", "Ga"]
+        cfg_with_sub = AlignmentConfig(lambda_skip=1.0, lambda_sub=0.1, max_sub_distance=2)
+        cfg_no_sub = AlignmentConfig(lambda_skip=1.0, lambda_sub=0.1, max_sub_distance=0)
+
+        # Build explicit sub_map so the substitution branch is actually entered
+        sub_map = build_substitution_map(model.vocabulary, max_distance=2)
+        result_sub = score_phrase_aligned(model, "Yaman", phrase_with_sub, cfg_with_sub, sub_map=sub_map)
+        result_nosub = score_phrase_aligned(model, "Yaman", phrase_with_sub, cfg_no_sub)
+
+        # With substitution enabled, scorer must actually use substitutions
+        self.assertGreater(result_sub.n_substituted, 0, "substitution branch was never taken")
+        self.assertGreaterEqual(result_sub.n_matched, result_nosub.n_matched)
+
+    def test_empty_phrase(self):
+        model = _build_test_model()
+        result = score_phrase_aligned(model, "Yaman", [], AlignmentConfig())
+        self.assertEqual(result.n_matched, 0)
+        self.assertAlmostEqual(result.lm_per_token, 0.0)
+
+    def test_bos_only_phrase(self):
+        model = _build_test_model()
+        result = score_phrase_aligned(model, "Yaman", ["<BOS>"], AlignmentConfig())
+        self.assertEqual(result.n_matched, 0)
+
+
+class TestScoreSequenceAligned(unittest.TestCase):
+
+    def test_multi_phrase_aggregation(self):
+        """Scores across multiple phrases should be aggregated."""
+        model = _build_test_model()
+        # Both phrases start with Sa (as in training data) so the first
+        # token has a reasonable log-prob and the DP prefers matching.
+        phrases = [
+            ["<BOS>", "Sa", "Re", "Ga"],
+            ["<BOS>", "Sa", "Re", "Ga"],
+        ]
+        cfg = AlignmentConfig(lambda_skip=1.0)
+        result = score_sequence_aligned(model, "Yaman", phrases, cfg)
+        self.assertGreater(result.lm_per_token, -10.0)
+        self.assertEqual(result.n_matched, 6)  # 3 + 3 tokens (excl BOS)
+
+    def test_correct_raga_ranks_first_noisy(self):
+        """End-to-end: noisy Yaman sequence should rank Yaman over Bhairav."""
+        model = _build_test_model()
+        noisy_phrases = [
+            ["<BOS>", "Sa", "dha", "Re", "Ga", "ni", "Ma", "Pa"],
+            ["<BOS>", "Dha", "ga", "Ni", "Sa"],
+        ]
+        cfg = AlignmentConfig(lambda_skip=0.5)
+
+        yaman = score_sequence_aligned(model, "Yaman", noisy_phrases, cfg)
+        bhairav = score_sequence_aligned(model, "Bhairav", noisy_phrases, cfg)
+        self.assertGreater(yaman.lm_per_token, bhairav.lm_per_token)
+
+
+class TestNgramModelPublicAPI(unittest.TestCase):
+    """Verify the new public API methods on NgramModel."""
+
+    def test_vocabulary_property(self):
+        model = _build_test_model()
+        vocab = model.vocabulary
+        self.assertIsInstance(vocab, set)
+        self.assertIn("Sa", vocab)
+        self.assertIn("<BOS>", vocab)
+
+    def test_remove_raga(self):
+        model = _build_test_model()
+        self.assertIn("Yaman", model.ragas())
+        model.remove_raga("Yaman")
+        self.assertNotIn("Yaman", model.ragas())
+        # Bhairav still there
+        self.assertIn("Bhairav", model.ragas())
 
 
 if __name__ == "__main__":

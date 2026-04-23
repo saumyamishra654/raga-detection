@@ -501,14 +501,67 @@ def phase2_score(features_csv: Path, output_dir: Path) -> None:
 
         all_results.setdefault("E: Logistic", {})[gating_label] = correct / n_recs
 
-    # --- Method F: Combined z_lm + hist (fold-safe) ---
+    # --- Method F: Combined z_lm + z_hist (fold-safe, both z-scored) ---
+    def _fold_safe_hist_stats(df, held_out_idx):
+        train = df[df["rec_idx"] != held_out_idx]
+        mu = float(train["hist_score"].mean())
+        sigma = max(float(train["hist_score"].std()), 1e-6)
+        return mu, sigma
+
     def score_f(row, stats_by_k):
         k = int(row["scale_size"])
-        mu, sigma = stats_by_k.get(k, (0.0, 1.0))
-        z_lm = (row["lm_per_token"] - mu) / sigma
-        return 0.5 * row["hist_score"] + 2.0 * z_lm
+        mu_lm, sigma_lm = stats_by_k.get(k, (0.0, 1.0))
+        z_lm = (row["lm_per_token"] - mu_lm) / sigma_lm
+        # hist stats stored in stats_by_k under key -1
+        mu_h, sigma_h = stats_by_k.get(-1, (0.0, 1.0))
+        z_hist = (row["hist_score"] - mu_h) / sigma_h
+        return 0.5 * z_hist + 2.0 * z_lm
 
-    all_results["F: 0.5*hist + 2.0*z_lm"] = _eval_method(df, n_recs, score_f, "both")
+    # Override _eval_method for F to also compute hist stats
+    f_results = {}
+    for gating_label, do_gate in [("gated", True), ("ungated", False)]:
+        correct = 0
+        rec_indices = sorted(df["rec_idx"].unique())
+        for held_out_idx in rec_indices:
+            stats_by_k = _fold_safe_stats(df, held_out_idx)
+            mu_h, sigma_h = _fold_safe_hist_stats(df, held_out_idx)
+            stats_by_k[-1] = (mu_h, sigma_h)  # piggyback hist stats
+
+            grp = df[df["rec_idx"] == held_out_idx]
+            if do_gate:
+                candidates = grp[grp["hist_gated"] == 1]
+                if len(candidates) == 0:
+                    candidates = grp.nlargest(20, "hist_score")
+            else:
+                candidates = grp
+
+            best_score = -1e30
+            best_is_gt = False
+            for _, row in candidates.iterrows():
+                s = score_f(row, stats_by_k)
+                if s > best_score:
+                    best_score = s
+                    best_is_gt = row["is_gt"] == 1
+            if best_is_gt:
+                correct += 1
+        f_results[gating_label] = correct / n_recs
+    all_results["F: 0.5*z_hist + 2.0*z_lm"] = f_results
+
+    # --- Method G: Histogram-only baseline (no LM) ---
+    def score_g(row, stats_by_k):
+        return row["hist_score"]
+
+    all_results["G: Hist-only baseline"] = _eval_method(df, n_recs, score_g, "both")
+
+    # --- Diagnostic: GT vs non-GT LM separation ---
+    gt_rows = df[df["is_gt"] == 1]
+    nongt_rows = df[df["is_gt"] == 0]
+    print(f"\n=== LM Diagnostic ===")
+    print(f"  GT mean lm_per_token:     {gt_rows['lm_per_token'].mean():.4f}")
+    print(f"  Non-GT mean lm_per_token: {nongt_rows['lm_per_token'].mean():.4f}")
+    print(f"  Delta (GT - non-GT):      {gt_rows['lm_per_token'].mean() - nongt_rows['lm_per_token'].mean():.4f}")
+    print(f"  GT mean skip_fraction:    {gt_rows['skip_fraction'].mean():.4f}")
+    print(f"  Non-GT mean skip_fraction:{nongt_rows['skip_fraction'].mean():.4f}")
 
     # Print results
     print("\n=== Scoring Comparison (gated | ungated) ===")

@@ -482,6 +482,9 @@ def phase2_score(features_csv: Path, output_dir: Path) -> None:
             X_train = train_df[feature_cols].values
             y_train = train_df["is_gt"].values
 
+            if len(np.unique(y_train)) < 2:
+                continue
+
             scaler = StandardScaler()
             X_train_s = scaler.fit_transform(X_train)
 

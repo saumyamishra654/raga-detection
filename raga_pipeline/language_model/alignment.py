@@ -101,6 +101,7 @@ def build_substitution_map(
 class AlignmentConfig:
     """Hyperparameters for the alignment scorer."""
     lambda_skip: float = 0.5       # penalty per skipped token
+    lambda_match: float = 2.0      # reward per matched token (compensates negative log-probs)
     lambda_sub: float = 0.3        # penalty per semitone of substitution distance
     beam_width: int = 200          # max DP states per position
     max_sub_distance: int = 2      # max pitch distance for substitution (0 = disabled)
@@ -198,10 +199,12 @@ def score_phrase_aligned(
             ))
 
             # --- Option 2: Match (accept token as-is) ---
+            # lambda_match compensates for negative log-probs so that
+            # in-scale tokens contribute positively to the DP objective.
             lp = model.log_prob(raga, token, ctx)
             new_ctx = (ctx + (token,))[-ctx_len:] if ctx_len > 0 else ()
             _update(new_beam, new_ctx, _BeamEntry(
-                score=entry.score + lp,
+                score=entry.score + lp + config.lambda_match,
                 lm_sum=entry.lm_sum + lp,
                 n_matched=entry.n_matched + 1,
                 n_skipped=entry.n_skipped,
@@ -215,7 +218,7 @@ def score_phrase_aligned(
                     lp_sub = model.log_prob(raga, sub_token, ctx)
                     sub_ctx = (ctx + (sub_token,))[-ctx_len:] if ctx_len > 0 else ()
                     _update(new_beam, sub_ctx, _BeamEntry(
-                        score=entry.score + lp_sub - config.lambda_sub * dist,
+                        score=entry.score + lp_sub + config.lambda_match - config.lambda_sub * dist,
                         lm_sum=entry.lm_sum + lp_sub,
                         n_matched=entry.n_matched + 1,
                         n_skipped=entry.n_skipped,

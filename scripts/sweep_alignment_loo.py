@@ -209,6 +209,8 @@ def collect_features(
     raga_filter_str: str,
     lm_order: int,
     align_config: AlignmentConfig,
+    gated_only: bool = False,
+    top_k: int = 0,
 ) -> List[dict]:
     """Run LOO: train corrected LM, score uncorrected test with alignment."""
     all_features: List[dict] = []
@@ -279,8 +281,9 @@ def collect_features(
             tonic_midi = 60.0 + tpc
             test_phrases_cache[tpc] = tokenize_notes_for_lm(raw_notes, tonic_midi)
 
-        # --- Score all candidates with alignment ---
-        for _, cand_row in hist_df.iterrows():
+        # --- Score candidates with alignment ---
+        score_df = hist_df.head(top_k) if top_k > 0 else hist_df
+        for _, cand_row in score_df.iterrows():
             cand_tonic = int(cand_row["tonic"])
             raga_group = str(cand_row["raga"])
             hist_score = float(cand_row.get("fit_score", cand_row.get("score", 0.0)))
@@ -291,6 +294,9 @@ def collect_features(
 
             for cand_raga in individual_ragas:
                 is_gated = (cand_tonic, cand_raga) in gated_keys
+
+                if gated_only and not is_gated:
+                    continue
 
                 if test_phrases:
                     result = score_sequence_aligned(
@@ -629,6 +635,10 @@ def main():
     parser.add_argument("--max-sub-distance", type=int, default=2)
 
     parser.add_argument("--raga-filter", default="")
+    parser.add_argument("--gated-only", action="store_true",
+                        help="Only score histogram-gated candidates (much faster)")
+    parser.add_argument("--top-k", type=int, default=0,
+                        help="Only score top-k histogram candidates per recording (0=all)")
 
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
@@ -680,6 +690,7 @@ def main():
 
     features = collect_features(
         filenames, data, raga_db, args.raga_filter, args.lm_order, align_config,
+        gated_only=args.gated_only, top_k=args.top_k,
     )
     write_csv(features_csv, FEATURE_FIELDS, features)
     print(f"Phase 1 complete: {len(features)} features saved to {features_csv}")

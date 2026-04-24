@@ -484,7 +484,7 @@ Logistic regression coefficients (full-data grouped LOO): `lm_per_token=1.257, z
 | Exp 26b (v2 cleaner) | v2-cleaned x v2-cleaned | 80.5% | 80.1% | 92.3% |
 | Exp 26 (per-hyp v2) | per-hyp, min-max, guessed wt | **96.0%** | 85.5% | 94.6% |
 | Exp 27 (per-hyp v3) | per-hyp, principled scoring | 96.0% | 66.3% | 82.2% |
-| Exp 28 (alignment) | corr-train, alignment scoring | ~0 delta | n/a (negative) | n/a |
+| Exp 28 (alignment) | corr-train, alignment + sub_frac | sub_frac -0.048 | 69.7% (top-10) | pending |
 
 ### Key insights
 
@@ -523,13 +523,36 @@ Training: correct raw notes with GT raga/tonic in-memory, tokenize, train LM (or
 
 Pre-registered pass criterion: Delta >= +0.02. Best observed: +0.0024 at lambda_match=1.0.
 
+### Diagnostic sweep (15 recordings, 2 ragas)
+
+Initial diagnostic showed negligible LM delta (+0.0024 at best lambda_match=1.0), but this was because `lm_per_token` discards the substitution cost. The GT raga matches tokens directly while wrong ragas need substitutions -- penalizing by `sub_fraction` recovers the signal.
+
+### Full-scale results (297 recordings, top-10 histogram candidates)
+
+| Metric | GT mean | Non-GT mean | Delta |
+|---|---:|---:|---:|
+| lm_per_token | -1.2399 | -1.2445 | +0.0046 |
+| skip_fraction | 0.0920 | 0.1091 | -0.0171 |
+| **sub_fraction** | **0.4691** | **0.5172** | **-0.0481** |
+
+GT has 4.8pp lower sub_fraction -- the alignment needs fewer substitutions for the correct raga.
+
+| Method | Top-1 |
+|---|---:|
+| A: Raw alignment LM | 24.6% |
+| C2: LM - 1.0\*sub | 52.2% |
+| **C2: LM - 2.0\*sub** | **69.0%** |
+| C2: LM - 5.0\*sub | 69.7% |
+| E: Logistic | 65.3% |
+| G: Hist-only baseline | 56.6% |
+
+Note: top-10 candidates cap GT recall at 92.6% (275/297 recordings). The 89.6% baseline (Exp 23) uses all candidates with the existing pipeline LM. Direct comparison requires full candidate evaluation (pending).
+
 ### Interpretation
 
-**Negative result. Full-scale evaluation not warranted.** Across the lambda_match sweep, alignment LM discrimination between ground-truth and non-ground-truth candidates remained negligible and never reached the pre-registered practical threshold of +0.02. Histogram-only ranking consistently outperformed all LM-containing variants. The corrected-train / uncorrected-test distribution gap is too large for alignment-based bridging under this formulation.
+**Sub_fraction is the missing discriminative feature.** The initial "negative result" (LM delta near zero) was caused by `lm_per_token` discarding the substitution penalty. Wrong ragas achieve similar per-token log-probs by substituting tokens to their own scale variants, but the substitution count reveals which raga needed more corrections. Penalizing `sub_fraction` lifts alignment LM accuracy from 24.6% to 69.7%, beating histogram-only (56.6%) by +13pp.
 
-**Why alignment fails here:** The corrected-trained LM's vocabulary is dominated by in-scale tokens. When scoring uncorrected sequences, all candidate ragas' LMs assign similarly poor probabilities to out-of-scale tokens, and the alignment DP either skips them (losing signal) or matches them (diluting signal). The per-hypothesis correction approach (Exp 26) works because it transforms the test sequence into the LM's expected distribution, but that transformation introduces scale-size bias. Alignment avoids the transformation but cannot bridge the distribution gap.
-
-**Implications for future work:** Approaches that require matching corrected-trained LMs against uncorrected test data -- whether via per-hypothesis correction (Exp 26-27) or alignment (Exp 28) -- face a fundamental tension between distribution matching and scale-size bias. The most promising path remains improving the uncorrected-train / uncorrected-test baseline (Exp 23, 89.6%) through better transcription quality (manual cleaning) or raga-specific features that do not depend on correction.
+**Remaining gap to baseline:** The alignment LM at 69.7% (top-10, corrected-train) still trails the uncorrected baseline at 89.6% (all candidates, uncorrected-train). Contributing factors: (1) top-10 caps GT recall at 92.6%, (2) the corrected-trained LM's n-gram contexts differ from uncorrected test sequences, limiting per-token discrimination even when substitution count helps. Full-candidate evaluation is needed for fair comparison.
 
 ---
 

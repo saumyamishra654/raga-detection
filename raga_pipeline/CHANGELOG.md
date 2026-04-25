@@ -4,11 +4,24 @@
 
 ---
 
+## 2026-04-25
+
+### Experiment
+
+- **Exp 28c (alignment, 30-raga filter):** Full 297-recording LOO with corrected-train alignment LM, top-10 histogram candidates, 30-raga filter. Sub_fraction delta = -0.089 (GT needs fewer substitutions). Best: logistic 66.7%, C2 (LM - 2.0*sub) 63.6%, both beating hist-only 56.6%. GT recall 97.6% (290/297). Still below 89.6% baseline (different candidate set and LM distribution).
+
+### Feature
+
+- Added `--gated-only`, `--top-k`, and auto 30-raga filter to `sweep_alignment_loo.py`
+- Added sub_fraction penalty methods (C2, C3) and hist-only baseline (G) to Phase 2 scoring
+- Added sub_fraction to logistic regression features and LM diagnostic printout
+
 ## 2026-04-24
 
 ### Experiment
 
-- **Exp 28 (negative result):** Noisy-channel alignment LM scoring. Beam DP alignment of uncorrected test sequences against corrected-trained LMs produces negligible GT vs non-GT separation (best delta +0.0024, threshold +0.02). Diagnostic lambda_match sweep on 15 recordings confirms the corrected-train / uncorrected-test distribution gap is too large for alignment-based bridging. Full-scale run not warranted.
+- **Exp 28a (alignment diagnostic):** Lambda_match sweep on 15 recordings. Discovered lm_per_token discards substitution cost -- sub_fraction is the discriminative feature (w_sub=1 gives 100% on 15 rec).
+- **Exp 28b (alignment, no filter):** 297-recording LOO, top-10, 78-raga histogram. Sub_fraction delta -0.048. Best C2 (LM - 5.0*sub) 69.7%. Hist-only depressed to 56.6% due to LM filtering artifacts (78 DB ragas vs 30 LM ragas).
 
 ## 2026-04-23
 

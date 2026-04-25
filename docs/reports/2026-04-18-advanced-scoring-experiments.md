@@ -1,6 +1,6 @@
 # Advanced Scoring Experiments (Exp 16-28)
 
-Date: 2026-04-18 -- 2026-04-24
+Date: 2026-04-18 -- 2026-04-25
 Corpus: CompMusic 297-300 recordings, 30 ragas, 10 recordings each
 Baseline: Exp 14 pipeline LOO = 87.2% combined top-1, 92.3% tonic top-1
 Updated baseline: Exp 23 honest pipeline LOO = 89.6% combined top-1 (uncorrected transcriptions)
@@ -484,7 +484,8 @@ Logistic regression coefficients (full-data grouped LOO): `lm_per_token=1.257, z
 | Exp 26b (v2 cleaner) | v2-cleaned x v2-cleaned | 80.5% | 80.1% | 92.3% |
 | Exp 26 (per-hyp v2) | per-hyp, min-max, guessed wt | **96.0%** | 85.5% | 94.6% |
 | Exp 27 (per-hyp v3) | per-hyp, principled scoring | 96.0% | 66.3% | 82.2% |
-| Exp 28 (alignment) | corr-train, alignment + sub_frac | sub_frac -0.048 | 69.7% (top-10) | pending |
+| Exp 28b (alignment, no filter) | corr-train, align + sub_frac, top-10, 78 ragas | sub_frac -0.048 | 69.7% (top-10) | -- |
+| Exp 28c (alignment, 30-raga) | corr-train, align + sub_frac, top-10, 30 ragas | sub_frac -0.089 | 66.7% (logistic) | -- |
 
 ### Key insights
 
@@ -496,38 +497,62 @@ Logistic regression coefficients (full-data grouped LOO): `lm_per_token=1.257, z
 
 4. **Distribution matching is critical.** The 47pp drop from corrected-train mismatch (Exp 24) is the largest single effect in the experiment series. Per-hypothesis correction solves the mismatch by construction, but introduces scale-size bias that is equally destructive.
 
-5. **Noisy-channel alignment does not recover LM signal (Exp 28).** Scoring uncorrected test sequences against corrected-trained LMs via beam DP alignment (with skip/match/substitute transitions) produces negligible GT vs non-GT separation across all hyperparameter settings. The corrected-train / uncorrected-test distribution gap appears too large for alignment-based bridging.
+5. **Alignment LM's discriminative signal is in substitution fraction, not per-token log-prob (Exp 28).** The alignment DP assigns similar log-probs to GT and non-GT ragas because wrong ragas substitute tokens to their own scale (1-semitone swaps). But the GT raga needs fewer substitutions (sub_fraction delta = -0.089). Penalizing sub_fraction lifts alignment LM from 7% to 64.7%, beating histogram-only (56.6%) by +8pp, but still far below the 89.6% uncorrected baseline.
 
 ---
 
-## Experiment 28: Noisy-Channel Alignment LM Scoring (Negative Result)
+## Experiment 28: Noisy-Channel Alignment LM Scoring
 
-Date: 2026-04-24
+Date: 2026-04-23 -- 2026-04-25
 
 **Motivation:** Exp 26-27 showed per-hypothesis correction recovers a 96.0% LM diagnostic signal but introduces scale-size bias that all scoring methods fail to overcome (best: 66.3%). The alignment approach eliminates per-hypothesis correction: keep uncorrected test sequences as-is, score them against corrected-trained LMs using beam DP alignment with skip/substitution costs.
 
-**Method:** Phrase-local beam DP alignment. At each observed token, choose: skip (penalty lambda_skip), match (reward lambda_match + LM log-prob), or substitute to nearby pitch class (reward lambda_match + LM log-prob - lambda_sub * distance). Context is built from matched/substituted tokens only. Scores calibrated by z-scoring per scale size.
+**Method:** Phrase-local beam DP alignment (`raga_pipeline/language_model/alignment.py`). At each observed token, choose:
+- **Skip** (noise): penalty -lambda_skip
+- **Match** (accept as-is): reward +lambda_match + log P_r(token | context)
+- **Substitute** to nearby pitch class (<=2 semitones): reward +lambda_match + log P_r(sub_token | context) - lambda_sub * distance
 
-Training: correct raw notes with GT raga/tonic in-memory, tokenize, train LM (order 7). Testing: tokenize uncorrected raw notes without any correction, score with alignment.
+Context is built from matched/substituted tokens only, never crosses phrase boundaries. Beam search prunes to top-B states per position.
 
-**Diagnostic sweep:** Evaluated on 15 recordings (2 ragas) with beam_width=50, varying lambda_match.
+Training: correct raw notes with GT raga/tonic in-memory (`apply_raga_correction_to_notes`), tokenize, train LOO LM (order 7, add-k smoothing). Testing: tokenize uncorrected raw notes *without any correction*, score with alignment.
 
-| lambda_match | skip_frac GT | skip_frac non-GT | Delta (GT - non-GT) | LM-only A (ungated) | Hist-only G |
+Defaults: lambda_skip=0.5, lambda_match=2.0, lambda_sub=0.3, beam_width=50, max_sub_distance=2.
+
+### Exp 28a: Diagnostic sweep (15 recordings, 2 ragas, no raga filter)
+
+**Purpose:** Determine whether the alignment LM has any discriminative signal, and identify the best lambda_match.
+
+**Design issue discovered:** Without `lambda_match`, log-probs are always negative (-1 to -4), so the DP rationally skips every token. `lambda_match` compensates so that in-scale tokens (log_prob ~ -1.4) contribute positively (+0.6) while out-of-scale tokens (log_prob ~ -4) still get skipped (-2.0). Pre-registered pass criterion: GT vs non-GT lm_per_token delta >= +0.02.
+
+| lambda_match | skip_frac GT | skip_frac non-GT | lm_per_token Delta | LM-only A | Hist-only G |
 |---:|---:|---:|---:|---:|---:|
 | 0.0 | 1.000 | 1.000 | 0.000 | 93.3%\* | 93.3% |
 | 0.5 | 0.969 | 0.971 | -67308\*\* | 26.7% | 93.3% |
 | 1.0 | 0.650 | 0.664 | **+0.0024** | 33.3% | 93.3% |
 | 2.0 | 0.318 | 0.339 | -0.0057 | 53.3% | 93.3% |
 
-\* All tokens skipped (-1e6 sentinel); ranking collapses to histogram. \*\* Sentinel contamination from mixed 0-matched/few-matched rows.
+\* All tokens skipped; ranking collapses to histogram tie-breaking. \*\* Sentinel contamination (-1e6) from mixed 0-matched/few-matched rows.
 
-Pre-registered pass criterion: Delta >= +0.02. Best observed: +0.0024 at lambda_match=1.0.
+**Initial verdict:** lm_per_token delta never exceeds +0.003. Appeared to be a negative result.
 
-### Diagnostic sweep (15 recordings, 2 ragas)
+**Key discovery:** `lm_per_token` (= raw log-prob sum / n_matched) discards the substitution penalty. The DP's `score` field includes lambda_match and lambda_sub, but the reported metric strips them. Wrong ragas achieve similar per-token log-probs by substituting tokens to their own scale variants (1-semitone swaps), but the GT raga needs *fewer substitutions*. The `sub_fraction` (= n_substituted / n_matched) captures this signal.
 
-Initial diagnostic showed negligible LM delta (+0.0024 at best lambda_match=1.0), but this was because `lm_per_token` discards the substitution cost. The GT raga matches tokens directly while wrong ragas need substitutions -- penalizing by `sub_fraction` recovers the signal.
+At lambda_match=2.0, `lm_per_token - w * sub_fraction` sweep on 15 recordings:
 
-### Full-scale results (297 recordings, top-10 histogram candidates)
+| w_sub | Gated | Ungated |
+|---:|---:|---:|
+| 0 | 20.0% | 53.3% |
+| **1** | **100.0%** | **100.0%** |
+| 2 | 86.7% | 86.7% |
+| 5 | 86.7% | 86.7% |
+
+100% at w_sub=1 on 15 recordings (small sample caveat: Wilson 95% CI [79.6%, 100%]).
+
+### Exp 28b: Full-scale, no raga filter (297 recordings, top-10, 78-raga histogram)
+
+**Purpose:** Validate sub_fraction signal at full scale. Used top-10 histogram candidates to manage compute time.
+
+**Problem:** Histogram scored all 78 ragas in the DB, but LM only knows 30 CompMusic ragas. Top-10 slots wasted on ragas not in the LM. After LM filtering: 5.4 features/recording avg, GT recall 92.6% (275/297).
 
 | Metric | GT mean | Non-GT mean | Delta |
 |---|---:|---:|---:|
@@ -535,24 +560,71 @@ Initial diagnostic showed negligible LM delta (+0.0024 at best lambda_match=1.0)
 | skip_fraction | 0.0920 | 0.1091 | -0.0171 |
 | **sub_fraction** | **0.4691** | **0.5172** | **-0.0481** |
 
-GT has 4.8pp lower sub_fraction -- the alignment needs fewer substitutions for the correct raga.
-
 | Method | Top-1 |
 |---|---:|
 | A: Raw alignment LM | 24.6% |
 | C2: LM - 1.0\*sub | 52.2% |
-| **C2: LM - 2.0\*sub** | **69.0%** |
+| C2: LM - 2.0\*sub | 69.0% |
 | C2: LM - 5.0\*sub | 69.7% |
 | E: Logistic | 65.3% |
 | G: Hist-only baseline | 56.6% |
 
-Note: top-10 candidates cap GT recall at 92.6% (275/297 recordings). The 89.6% baseline (Exp 23) uses all candidates with the existing pipeline LM. Direct comparison requires full candidate evaluation (pending).
+Sub_fraction signal confirmed (delta -0.048). C2 at 69.7% beats hist-only by +13pp. But hist-only at 56.6% is depressed vs Exp 23's 74.2% due to candidate filtering artifacts.
+
+### Exp 28c: Full-scale, 30-raga filter (297 recordings, top-10, 30-raga histogram)
+
+**Purpose:** Fair evaluation with histogram restricted to the 30 CompMusic ragas (matching Exp 23 setup). Auto-built raga filter from GT CSV.
+
+Config: lambda_match=2.0, lambda_skip=0.5, lambda_sub=0.3, beam_width=50, top-k=10.
+Runtime: ~21,600s (~6 hours) on Apple Silicon M-series.
+Features: 4436 across 297 recordings (14.9 avg/recording). GT recall: 97.6% (290/297).
+
+| Metric | GT mean | Non-GT mean | Delta |
+|---|---:|---:|---:|
+| lm_per_token | -1.2385 | -1.2421 | +0.0036 |
+| skip_fraction | 0.0912 | 0.1117 | -0.0205 |
+| **sub_fraction** | **0.4712** | **0.5605** | **-0.0893** |
+
+Sub_fraction delta nearly doubled (-0.089 vs -0.048) with the correct candidate set.
+
+| Method | Top-1 |
+|---|---:|
+| A: Raw alignment LM | 7.1% |
+| B: Z-scored LM | 5.4% |
+| C: Z-LM - 5.0\*skip | 8.4% |
+| C2: LM - 0.5\*sub | 18.5% |
+| C2: LM - 1.0\*sub | 42.4% |
+| **C2: LM - 2.0\*sub** | **63.6%** |
+| C2: LM - 5.0\*sub | 64.7% |
+| C3: Z-LM - 2.0\*sub | 10.8% |
+| D: RRF (hist + LM) | 26.3% |
+| **E: Logistic** | **66.7%** |
+| F: 0.5\*z\_hist + 2.0\*z\_lm | 19.2% |
+| G: Hist-only baseline | 56.6% |
 
 ### Interpretation
 
-**Sub_fraction is the missing discriminative feature.** The initial "negative result" (LM delta near zero) was caused by `lm_per_token` discarding the substitution penalty. Wrong ragas achieve similar per-token log-probs by substituting tokens to their own scale variants, but the substitution count reveals which raga needed more corrections. Penalizing `sub_fraction` lifts alignment LM accuracy from 24.6% to 69.7%, beating histogram-only (56.6%) by +13pp.
+**Sub_fraction is the discriminative feature, not lm_per_token.** The alignment DP assigns similar log-probs to GT and non-GT ragas because wrong ragas compensate via 1-semitone substitutions. But the GT raga needs fewer substitutions: sub_fraction delta = -0.089 (30-raga filter). Penalizing sub_fraction lifts accuracy from 7.1% (raw LM) to 64.7% (C2, w=5) or 66.7% (logistic), beating histogram-only (56.6%) by +8-10pp.
 
-**Remaining gap to baseline:** The alignment LM at 69.7% (top-10, corrected-train) still trails the uncorrected baseline at 89.6% (all candidates, uncorrected-train). Contributing factors: (1) top-10 caps GT recall at 92.6%, (2) the corrected-trained LM's n-gram contexts differ from uncorrected test sequences, limiting per-token discrimination even when substitution count helps. Full-candidate evaluation is needed for fair comparison.
+**Why alignment still trails the 89.6% baseline:**
+1. **Train/test distribution gap persists.** The corrected-trained LM's n-gram contexts are clean; uncorrected test sequences have different n-gram statistics even after alignment. The sub_fraction signal partially bridges this, but per-token log-prob discrimination remains near zero (delta +0.004).
+2. **Top-10 candidate truncation.** GT recall is 97.6%, capping the ceiling. The 7 missing-GT recordings (2.4%) contribute 0% accuracy.
+3. **The baseline uses same-distribution matching.** Exp 23's uncorrected-train x uncorrected-test LM scores uncorrected test sequences with an LM trained on uncorrected data -- no distribution gap at all. The alignment approach cannot overcome the fundamental mismatch between corrected training and uncorrected test.
+
+**Comparison to per-hypothesis correction (Exp 26-27):**
+- Per-hyp correction: 96% LM diagnostic, 66.3% best combined (scale-size bias kills it)
+- Alignment + sub_fraction: no useful LM diagnostic, 66.7% best combined (sub_fraction carries the signal)
+- Both approaches achieve similar final accuracy (~66%) but for different reasons. Per-hyp has strong LM signal destroyed by bias; alignment has weak LM signal rescued by substitution count.
+
+**The sub_fraction metric is essentially a soft scale-match score** -- it counts what fraction of tokens needed pitch correction to fit the candidate raga's scale. This is simpler than the full alignment LM and could potentially be computed without the expensive beam DP (just count how many test tokens are in-scale for each candidate). Future work should explore whether a direct in-scale fraction feature achieves similar accuracy at lower cost.
+
+### Caveats for baseline comparison
+
+The 89.6% baseline (Exp 23) and the alignment results (Exp 28) are **not directly comparable**:
+- Exp 23: all candidates, uncorrected-train LM, min-max normalization, combined = 0.5\*norm_hist + 2.0\*norm_lm
+- Exp 28c: top-10 candidates, corrected-train LM + alignment, sub_fraction penalty or logistic regression
+
+A fair comparison would require running Exp 28 with all candidates (prohibitively slow at ~57 hours with gated-only, ~200+ hours ungated) or running Exp 23 with top-10 candidates (quick re-score from existing results).
 
 ---
 
@@ -574,8 +646,8 @@ Note: top-10 candidates cap GT recall at 92.6% (275/297 recordings). The 89.6% b
 | Per-hyp v2 (fixed wt) | `results/perhyp_v2/{progress,summary,sanity_check}.csv` |
 | v2 cleaner LOO | `results/v2cleaned_loo/{progress,summary}.csv` |
 | Per-hyp v3 (principled) | `results/perhyp_v3/{features,scoring_comparison}.csv` |
-| Alignment LOO (Exp 28) | `results/alignment_loo/{features,scoring_comparison}.csv` |
-| Alignment diagnostics | `results/alignment_diag/{m0,m05,m10,m20}/` |
+| Alignment LOO (Exp 28c) | `results/alignment_loo/{features,scoring_comparison,evaluated_filenames}.{csv,txt}` |
+| Alignment diagnostics (Exp 28a) | `results/alignment_diag/{m0,m05,m10,m20}/` |
 
 ## Scripts
 

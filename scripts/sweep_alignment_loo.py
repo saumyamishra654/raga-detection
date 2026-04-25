@@ -669,6 +669,13 @@ def main():
     if args.limit > 0:
         gt_rows = gt_rows[:args.limit]
 
+    # Auto-build raga filter from GT CSV if not explicitly provided
+    raga_filter = args.raga_filter
+    if not raga_filter:
+        gt_ragas = sorted({r.get("Raga", "").strip() for r in gt_rows if r.get("Raga")})
+        raga_filter = ",".join(gt_ragas)
+        print(f"Auto raga filter: {len(gt_ragas)} ragas from GT CSV")
+
     stems_root = Path(args.stems_root)
     trans_root = Path(args.transcription_root)
     data, filenames, skipped = load_all_data(gt_rows, stems_root, trans_root, raga_db)
@@ -689,7 +696,7 @@ def main():
     print(f"Alignment config: {align_config}")
 
     features = collect_features(
-        filenames, data, raga_db, args.raga_filter, args.lm_order, align_config,
+        filenames, data, raga_db, raga_filter, args.lm_order, align_config,
         gated_only=args.gated_only, top_k=args.top_k,
     )
     write_csv(features_csv, FEATURE_FIELDS, features)

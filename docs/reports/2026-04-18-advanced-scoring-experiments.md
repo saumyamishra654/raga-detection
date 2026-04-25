@@ -479,7 +479,8 @@ Logistic regression coefficients (full-data grouped LOO): `lm_per_token=1.257, z
 
 | Experiment | Condition | LM top-1 | Combined top-1 | Combined top-3 |
 |---|---|---:|---:|---:|
-| Exp 23 (baseline) | uncorr x uncorr, min-max | 87.2% | **89.6%** | 94.6% |
+| Exp 23 (LEAKED) | corr x corr (mislabeled uncorr) | 87.2% | 89.6% | 94.6% |
+| Exp 23b (pending) | truly uncorr x uncorr | pending | pending | pending |
 | Exp 24 | corr-train x uncorr-test | 44.1% | 42.4% | 53.2% |
 | Exp 26b (v2 cleaner) | v2-cleaned x v2-cleaned | 80.5% | 80.1% | 92.3% |
 | Exp 26 (per-hyp v2) | per-hyp, min-max, guessed wt | **96.0%** | 85.5% | 94.6% |
@@ -489,15 +490,46 @@ Logistic regression coefficients (full-data grouped LOO): `lm_per_token=1.257, z
 
 ### Key insights
 
-1. **Per-hypothesis correction recovers a 96.0% LM diagnostic signal** -- the strongest single-feature result. However, this signal cannot be converted into classification accuracy: the best combined method (logistic regression) achieves only 66.3%, well below the 89.6% uncorrected baseline.
+1. **Per-hypothesis correction (Exp 26) is the best honest result at 85.5% combined top-1.** The previously reported 89.6% "uncorrected baseline" (Exp 23) was leaked -- the script read corrected transcriptions from the default stems directory. The truly uncorrected baseline is pending re-evaluation.
 
-2. **The fundamental bottleneck is scale-size bias, not scoring method.** Pentatonic ragas (k=5) get mean LM score -1.64 vs heptatonic (k=7) at -1.94 -- a 0.3 gap that dwarfs the GT vs wrong-raga separation (0.08). Z-scoring partially addresses this but does not eliminate it. Five different scoring methods all fail to beat the baseline, confirming the bias is structural.
+2. **The LM diagnostic at 96.0% confirms strong raga discrimination** when given correct tonic and clean transcription. The 96% → 85.5% drop comes from tonic detection errors (7.7%), per-hypothesis correction noise, and min-max normalization.
 
-3. **Raga-agnostic cleaning is not viable.** Even with 93.1% match F1, the v2 cleaner's errors compound through LM training to produce worse results than no cleaning at all.
+3. **Top-3 accuracy is 94.6% (97.1% given correct tonic).** The right raga is almost always in the top 3. An app showing 3 candidates captures the correct answer in 97.1% of cases when the user provides the tonic.
 
-4. **Distribution matching is critical.** The 47pp drop from corrected-train mismatch (Exp 24) is the largest single effect in the experiment series. Per-hypothesis correction solves the mismatch by construction, but introduces scale-size bias that is equally destructive.
+4. **Scale-size bias remains a bottleneck.** Pentatonic ragas (k=5) get systematically higher LM scores than heptatonic (k=7). Per-hypothesis correction introduces this via the snapping step. All principled scoring attempts (Exp 27: z-scoring, logistic, RRF) failed to overcome it.
 
-5. **Alignment LM's discriminative signal is in substitution fraction, not per-token log-prob (Exp 28).** The alignment DP assigns similar log-probs to GT and non-GT ragas because wrong ragas substitute tokens to their own scale (1-semitone swaps). But the GT raga needs fewer substitutions (sub_fraction delta = -0.089). Penalizing sub_fraction lifts alignment LM from 7% to 64.7%, beating histogram-only (56.6%) by +8pp, but still far below the 89.6% uncorrected baseline.
+5. **Raga-agnostic cleaning is not viable (Exp 26b).** Even with 93.1% match F1, the 6.9% incorrectly cleaned tokens pollute the LM (80.1% vs 85.5% best).
+
+6. **Alignment LM (Exp 28) provides weak signal via sub_fraction** but cannot compete with per-hypothesis correction. Best alignment result: 66.7% (logistic), vs 85.5% per-hyp.
+
+### Conditional accuracy by user-provided information (Exp 26)
+
+Relevant for the web app, where users can optionally provide metadata to improve detection.
+
+| Scenario | Tonic acc | Raga top-1 | Raga top-3 |
+|---|---:|---:|---:|
+| **Fully automatic** (no user input) | 92.3% | 85.5% | 94.6% |
+| **User provides tonic** | 100%\* | 88.7% | 97.1% |
+| **User provides tonic + LM rerank top-3** | 100%\* | ~95.3%\*\* | 97.1% |
+| **Female artist** (auto tonic) | 98.5% | 93.9% | -- |
+| **Male artist** (auto tonic) | 90.5% | 83.1% | -- |
+| LM ceiling (GT tonic + clean transcript) | 100%\* | 96.0% | -- |
+| Histogram only (no transcription) | 92.3% | 74.4% | -- |
+
+\* By definition (user-provided). \*\* Estimated: of 23 rank-2/3 cases at correct tonic, LM diagnostic rescues 18.
+
+**Error breakdown (43 total errors):**
+- Correct tonic, wrong raga: 31 (72%) -- scoring/combination failures
+- Wrong tonic, right raga: 11 (26%) -- lucky histogram match
+- Wrong tonic, wrong raga: 12 (28%) -- tonic detection failure cascading
+
+Note: 11 recordings appear in both "wrong tonic, right raga" and the total is 43 because tonic_wrong_raga_wrong (12) + tonic_ok_raga_wrong (31) = 43.
+
+### Exp 23 data leakage disclosure
+
+The previously reported Exp 23 "honest pipeline LOO" result of 89.6% combined top-1 was computed using transcriptions from `separated_stems/htdemucs/`, which contains GT-raga-corrected transcriptions (verified: 291/297 recordings differ between corrected and uncorrected directories). The script (`sweep_pipeline_loo.py`) defaults `--stems-root` to the corrected directory and uses it for both pitch data and transcriptions. Without `--train-corrected` flag, it reads the already-corrected transcriptions as-is, making the result effectively corrected x corrected.
+
+The truly uncorrected x uncorrected baseline is being re-evaluated (Exp 23b).
 
 ---
 

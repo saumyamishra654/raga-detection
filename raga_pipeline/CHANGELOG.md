@@ -15,6 +15,10 @@
 
 - **CLAUDE.md:** Added "Phrase splitting" subsection documenting the two-stage phrase segmentation pipeline (inter-note gap KMeans method + RMS energy silence splitting), config defaults, and post-processing steps.
 
+### Refactor
+
+- **RMS-primary phrase splitting:** Added `detect_phrases_by_silence()` as the primary phrase detection method (default `--phrase-method rms`). Takes flat note list + energy track, splits at sustained silence regions. Legacy gap-based method (`detect_phrases`) available via `--phrase-method gap`. Replaced two-stage detect+split chain in driver with single dispatch.
+
 ## 2026-04-26
 
 ### Experiment

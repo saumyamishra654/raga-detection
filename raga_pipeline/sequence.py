@@ -740,6 +740,121 @@ def merge_consecutive_notes(
     return merged
 
 
+def detect_phrases_by_silence(
+    notes: List[Note],
+    energy: np.ndarray,
+    timestamps: np.ndarray,
+    silence_threshold: float = 0.10,
+    silence_min_duration: float = 0.25,
+    min_phrase_duration: float = 0.2,
+    min_notes_in_phrase: int = 1,
+) -> List[Phrase]:
+    """
+    Primary phrase detection using RMS energy silence regions.
+
+    Scans the energy track for sustained silence (energy < silence_threshold
+    for >= silence_min_duration seconds), uses silence midpoints as phrase
+    boundaries, and groups notes accordingly.
+
+    Args:
+        notes: Flat list of Note objects, sorted by start time.
+        energy: Full-length normalised RMS array aligned to *timestamps*.
+        timestamps: Full-length time axis matching *energy*.
+        silence_threshold: Fraction of peak energy below which a frame is
+            silent (e.g. 0.10 = 10%). 0 disables splitting.
+        silence_min_duration: Minimum consecutive seconds of silence to
+            trigger a phrase break.
+        min_phrase_duration: Drop phrases shorter than this (seconds),
+            merging into neighbour.
+        min_notes_in_phrase: Drop phrases with fewer notes, merging into
+            neighbour.
+
+    Returns:
+        List of Phrase objects.
+    """
+    if not notes:
+        return []
+
+    if silence_threshold <= 0 or len(energy) == 0 or len(timestamps) == 0:
+        return [Phrase(notes=list(notes))]
+
+    length = min(len(energy), len(timestamps))
+    energy = np.asarray(energy[:length], dtype=float)
+    ts = np.asarray(timestamps[:length], dtype=float)
+
+    # --- Find silence regions across the full track ---
+    is_silent = energy < silence_threshold
+
+    silent_indices = np.where(is_silent)[0]
+    if len(silent_indices) == 0:
+        return [Phrase(notes=list(notes))]
+
+    # Group consecutive silent indices into runs
+    breaks_in_silence = np.where(np.diff(silent_indices) > 1)[0]
+    runs: list = []
+    run_start = 0
+    for b in breaks_in_silence:
+        runs.append((silent_indices[run_start], silent_indices[b]))
+        run_start = b + 1
+    runs.append((silent_indices[run_start], silent_indices[-1]))
+
+    # Keep runs >= silence_min_duration, compute midpoints as split boundaries
+    split_times: List[float] = []
+    for ri, rf in runs:
+        if ts[rf] - ts[ri] >= silence_min_duration:
+            split_times.append((ts[ri] + ts[rf]) / 2.0)
+
+    if not split_times:
+        return [Phrase(notes=list(notes))]
+
+    split_times.sort()
+
+    # --- Assign notes to segments between split boundaries ---
+    # Boundaries: [-inf, split_times[0], split_times[1], ..., +inf]
+    raw_groups: List[List[Note]] = [[] for _ in range(len(split_times) + 1)]
+    for note in notes:
+        note_mid = (note.start + note.end) / 2.0
+        # Binary search for the segment
+        seg = 0
+        for st in split_times:
+            if note_mid >= st:
+                seg += 1
+            else:
+                break
+        raw_groups[seg].append(note)
+
+    # Drop empty groups
+    raw_groups = [g for g in raw_groups if g]
+
+    if not raw_groups:
+        return [Phrase(notes=list(notes))]
+
+    # --- Post-processing: merge runts ---
+    def _group_duration(g: List[Note]) -> float:
+        return g[-1].end - g[0].start if g else 0.0
+
+    final_groups: List[List[Note]] = []
+    i = 0
+    while i < len(raw_groups):
+        g = raw_groups[i]
+        dur = _group_duration(g)
+        if dur < min_phrase_duration or len(g) < min_notes_in_phrase:
+            # Merge into next neighbour if available, else previous
+            if i + 1 < len(raw_groups):
+                raw_groups[i + 1] = g + raw_groups[i + 1]
+            elif final_groups:
+                final_groups[-1] = final_groups[-1] + g
+            # else: single runt with no neighbours, keep it
+            else:
+                final_groups.append(g)
+            i += 1
+            continue
+        final_groups.append(g)
+        i += 1
+
+    return [Phrase(notes=g) for g in final_groups if g]
+
+
 def split_phrases_by_silence(
     phrases: List[Phrase],
     energy: np.ndarray,

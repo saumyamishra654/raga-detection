@@ -9,6 +9,7 @@
 ### Added
 
 - **config.py:** Added `phrase_method` field to `PipelineConfig` (default `"rms"`) and corresponding `--phrase-method` CLI argument with choices `rms` / `gap`. Wired through `_config_from_parsed_args`. This controls which phrase detection method the driver dispatches to: `"rms"` for energy-based silence detection (new default) or `"gap"` for legacy inter-note gap clustering.
+- **runtime_fingerprint.py:** Added `detect_phrases_by_silence` selector to analyze-phase fingerprint tracking so changes to the new primary phrase detection function are reflected in runtime hashes.
 
 ### Documentation
 

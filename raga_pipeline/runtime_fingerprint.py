@@ -73,6 +73,7 @@ STAGE_SELECTORS: Dict[str, List[StageSelector]] = {
         _selector("raga_pipeline/sequence.py", "function", "merge_consecutive_notes"),
         _selector("raga_pipeline/sequence.py", "function", "split_phrases_by_silence"),
         _selector("raga_pipeline/sequence.py", "function", "detect_phrases"),
+        _selector("raga_pipeline/sequence.py", "function", "detect_phrases_by_silence"),
         _selector("raga_pipeline/sequence.py", "function", "cluster_phrases"),
         _selector("raga_pipeline/sequence.py", "function", "build_transition_matrix_corrected"),
         _selector("raga_pipeline/sequence.py", "function", "analyze_raga_patterns"),

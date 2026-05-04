@@ -125,6 +125,7 @@ class PipelineConfig:
     phrase_max_gap: float = 1.0           # Max silence between notes in phrase
     phrase_min_length: int = 1            # Minimum notes per phrase
     phrase_min_duration: float = 0.2      # Minimum phrase duration in seconds
+    phrase_method: str = "rms"            # "rms" (energy-based) or "gap" (inter-note gap, legacy)
 
     # Silence-based phrase splitting (RMS energy)
     # When > 0, phrases are additionally split at points where vocal RMS
@@ -141,9 +142,9 @@ class PipelineConfig:
     model_path: Optional[str] = None      # Path to trained model (unused)
 
     # LM scoring (detect mode)
-    use_lm_scoring: bool = False
+    use_lm_scoring: bool = True
     lm_model_path: Optional[str] = None
-    lm_skip_correction: bool = False
+    lm_skip_correction: bool = True
     lm_deletion_lambda: float = 2.0
     lm_deletion_slope: float = -0.0684
     lm_deletion_intercept: float = 0.6640
@@ -288,6 +289,7 @@ class PipelineConfig:
         """Find trained n-gram LM in standard locations."""
         project_root = Path(__file__).parent.parent
         candidates = [
+            project_root / "raga_pipeline" / "models" / "compmusic_ngram_model.json",
             project_root / "compmusic_ngram_model_uncorrected.json",
             project_root / "raga_pipeline" / "models" / "compmusic_ngram_model_uncorrected.json",
             project_root / "compmusic_ngram_model.json",
@@ -540,13 +542,13 @@ def build_cli_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Detect mode only: requires --force and also forces stem-separation recomputation.",
     )
-    detect_parser.add_argument("--use-lm-scoring", action="store_true",
-                               help="Re-rank candidates using n-gram language model (writes lm_candidates.csv)")
+    detect_parser.add_argument("--use-lm-scoring", action=argparse.BooleanOptionalAction, default=True,
+                               help="Re-rank candidates using n-gram language model (default: on; --no-use-lm-scoring to disable)")
     detect_parser.add_argument("--lm-model", dest="lm_model_path", default=None,
                                help="Path to trained n-gram model JSON (auto-discovered if omitted)")
-    detect_parser.add_argument("--lm-skip-correction", action="store_true",
-                               help="Score uncorrected chromatic transcription (no per-raga correction). "
-                                    "Use with a model trained on uncorrected transcriptions.")
+    detect_parser.add_argument("--lm-skip-correction", action=argparse.BooleanOptionalAction, default=True,
+                               help="Score uncorrected chromatic transcription (default: on; "
+                                    "--no-lm-skip-correction for per-raga correction mode)")
     detect_parser.add_argument("--lm-deletion-lambda", type=float, default=2.0,
                                help="Weight for deletion residual in combined LM scoring (default: 2.0)")
     detect_parser.add_argument("--lm-deletion-slope", type=float, default=-0.0684,
@@ -631,6 +633,13 @@ def build_cli_parser() -> argparse.ArgumentParser:
         help="RMS energy threshold (0.0-1.0) for silence-based phrase splitting. 0 disables.",
     )
     analyze_parser.add_argument("--silence-min-duration", type=float, default=0.25, help="Minimum silence duration (seconds) to trigger a phrase break.")
+    analyze_parser.add_argument(
+        "--phrase-method",
+        choices=["rms", "gap"],
+        default="rms",
+        help="Phrase detection method: 'rms' (energy-based silence detection, default) "
+        "or 'gap' (legacy inter-note gap clustering).",
+    )
     analyze_parser.add_argument("--phrase-min-duration", type=float, default=0.2, help="Exclude phrases shorter than this duration (seconds).")
     analyze_parser.add_argument("--phrase-min-notes", type=int, default=1, help="Exclude phrases with fewer notes than this count.")
     analyze_parser.add_argument("--no-rms-overlay", action="store_true", help="Disable RMS energy overlay on pitch analysis plots.")
@@ -739,9 +748,9 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         pitch_only=getattr(args, 'pitch_only', False),
         transcription_only=getattr(args, 'transcription_only', False),
         raga_db_path=getattr(args, 'raga_db', None),
-        use_lm_scoring=getattr(args, 'use_lm_scoring', False),
+        use_lm_scoring=getattr(args, 'use_lm_scoring', True),
         lm_model_path=getattr(args, 'lm_model_path', None),
-        lm_skip_correction=getattr(args, 'lm_skip_correction', False),
+        lm_skip_correction=getattr(args, 'lm_skip_correction', True),
         lm_deletion_lambda=getattr(args, 'lm_deletion_lambda', 2.0),
         lm_deletion_slope=getattr(args, 'lm_deletion_slope', -0.0684),
         lm_deletion_intercept=getattr(args, 'lm_deletion_intercept', 0.6640),
@@ -763,6 +772,7 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         silence_threshold=getattr(args, 'silence_threshold', 0.0),
         silence_min_duration=getattr(args, 'silence_min_duration', 0.25),
         phrase_min_duration=getattr(args, 'phrase_min_duration', 0.2),
+        phrase_method=getattr(args, 'phrase_method', 'rms'),
         phrase_min_length=getattr(args, 'phrase_min_notes', 1),
         show_rms_overlay=not getattr(args, 'no_rms_overlay', False),
         melody_source=getattr(args, 'melody_source', "separated"),

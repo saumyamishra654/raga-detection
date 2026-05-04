@@ -4,17 +4,57 @@
 
 ---
 
+## 2026-05-04
+
+### Added
+
+- **config.py:** Added `phrase_method` field to `PipelineConfig` (default `"rms"`) and corresponding `--phrase-method` CLI argument with choices `rms` / `gap`. Wired through `_config_from_parsed_args`. This controls which phrase detection method the driver dispatches to: `"rms"` for energy-based silence detection (new default) or `"gap"` for legacy inter-note gap clustering.
+
+### Documentation
+
+- **CLAUDE.md:** Added "Phrase splitting" subsection documenting the two-stage phrase segmentation pipeline (inter-note gap KMeans method + RMS energy silence splitting), config defaults, and post-processing steps.
+
+## 2026-04-26
+
+### Experiment
+
+- **Exp 22b (n-gram order sweep, honest uncorrected):** Reran `sweep_ngram_order.py` on verified uncorrected stems (`separated_stems_nocorrection/htdemucs`). Original Exp 22 was LEAKED (default `--stems-root` pointed to corrected `separated_stems/htdemucs`). Honest results: order=6 optimal at 87.5% top-1 (was 96.6%), order=1 drops to 68.7% (was 91.2%). Peak shifted from order=7 to order=6; orders 7-8 overfit on noisier uncorrected data. Results at `results/ngram_order_sweep_uncorrected/`.
+
 ## 2026-04-25
 
 ### Experiment
 
-- **Exp 28c (alignment, 30-raga filter):** Full 297-recording LOO with corrected-train alignment LM, top-10 histogram candidates, 30-raga filter. Sub_fraction delta = -0.089 (GT needs fewer substitutions). Best: logistic 66.7%, C2 (LM - 2.0*sub) 63.6%, both beating hist-only 56.6%. GT recall 97.6% (290/297). Still below 89.6% baseline (different candidate set and LM distribution).
+- **Exp 23b (truly uncorrected baseline):** Re-ran pipeline LOO with verified uncorrected data from `separated_stems_nocorrection/htdemucs/`. Result: **88.9% combined top-1** (264/297), 94.9% top-3, 92.0% given-tonic. Verified: pitch data identical within 0.005 Hz, transcriptions genuinely different for 291/297 recordings. **New honest best result**, beating Exp 26 per-hyp correction (85.5%) by 3.4pp due to distribution matching.
+- **Exp 29 (top-3 rerank):** Top-3 histogram candidates at detected/given tonic, per-hyp corrected, LM rerank. Auto: 70.7%, given: 72.7%. Negative result: top-3 recall ceiling only 86.9% (histogram misses GT in 39/297 cases), too aggressive a filter.
+- **Exp 23 leakage confirmed:** Original 89.6% "uncorrected baseline" used corrected transcriptions from default stems directory. Verified by comparing 300 recordings: 291 differ, 6 identical (already in-scale), 3 missing. The ~0.7pp difference (89.6% vs 88.9%) reflects the small benefit of pre-corrected transcriptions.
+- **Exp 28c (alignment, 30-raga filter):** Full 297-recording LOO with corrected-train alignment LM, top-10 histogram candidates, 30-raga filter. Sub_fraction delta = -0.089 (GT needs fewer substitutions). Best: logistic 66.7%, C2 (LM - 2.0*sub) 63.6%, both beating hist-only 56.6%. GT recall 97.6% (290/297). Still below 88.9% baseline.
+
+### Production Integration
+
+- **Trained production LM model** (order=7, 30 ragas, all 297 recordings) at `raga_pipeline/models/compmusic_ngram_model.json`. Uses uncorrected transcriptions from `separated_stems_nocorrection` to match Exp 23b distribution.
+- **LM scoring now enabled by default:** `use_lm_scoring=True`, `lm_skip_correction=True` in `config.py`. Pipeline automatically loads model from `raga_pipeline/models/`.
+- **LM winner feeds back into `results.detected_raga`:** After Step 5.5 re-ranking, the combined top-1 raga/tonic replaces the histogram top-1, so `detection_report.meta.json` and the subsequent analyze step use the LM-reranked result.
+- **Updated `_find_lm_model_path()`** to search `raga_pipeline/models/compmusic_ngram_model.json` first.
+- **Synced pipeline to raga-web-app:** Copied `language_model/` module, trained model, `driver.py`, `config.py`, `sequence.py`. Updated `api/routes/results.py` to prefer `lm_candidates.csv`.
+- **Web app: raga dropdown now shows 30 CompMusic ragas** (reads from trained LM model instead of full 113-raga CSV). Falls back to CSV if model not found.
+- **Web app: dual candidates display** -- results page shows both "Combined (Histogram + LM)" and "Histogram Only" candidate tables side by side. API returns `histogramCandidates` alongside `candidates`.
+- **Fixed CLI defaults:** Changed `--use-lm-scoring` and `--lm-skip-correction` from `store_true` (always-false default) to `BooleanOptionalAction` with `default=True`. Use `--no-use-lm-scoring` to disable.
+- **Fixed meta.json hero display:** Web app now reads `selected_raga` (LM winner) over `top_raga` (histogram) in results endpoint and job runner.
+- **YouTube start/end time trimming:** Upload page YouTube tab now has optional start/end time inputs (MM:SS format). Backend passes them through to `download_youtube_audio()` which trims via ffmpeg post-download.
+- **Browser microphone recording with tanpura:** New "Record" tab in upload page. Uses MediaRecorder API for browser-side recording. Optional tanpura drone playback (12 keys) during recording via HTML5 Audio streaming from `/api/tanpura-audio/{key}`. Tanpura key auto-sets tonic. Recording uploads as file and creates song in library with `source: "recording"`.
+- **Tanpura API endpoints:** `/api/tanpura-tracks` lists available keys, `/api/tanpura-audio/{key}` streams tanpura MP3. Tanpura assets copied from pipeline repo.
+- **Recording source in library:** Songs from recordings show green "Rec" badge. Appear under "Uploaded" filter alongside file uploads.
 
 ### Feature
 
+- New `scripts/sweep_top3_rerank_loo.py`: top-K rerank at detected/given tonic with per-hyp correction and LM reranking. Supports auto (detected tonic) and given (GT tonic) strategies.
 - Added `--gated-only`, `--top-k`, and auto 30-raga filter to `sweep_alignment_loo.py`
 - Added sub_fraction penalty methods (C2, C3) and hist-only baseline (G) to Phase 2 scoring
 - Added sub_fraction to logistic regression features and LM diagnostic printout
+
+### Documentation
+
+- Comprehensive update to `docs/reports/2026-04-18-advanced-scoring-experiments.md`: renamed to Exp 16-29, added Exp 23b and 29, marked Exp 23 as LEAKED, updated cross-experiment summary with corrected rankings, added error decomposition and confusion pair analysis, added same-scale raga group table, added improvement strategies section
 
 ## 2026-04-24
 

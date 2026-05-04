@@ -109,40 +109,46 @@ class DriverAnalyzeEnergyFlowTests(unittest.TestCase):
                 ),
             ]
 
-            with (
-                patch("driver._safe_get_audio_duration_seconds", return_value=None),
-                patch("driver.librosa", new=types.SimpleNamespace(note_to_hz=lambda _note: 440.0)),
-                patch("driver.extract_pitch", return_value=_dummy_pitch_data(str(audio_path))),
-                patch("driver.transcription.transcribe_to_notes", return_value=transcribed_notes),
-                patch("driver.merge_consecutive_notes", side_effect=lambda notes, **_: notes),
-                patch("driver.plot_note_duration_histogram"),
-                patch("driver.save_notes_to_csv"),
-                patch("driver.detect_phrases", return_value=[]),
-                patch("driver.cluster_phrases", return_value={}),
-                patch(
-                    "driver.build_transition_matrix_corrected",
-                    return_value=(np.zeros((1, 1), dtype=float), ["Sa"], {}),
-                ),
-                patch("driver.plot_transition_heatmap_v2"),
-                patch(
-                    "driver.analyze_raga_patterns",
-                    return_value={
-                        "common_motifs": [],
-                        "total_aaroh_runs": 0,
-                        "total_avroh_runs": 0,
-                    },
-                ),
-                patch("driver.plot_pitch_with_sargam_lines"),
-                patch("driver.plot_note_segments"),
-                patch("driver.compute_cent_histograms_from_config", return_value=_dummy_histogram()),
-                patch("driver.detect_peaks_from_config", return_value=_dummy_peaks()),
-                patch("driver.fit_gmm_to_peaks", return_value=[]),
-                patch("driver.compute_gmm_bias_cents", return_value=None),
-                patch(
-                    "driver.generate_analysis_report",
-                    return_value=str(stem_dir / "analysis_report.html"),
-                ),
-            ):
+            with ExitStack() as stack:
+                stack.enter_context(patch("driver._safe_get_audio_duration_seconds", return_value=None))
+                stack.enter_context(patch("driver.librosa", new=types.SimpleNamespace(note_to_hz=lambda _note: 440.0)))
+                stack.enter_context(patch("driver.extract_pitch", return_value=_dummy_pitch_data(str(audio_path))))
+                stack.enter_context(patch("driver.transcription.transcribe_to_notes", return_value=transcribed_notes))
+                stack.enter_context(patch("driver.merge_consecutive_notes", side_effect=lambda notes, **_: notes))
+                stack.enter_context(patch("driver.plot_note_duration_histogram"))
+                stack.enter_context(patch("driver.save_notes_to_csv"))
+                stack.enter_context(patch("driver.detect_phrases", return_value=[]))
+                stack.enter_context(patch("driver.detect_phrases_by_silence", return_value=[]))
+                stack.enter_context(patch("driver.cluster_phrases", return_value={}))
+                stack.enter_context(
+                    patch(
+                        "driver.build_transition_matrix_corrected",
+                        return_value=(np.zeros((1, 1), dtype=float), ["Sa"], {}),
+                    )
+                )
+                stack.enter_context(patch("driver.plot_transition_heatmap_v2"))
+                stack.enter_context(
+                    patch(
+                        "driver.analyze_raga_patterns",
+                        return_value={
+                            "common_motifs": [],
+                            "total_aaroh_runs": 0,
+                            "total_avroh_runs": 0,
+                        },
+                    )
+                )
+                stack.enter_context(patch("driver.plot_pitch_with_sargam_lines"))
+                stack.enter_context(patch("driver.plot_note_segments"))
+                stack.enter_context(patch("driver.compute_cent_histograms_from_config", return_value=_dummy_histogram()))
+                stack.enter_context(patch("driver.detect_peaks_from_config", return_value=_dummy_peaks()))
+                stack.enter_context(patch("driver.fit_gmm_to_peaks", return_value=[]))
+                stack.enter_context(patch("driver.compute_gmm_bias_cents", return_value=None))
+                stack.enter_context(
+                    patch(
+                        "driver.generate_analysis_report",
+                        return_value=str(stem_dir / "analysis_report.html"),
+                    )
+                )
                 results = driver.run_pipeline(config)
 
             self.assertEqual(len(results.notes), 2)
@@ -217,6 +223,7 @@ class DriverAnalyzeEnergyFlowTests(unittest.TestCase):
                 stack.enter_context(patch("driver.plot_note_duration_histogram"))
                 stack.enter_context(patch("driver.save_notes_to_csv"))
                 stack.enter_context(patch("driver.detect_phrases", return_value=[]))
+                stack.enter_context(patch("driver.detect_phrases_by_silence", return_value=[]))
                 stack.enter_context(patch("driver.cluster_phrases", return_value={}))
                 stack.enter_context(
                     patch(

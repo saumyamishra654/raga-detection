@@ -974,9 +974,14 @@ def run_pipeline(
                     # OPTION A: No per-raga correction. Tokenize once per
                     # tonic, score against every raga in the LM. Much faster.
                     tonic_phrases_cache: Dict[int, list] = {}
+                    rms_phrases = detect_phrases_by_silence(
+                        merged_notes, pitch_data.energy, pitch_data.timestamps,
+                    ) if merged_notes and len(pitch_data.energy) > 0 else []
                     for tonic_pc in unique_tonics:
                         tonic_midi = 60.0 + tonic_pc
-                        tonic_phrases_cache[tonic_pc] = tokenize_notes_for_lm(merged_notes, tonic_midi)
+                        tonic_phrases_cache[tonic_pc] = tokenize_notes_for_lm(
+                            merged_notes, tonic_midi, phrases=rms_phrases,
+                        )
 
                     for _, cand_row in results.candidates.iterrows():
                         cand_tonic = int(cand_row["tonic"])
@@ -1032,8 +1037,13 @@ def run_pipeline(
                                 corrected_notes, max_gap=0.1, pitch_tolerance=0.7,
                                 max_dropout_gap=0.18, dropout_fragment_duration=0.12,
                             )
+                            corrected_rms = detect_phrases_by_silence(
+                                corrected_merged, pitch_data.energy, pitch_data.timestamps,
+                            ) if corrected_merged and len(pitch_data.energy) > 0 else []
                             tonic_midi = 60.0 + cand_tonic
-                            phrases = tokenize_notes_for_lm(corrected_merged, tonic_midi)
+                            phrases = tokenize_notes_for_lm(
+                                corrected_merged, tonic_midi, phrases=corrected_rms,
+                            )
                             lm_score = lm_model.score_sequence(cand_raga, phrases) if phrases else -999.0
 
                             lm_rows.append({
@@ -1075,8 +1085,13 @@ def run_pipeline(
                 # Defaults: alpha=1.0, beta=1.0, gamma=2.0 (lambda)
                 # norm(histogram) and norm(lm) are in [0,1]; del_residual is ~[-0.2, +0.2]
                 lam = config.lm_deletion_lambda
-                alpha = 0.5  # histogram weight
-                beta = 2.0   # LM weight
+                alpha = config.lm_hist_weight
+                beta = config.lm_score_weight
+                print(
+                    "  LM combine weights: "
+                    f"alpha={alpha:.3f}, beta={beta:.3f}, lambda={lam:.3f}; "
+                    "phrase boundaries=rms_silence"
+                )
                 for row in lm_rows:
                     is_gated = (row["tonic"], row["raga"]) in gated_ragas
                     row["gated"] = is_gated

@@ -148,6 +148,8 @@ class PipelineConfig:
     lm_deletion_lambda: float = 2.0
     lm_deletion_slope: float = -0.0684
     lm_deletion_intercept: float = 0.6640
+    lm_hist_weight: float = 0.3       # alpha: histogram weight in combined LM scoring
+    lm_score_weight: float = 0.5      # beta: LM weight in combined LM scoring
 
     # db paths
     raga_db_path: Optional[str] = None    # Auto-locates if None
@@ -754,6 +756,8 @@ def _config_from_parsed_args(args: argparse.Namespace, parser: argparse.Argument
         lm_deletion_lambda=getattr(args, 'lm_deletion_lambda', 2.0),
         lm_deletion_slope=getattr(args, 'lm_deletion_slope', -0.0684),
         lm_deletion_intercept=getattr(args, 'lm_deletion_intercept', 0.6640),
+        lm_hist_weight=getattr(args, 'lm_hist_weight', 0.3),
+        lm_score_weight=getattr(args, 'lm_score_weight', 0.5),
         mode=mode,
         tonic_override=getattr(args, 'tonic', None),
         raga_override=getattr(args, 'raga', None),

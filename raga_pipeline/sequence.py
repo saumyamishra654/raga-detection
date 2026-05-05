@@ -1780,11 +1780,50 @@ def cluster_notes_into_phrases(
 # LM TOKENIZER
 # =============================================================================
 
+def _tokenize_note(
+    note: Note,
+    tonic_rounded: int,
+    include_direction: bool,
+    prev_midi: Optional[int],
+) -> Tuple[str, int]:
+    """Convert a single Note to a sargam LM token.
+
+    Returns:
+        (token_string, midi_rounded) -- the token and the rounded MIDI
+        value for direction tracking.
+    """
+    midi_rounded = int(round(note.pitch_midi))
+    offset = (midi_rounded - tonic_rounded) % 12
+    sargam = OFFSET_TO_SARGAM.get(offset, f"?{offset}")
+
+    # Tonic-relative octave: how many octaves above/below the tonic
+    octave_diff = (midi_rounded - tonic_rounded) // 12
+
+    # Clip to [-1, +1] range
+    if octave_diff <= -1:
+        sargam += "'"
+    elif octave_diff >= 1:
+        sargam += "''"
+    # else: middle octave, bare sargam
+
+    # Direction suffix
+    if include_direction and prev_midi is not None:
+        if midi_rounded > prev_midi:
+            sargam += "/U"
+        elif midi_rounded < prev_midi:
+            sargam += "/D"
+        else:
+            sargam += "/="
+
+    return sargam, midi_rounded
+
+
 def tokenize_notes_for_lm(
     notes: List[Note],
     tonic_midi: float,
     phrase_gap_sec: float = 0.25,
     include_direction: bool = False,
+    phrases: Optional[List["Phrase"]] = None,
 ) -> List[List[str]]:
     """Convert note list to phrase-separated LM token sequences.
 
@@ -1797,61 +1836,64 @@ def tokenize_notes_for_lm(
           ``/U`` = ascending from previous note, ``/D`` = descending,
           ``/=`` = same pitch.  First note after ``<BOS>`` has no direction.
 
-    Phrase boundaries (gaps > *phrase_gap_sec* between consecutive notes)
-    start a new phrase. Each phrase begins with a ``<BOS>`` token.
-    N-grams should be counted within phrases only -- never crossing
-    phrase boundaries.
+    Phrase boundaries are determined by one of two methods:
+
+    1. If *phrases* is provided (``List[Phrase]``), each Phrase object
+       defines a phrase boundary.  The *notes* and *phrase_gap_sec*
+       parameters are ignored.
+    2. Otherwise, gaps > *phrase_gap_sec* between consecutive notes in
+       *notes* start a new phrase.
+
+    Each phrase begins with a ``<BOS>`` token.  N-grams should be counted
+    within phrases only -- never crossing phrase boundaries.
 
     Returns:
         List of phrase token lists, e.g.
         ``[['<BOS>', 'Sa', 'Re/U', 'Ga/U'], ['<BOS>', 'Ni\\'', 'Re/U', ...]]``
     """
+    # --- Pre-computed phrases path ---
+    if phrases is not None:
+        tonic_rounded = int(round(tonic_midi))
+        result: List[List[str]] = []
+        for phrase in phrases:
+            if not phrase.notes:
+                continue
+            tokens: List[str] = ["<BOS>"]
+            prev_midi: Optional[int] = None
+            for note in phrase.notes:
+                tok, prev_midi = _tokenize_note(
+                    note, tonic_rounded, include_direction, prev_midi,
+                )
+                tokens.append(tok)
+            result.append(tokens)
+        return result
+
+    # --- Flat note list path (gap-based phrase detection) ---
     if not notes:
         return []
 
     tonic_rounded = int(round(tonic_midi))
 
-    phrases: List[List[str]] = []
+    token_phrases: List[List[str]] = []
     current_phrase: List[str] = []
     prev_end: Optional[float] = None
-    prev_midi: Optional[int] = None
+    prev_midi_val: Optional[int] = None
 
     for note in notes:
         # Start a new phrase on gap or at start
         if prev_end is None or (note.start - prev_end) > phrase_gap_sec:
             if current_phrase:
-                phrases.append(current_phrase)
+                token_phrases.append(current_phrase)
             current_phrase = ["<BOS>"]
-            prev_midi = None  # reset direction at phrase boundary
+            prev_midi_val = None  # reset direction at phrase boundary
 
-        midi_rounded = int(round(note.pitch_midi))
-        offset = (midi_rounded - tonic_rounded) % 12
-        sargam = OFFSET_TO_SARGAM.get(offset, f"?{offset}")
-
-        # Tonic-relative octave: how many octaves above/below the tonic
-        octave_diff = (midi_rounded - tonic_rounded) // 12
-
-        # Clip to [-1, +1] range
-        if octave_diff <= -1:
-            sargam += "'"
-        elif octave_diff >= 1:
-            sargam += "''"
-        # else: middle octave, bare sargam
-
-        # Direction suffix
-        if include_direction and prev_midi is not None:
-            if midi_rounded > prev_midi:
-                sargam += "/U"
-            elif midi_rounded < prev_midi:
-                sargam += "/D"
-            else:
-                sargam += "/="
-
-        current_phrase.append(sargam)
-        prev_midi = midi_rounded
+        tok, prev_midi_val = _tokenize_note(
+            note, tonic_rounded, include_direction, prev_midi_val,
+        )
+        current_phrase.append(tok)
         prev_end = note.end
 
     if current_phrase:
-        phrases.append(current_phrase)
+        token_phrases.append(current_phrase)
 
-    return phrases
+    return token_phrases

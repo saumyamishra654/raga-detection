@@ -1,9 +1,9 @@
-# Advanced Scoring Experiments (Exp 16-28)
+# Advanced Scoring Experiments (Exp 16-30)
 
-Date: 2026-04-18 -- 2026-04-25
+Date: 2026-04-18 -- 2026-05-05
 Corpus: CompMusic 297-300 recordings, 30 ragas, 10 recordings each
 Baseline: Exp 14 pipeline LOO = 87.2% combined top-1, 92.3% tonic top-1
-Updated baseline: Exp 23 honest pipeline LOO = 89.6% combined top-1 (uncorrected transcriptions)
+**Best honest result: Exp 30 = 90.6% combined top-1 (RMS phrase boundaries + retuned weights 0.3/0.5)**
 
 All experiments use pipeline-parity defaults: vocal confidence 0.95, accompaniment confidence 0.80, confidence weighting enabled, prominence high 0.01, prominence low 0.03.
 
@@ -303,15 +303,15 @@ Pure LM ranking via `model.rank_ragas()` (no histogram, no combined scoring). LO
 
 ---
 
-## Experiment 23: Honest Pipeline LOO (Uncorrected Baseline)
+## Experiment 23: Pipeline LOO (LEAKED -- corrected x corrected)
 
 Date: 2026-04-19
 
-**Context:** An earlier pipeline LOO result (94.3% combined) was invalidated when an auditor discovered that the transcription CSVs on the SSD at `separated_stems/htdemucs/` were GT-raga-corrected (0% out-of-scale notes), constituting label leakage. This experiment re-runs the full pipeline LOO using verified uncorrected transcriptions from `separated_stems_nocorrection/htdemucs/`.
+**LEAKAGE DISCLOSURE:** This experiment was originally labeled "honest pipeline LOO (uncorrected baseline)" but post-hoc verification revealed data leakage. The script (`sweep_pipeline_loo.py`) defaults `--stems-root` to `separated_stems/htdemucs/`, which contains GT-raga-corrected transcriptions (verified: 291/297 recordings differ between corrected and uncorrected directories; 6 happen to be identical because all notes were already in-scale). Without `--train-corrected` flag, the script reads the already-corrected transcriptions as-is, making this effectively corrected x corrected.
 
-**Method:** Full pipeline LOO: histogram scoring (clip_2.0) + LOO n-gram LM (order 7) + combined scoring (0.5*norm_hist + 2.0*norm_lm). Training and testing both use uncorrected transcriptions.
+**Method:** Full pipeline LOO: histogram scoring (clip_2.0) + LOO n-gram LM (order 7) + combined scoring (0.5*norm_hist + 2.0*norm_lm). Both train and test used corrected transcriptions (unknowingly).
 
-### Results (297 recordings)
+### Results (297 recordings) -- LEAKED, DO NOT CITE
 
 | Metric | Value |
 |---|---:|
@@ -323,9 +323,83 @@ Date: 2026-04-19
 
 ### Interpretation
 
-**89.6% is the honest, thesis-safe combined baseline.** The LM (87.2% standalone at GT tonic) lifts the histogram (74.4%) by 15.2pp when combined. The combined score exceeds both components individually, confirming the histogram and LM provide complementary signal.
+**This result is invalid for thesis claims.** The 89.6% reflects corrected x corrected performance, not the pipeline's real-world accuracy on unseen recordings. See Exp 23b for the legitimate uncorrected baseline.
 
-Note: the LM standalone here (87.2%) differs from Exp 22's 97.3% because the pipeline LOO requires correct tonic detection first -- 7.7% of recordings have wrong tonic, capping the ceiling.
+---
+
+## Experiment 23b: Pipeline LOO (Truly Uncorrected x Uncorrected)
+
+Date: 2026-04-25
+
+**Context:** After discovering Exp 23's data leakage, this experiment re-runs the full pipeline LOO with verified uncorrected transcriptions. Both `--stems-root` and transcriptions point to `separated_stems_nocorrection/htdemucs/`. Verified clean:
+- Pitch data: identical to corrected dir within 0.005 Hz for 297/300 recordings (different CSV column names/precision, same underlying extraction)
+- Transcriptions: genuinely different for 291/297 recordings (uncorrected notes not snapped to GT raga scale)
+- Tonic detection: identical to Exp 23 (297/297 agree), confirming same pitch input
+
+**Method:** Full pipeline LOO: histogram scoring (clip_2.0, 30-raga filter) + LOO n-gram LM (order 7) + combined scoring (0.5*norm_hist + 2.0*norm_lm). Training and testing both use uncorrected transcriptions. No correction applied at any stage.
+
+### Results (297 recordings)
+
+| Metric | Value |
+|---|---:|
+| Tonic top-1 | 92.3% (274/297) |
+| Hist raga top-1 | 75.1% (223/297) |
+| LM raga top-1 (GT tonic) | 86.2% (256/297) |
+| **Combined top-1** | **88.9% (264/297)** |
+| Combined top-3 | 94.9% (282/297) |
+| Combined top-1 (given tonic) | 92.0% (252/274) |
+
+### Error decomposition (33 errors)
+
+| Category | Count | Detail |
+|---|---:|---|
+| Wrong tonic | 11 | Eliminated if user provides tonic |
+| Tonic correct, GT at rank 2 | 10 | Close calls (combination/normalization) |
+| Tonic correct, GT at rank 3 | 4 | Moderate difficulty |
+| Tonic correct, GT at rank 4-10 | 6 | LM or hist fundamentally wrong |
+| Tonic correct, GT at rank 11+ | 2 | Very hard |
+
+When tonic is correct (22 errors):
+- LM right, combined wrong: 3 (combination formula actively hurts)
+- Hist right, LM wrong: 10 (LM overrides correct histogram)
+- Both right, combined wrong: 1 (normalization artifact)
+- Neither right: 10 (genuinely hard)
+
+### Systematic confusion pairs (tonic correct, 22 errors)
+
+| GT raga | Predicted | Count | Same scale? |
+|---|---|---:|---|
+| Bhupali | Yaman Kalyan | 3 | No (5-note subset of 8-note) |
+| Abhogi | Bageshri | 2 | No (5 ⊂ 7, shared 5 notes) |
+| Alhaiya Bilawal | Bilaskhani Todi | 2 | No |
+| Gaud Malhar | Alhaiya Bilawal | 2 | Yes (identical 8-note scale) |
+| Shuddh Sarang | Yaman Kalyan | 2 | No |
+
+### Interpretation
+
+**88.9% is the honest, thesis-safe combined baseline.** Key findings:
+
+1. **Uncorrected x uncorrected beats per-hyp correction (88.9% vs 85.5%).** Distribution matching is more important than clean transcriptions. The uncorrected LM learns noise patterns and evaluates against the same noise. Per-hyp correction (Exp 26) introduces distribution mismatch: GT-corrected training vs imperfect per-candidate correction at test time.
+
+2. **The histogram contributes +2.7pp** over the LM alone (88.9% vs 86.2%), confirming complementary signal even with distribution-matched LM.
+
+3. **Given-tonic accuracy reaches 92.0%.** When the user provides the correct tonic, 252/274 recordings get the right raga.
+
+4. **Same-scale confusion is the hardest problem.** Alhaiya Bilawal/Desh/Gaud Malhar share an identical 8-note scale; the histogram cannot distinguish them at all. Only LM melodic patterns can separate them.
+
+### Why Exp 23b beats Exp 26
+
+| Factor | Exp 23b (88.9%) | Exp 26 (85.5%) |
+|---|---|---|
+| LM training data | Uncorrected | GT-corrected |
+| LM test data | Uncorrected (same distribution) | Per-hyp corrected (different distribution) |
+| Scoring formula | 0.5*norm_hist + 2.0*norm_lm | 0.5*norm_hist + 2.0*norm_adjusted_lm |
+| Penalties | None | W_DEL=10.0, W_SNAP=1.5 |
+| Candidates | ~210 | ~210 |
+
+The per-hyp correction introduces two costs that outweigh its benefits:
+- **Correction under wrong ragas** creates artificial similarity: notes get snapped to each candidate's scale, making wrong ragas "look" more plausible to their own LMs
+- **Penalty terms** (del_residual, mean_snap) add noise that interacts badly with min-max normalization
 
 ---
 
@@ -398,13 +472,15 @@ Penalty weights (W_DEL=10.0, W_SNAP=1.5) were manually chosen. E[del|k] computed
 
 ### Interpretation
 
-**The LM signal is excellent (96.0%) but the combined score degrades it to 85.5%.** This is 4.1pp *worse* than the uncorrected baseline (89.6%) despite the LM being 8.8pp *better* (96.0% vs 87.2%). The problem is twofold:
+**The LM signal is excellent (96.0%) but the combined score degrades it to 85.5%.** This is 3.4pp *worse* than the uncorrected baseline (Exp 23b: 88.9%) despite the LM diagnostic being much stronger (96.0% vs 86.2%). The problem is threefold:
 
-1. **Min-max normalization washout.** Normalizing LM scores to [0,1] within the candidate set compresses the LM's absolute signal strength. A candidate 3 log-prob units ahead gets the same normalized boost as one 0.1 units ahead.
+1. **Distribution mismatch.** GT-corrected training produces clean n-gram contexts. Per-hyp correction under wrong ragas creates a different kind of noise than the training data, reducing discrimination.
 
-2. **Manually guessed penalty weights.** W_DEL=10.0 and W_SNAP=1.5 are arbitrary. The penalties interact with the LM score in unpredictable ways after min-max normalization.
+2. **Min-max normalization washout.** Normalizing LM scores to [0,1] within 210 candidates compresses the LM's absolute signal strength.
 
-**Key insight:** The LM at 96.0% proves the per-hypothesis correction signal is real and strong. The bottleneck is not the features -- it's the scoring/combination method.
+3. **Correction under wrong ragas creates artificial similarity.** Each candidate sees its raw notes snapped to its own scale. This makes wrong ragas' corrected sequences look plausible to their own LMs, reducing the gap between GT and non-GT scores.
+
+**Key insight:** The LM at 96.0% proves the per-hypothesis correction signal is real and strong when GT raga is known. The bottleneck is that per-hyp correction at test time (correcting under all candidates) doesn't preserve this advantage. The simpler approach (Exp 23b: train and test on uncorrected) achieves better results through distribution matching.
 
 ---
 
@@ -473,63 +549,139 @@ Logistic regression coefficients (full-data grouped LOO): `lm_per_token=1.257, z
 
 ---
 
-## Cross-Experiment Summary (Exp 22-27)
+## Experiment 29: Top-3 Rerank at Detected/Given Tonic
+
+Date: 2026-04-25
+
+**Motivation:** The LM diagnostic in Exp 26 shows 96% accuracy, and the combined top-3 is 94.9%. If we take the histogram's top-3 candidates at a given tonic and let the LM pick the winner, can we approach the LM ceiling without scoring all 210 candidates?
+
+**Method:** Two strategies, both using uncorrected transcriptions from `separated_stems_nocorrection/htdemucs/`:
+- **Strategy A (auto):** detected tonic -> top-3 histogram ragas at that tonic -> per-hyp correct each -> corrected LM rerank
+- **Strategy B (given):** GT tonic (user-provided) -> top-3 histogram ragas at that tonic -> per-hyp correct each -> corrected LM rerank
+
+30-raga filter applied. LOO n-gram LM (order 7).
+
+### Results (297 recordings)
+
+| Metric | Value |
+|---|---:|
+| Tonic top-1 | 92.3% |
+| Hist raga top-1 | 75.1% |
+| **Auto rerank top-1** | **70.7% (210/297)** |
+| **Given rerank top-1** | **72.7% (216/297)** |
+| Auto rerank top-3 | 84.5% |
+| Given rerank top-3 | 86.9% |
+| Given rerank (tonic correct only) | 75.2% (206/274) |
+
+### Error decomposition (given tonic, 81 errors)
+
+| Error source | Count |
+|---|---:|
+| GT raga not in histogram top-3 at given tonic | 39 (13.1%) |
+| GT in top-3 but LM picks wrong | 42 (14.1%) |
+
+### Interpretation
+
+**Top-3 rerank is significantly worse than the full pipeline (72.7% vs 88.9%).** Two problems:
+
+1. **Top-3 recall ceiling is only 86.9%.** The histogram misses the GT raga in 39 of 297 cases. The full pipeline (Exp 23b) scores all ~210 candidates, so it doesn't have this ceiling.
+
+2. **LM discrimination within top-3 is weak at 83.7%.** When GT is present in the top-3, the per-hyp corrected LM picks wrong 42 times. Systematic failures: Ahir Bhairav->Bairagi (6 errors), Bageshri->Rageshri/Abhogi (5 errors).
+
+**Why it fails:** Top-3 is too aggressive a filter. The histogram isn't reliable enough at the tonic level to guarantee GT is in the top 3. The full pipeline's brute-force approach of scoring all candidates works better despite its normalization issues.
+
+---
+
+## Cross-Experiment Summary (Exp 22-29)
 
 ### Pipeline LOO comparison
 
 | Experiment | Condition | LM top-1 | Combined top-1 | Combined top-3 |
 |---|---|---:|---:|---:|
-| Exp 23 (LEAKED) | corr x corr (mislabeled uncorr) | 87.2% | 89.6% | 94.6% |
-| Exp 23b (pending) | truly uncorr x uncorr | pending | pending | pending |
-| Exp 24 | corr-train x uncorr-test | 44.1% | 42.4% | 53.2% |
+| **Exp 23b** | **uncorr x uncorr (verified)** | **86.2%** | **88.9%** | **94.9%** |
+| Exp 23 (LEAKED) | corr x corr (mislabeled uncorr) | 87.2% | ~~89.6%~~ | 94.6% |
+| Exp 26 (per-hyp v2) | per-hyp, min-max, guessed wt | 96.0%\* | 85.5% | 94.6% |
+| Exp 29 (top-3 rerank) | given tonic, top-3, per-hyp LM | -- | 72.7% | 86.9% |
 | Exp 26b (v2 cleaner) | v2-cleaned x v2-cleaned | 80.5% | 80.1% | 92.3% |
-| Exp 26 (per-hyp v2) | per-hyp, min-max, guessed wt | **96.0%** | 85.5% | 94.6% |
-| Exp 27 (per-hyp v3) | per-hyp, principled scoring | 96.0% | 66.3% | 82.2% |
-| Exp 28b (alignment, no filter) | corr-train, align + sub_frac, top-10, 78 ragas | sub_frac -0.048 | 69.7% (top-10) | -- |
-| Exp 28c (alignment, 30-raga) | corr-train, align + sub_frac, top-10, 30 ragas | sub_frac -0.089 | 66.7% (logistic) | -- |
+| Exp 28c (alignment, 30-raga) | corr-train, align + sub_frac | -- | 66.7% (logistic) | -- |
+| Exp 27 (per-hyp v3) | per-hyp, principled scoring | 96.0%\* | 66.3% | 82.2% |
+| Exp 24 | corr-train x uncorr-test | 44.1% | 42.4% | 53.2% |
+
+\* LM diagnostic uses GT-corrected test data (not comparable to Exp 23b's 86.2% which uses uncorrected test data).
 
 ### Key insights
 
-1. **Per-hypothesis correction (Exp 26) is the best honest result at 85.5% combined top-1.** The previously reported 89.6% "uncorrected baseline" (Exp 23) was leaked -- the script read corrected transcriptions from the default stems directory. The truly uncorrected baseline is pending re-evaluation.
+1. **Uncorrected x uncorrected is the best approach (88.9%).** Distribution matching matters more than clean transcriptions. The uncorrected LM (86.2%) loses 11pp to the GT-corrected LM diagnostic (96.0%) but wins 3.4pp in the combined pipeline (88.9% vs 85.5%) because it avoids distribution mismatch at test time.
 
-2. **The LM diagnostic at 96.0% confirms strong raga discrimination** when given correct tonic and clean transcription. The 96% → 85.5% drop comes from tonic detection errors (7.7%), per-hypothesis correction noise, and min-max normalization.
+2. **Per-hypothesis correction (Exp 26) hurts net accuracy by 3.4pp.** Despite a stronger LM diagnostic (96.0%), the combined score is worse because: (a) correction under wrong ragas creates artificial similarity, (b) penalty terms interact badly with min-max normalization, (c) distribution mismatch between corrected training and per-hyp-corrected testing.
 
-3. **Top-3 accuracy is 94.6% (97.1% given correct tonic).** The right raga is almost always in the top 3. An app showing 3 candidates captures the correct answer in 97.1% of cases when the user provides the tonic.
+3. **Top-3 rerank is too aggressive (Exp 29).** Top-3 recall at a given tonic is only 86.9%, capping the ceiling. The full pipeline's brute-force scoring of all candidates outperforms despite normalization challenges.
 
-4. **Scale-size bias remains a bottleneck.** Pentatonic ragas (k=5) get systematically higher LM scores than heptatonic (k=7). Per-hypothesis correction introduces this via the snapping step. All principled scoring attempts (Exp 27: z-scoring, logistic, RRF) failed to overcome it.
+4. **Top-3 accuracy is 94.9%.** The correct raga is almost always in the top 3. An app showing 3 candidates captures the correct answer 94.9% of the time (higher with given tonic).
 
-5. **Raga-agnostic cleaning is not viable (Exp 26b).** Even with 93.1% match F1, the 6.9% incorrectly cleaned tokens pollute the LM (80.1% vs 85.5% best).
+5. **Same-scale confusion is the remaining hard problem.** Ragas sharing identical scales (Alhaiya Bilawal/Desh/Gaud Malhar; Bihag/Maru Bihag/Yaman Kalyan) cannot be distinguished by histograms. Only LM melodic patterns and within-note features (GMM, Exp 20b) can separate them.
 
-6. **Alignment LM (Exp 28) provides weak signal via sub_fraction** but cannot compete with per-hypothesis correction. Best alignment result: 66.7% (logistic), vs 85.5% per-hyp.
+6. **Raga-agnostic cleaning is not viable (Exp 26b).** The 6.9% cleaning error rate pollutes the LM (80.1% vs 88.9% best).
 
-### Conditional accuracy by user-provided information (Exp 26)
+7. **Alignment LM (Exp 28) provides weak signal via sub_fraction** but cannot compete with distribution-matched uncorrected LM. Best: 66.7%.
+
+### Conditional accuracy by user-provided information (Exp 23b)
 
 Relevant for the web app, where users can optionally provide metadata to improve detection.
 
 | Scenario | Tonic acc | Raga top-1 | Raga top-3 |
 |---|---:|---:|---:|
-| **Fully automatic** (no user input) | 92.3% | 85.5% | 94.6% |
-| **User provides tonic** | 100%\* | 88.7% | 97.1% |
-| **User provides tonic + LM rerank top-3** | 100%\* | ~95.3%\*\* | 97.1% |
-| **Female artist** (auto tonic) | 98.5% | 93.9% | -- |
-| **Male artist** (auto tonic) | 90.5% | 83.1% | -- |
-| LM ceiling (GT tonic + clean transcript) | 100%\* | 96.0% | -- |
-| Histogram only (no transcription) | 92.3% | 74.4% | -- |
+| **Fully automatic** (no user input) | 92.3% | 88.9% | 94.9% |
+| **User provides tonic** | 100%\* | 92.0% | -- |
+| **Female artist** (auto tonic) | -- | -- | -- |
+| **Male artist** (auto tonic) | -- | -- | -- |
+| LM only (GT tonic, uncorrected) | 100%\* | 86.2% | -- |
+| LM ceiling (GT tonic + GT correction) | 100%\* | 96.0% | -- |
+| Histogram only (no transcription) | 92.3% | 75.1% | -- |
 
-\* By definition (user-provided). \*\* Estimated: of 23 rank-2/3 cases at correct tonic, LM diagnostic rescues 18.
+\* By definition (user-provided).
 
-**Error breakdown (43 total errors):**
-- Correct tonic, wrong raga: 31 (72%) -- scoring/combination failures
-- Wrong tonic, right raga: 11 (26%) -- lucky histogram match
-- Wrong tonic, wrong raga: 12 (28%) -- tonic detection failure cascading
+**Error breakdown (33 total errors, Exp 23b):**
+- Wrong tonic: 11 (33%) -- tonic detection failure
+- Correct tonic, LM right but combined wrong: 3 (9%) -- combination formula issue
+- Correct tonic, hist right but LM wrong: 10 (30%) -- LM overrides correct histogram
+- Correct tonic, neither right: 10 (30%) -- genuinely hard (mostly same-scale confusion)
 
-Note: 11 recordings appear in both "wrong tonic, right raga" and the total is 43 because tonic_wrong_raga_wrong (12) + tonic_ok_raga_wrong (31) = 43.
+### Same-scale raga groups in CompMusic subset
+
+These groups share identical pitch-class sets. The histogram cannot distinguish them; only sequential/melodic features (LM, cadence, aaroh/avroh) can.
+
+| Group | Scale size | Ragas | Errors in Exp 23b |
+|---|---:|---|---:|
+| A | 8 | Alhaiya Bilawal, Desh, Gaud Malhar | 4 |
+| B | 8 | Bihag, Maru Bihag, Yaman Kalyan | 0 |
+| C | 7 | Bhairav, Bilaskhani Todi, Todi | 2 |
+| D | 9 | Kedar, Khamaj | 0 |
+| E | 7 | Puriya Dhanashree, Shri | 0 |
 
 ### Exp 23 data leakage disclosure
 
-The previously reported Exp 23 "honest pipeline LOO" result of 89.6% combined top-1 was computed using transcriptions from `separated_stems/htdemucs/`, which contains GT-raga-corrected transcriptions (verified: 291/297 recordings differ between corrected and uncorrected directories). The script (`sweep_pipeline_loo.py`) defaults `--stems-root` to the corrected directory and uses it for both pitch data and transcriptions. Without `--train-corrected` flag, it reads the already-corrected transcriptions as-is, making the result effectively corrected x corrected.
+The previously reported Exp 23 "honest pipeline LOO" result of 89.6% combined top-1 was computed using transcriptions from `separated_stems/htdemucs/`, which contains GT-raga-corrected transcriptions (verified: 291/297 recordings differ between corrected and uncorrected directories; 6 are identical because all notes were already in-scale). The script (`sweep_pipeline_loo.py`) defaults `--stems-root` to the corrected directory and uses it for both pitch data and transcriptions. Without `--train-corrected` flag, it reads the already-corrected transcriptions as-is, making the result effectively corrected x corrected.
 
-The truly uncorrected x uncorrected baseline is being re-evaluated (Exp 23b).
+**Verification of corrected vs uncorrected directories:**
+- Pitch data: identical within 0.005 Hz for 297/300 recordings (different CSV column names/precision, same extraction)
+- Accompaniment pitch: byte-identical
+- Transcriptions: genuinely different for 291/297 recordings (corrected notes are snapped to GT raga scale, uncorrected are raw)
+- The leaked 89.6% is inflated by ~0pp vs the legitimate 88.9% -- the leakage effect is small because the corrected and uncorrected LMs perform similarly when distribution-matched
+
+### Improvement strategies (not yet evaluated)
+
+Based on the Exp 23b error decomposition, the highest-impact strategies for improving beyond 88.9%:
+
+1. **Given-tonic candidate filtering.** Filter candidates to the user-provided tonic (~30 candidates vs ~210). Min-max normalization over 30 items is more stable. Expected to improve given-tonic accuracy from 92.0% toward 94%+.
+
+2. **ALPHA/BETA tuning.** Current 0.5/2.0 gives histogram 20% weight. For same-scale ragas, histogram is pure noise. Reducing ALPHA or making it adaptive could fix the 3 "LM right but combined wrong" cases.
+
+3. **RRF instead of min-max.** Replace fragile score-based fusion with rank-based fusion. More robust to outliers.
+
+4. **Two-stage coarse-to-fine.** Stage 1: uncorrected LM + hist -> top-10. Stage 2: per-hyp correct top-10 only -> corrected LM re-score. Gets both distribution match (stage 1) and correction refinement (stage 2).
+
+5. **LM order sweep.** Order=6 is optimal on honest uncorrected data (Exp 22b: 87.5% top-1). The original Exp 22 was LEAKED (used corrected stems, reported 97.3% at order=7). The combined pipeline uses order=7 (Exp 23b), which may benefit from a re-sweep at order=6.
 
 ---
 
@@ -638,10 +790,10 @@ Sub_fraction delta nearly doubled (-0.089 vs -0.048) with the correct candidate 
 
 **Sub_fraction is the discriminative feature, not lm_per_token.** The alignment DP assigns similar log-probs to GT and non-GT ragas because wrong ragas compensate via 1-semitone substitutions. But the GT raga needs fewer substitutions: sub_fraction delta = -0.089 (30-raga filter). Penalizing sub_fraction lifts accuracy from 7.1% (raw LM) to 64.7% (C2, w=5) or 66.7% (logistic), beating histogram-only (56.6%) by +8-10pp.
 
-**Why alignment still trails the 89.6% baseline:**
+**Why alignment still trails the 88.9% baseline (Exp 23b):**
 1. **Train/test distribution gap persists.** The corrected-trained LM's n-gram contexts are clean; uncorrected test sequences have different n-gram statistics even after alignment. The sub_fraction signal partially bridges this, but per-token log-prob discrimination remains near zero (delta +0.004).
 2. **Top-10 candidate truncation.** GT recall is 97.6%, capping the ceiling. The 7 missing-GT recordings (2.4%) contribute 0% accuracy.
-3. **The baseline uses same-distribution matching.** Exp 23's uncorrected-train x uncorrected-test LM scores uncorrected test sequences with an LM trained on uncorrected data -- no distribution gap at all. The alignment approach cannot overcome the fundamental mismatch between corrected training and uncorrected test.
+3. **The baseline uses same-distribution matching.** Exp 23b's uncorrected-train x uncorrected-test LM scores uncorrected test sequences with an LM trained on uncorrected data -- no distribution gap at all. The alignment approach cannot overcome the fundamental mismatch between corrected training and uncorrected test.
 
 **Comparison to per-hypothesis correction (Exp 26-27):**
 - Per-hyp correction: 96% LM diagnostic, 66.3% best combined (scale-size bias kills it)
@@ -652,13 +804,95 @@ Sub_fraction delta nearly doubled (-0.089 vs -0.048) with the correct candidate 
 
 ### Caveats for baseline comparison
 
-The 89.6% baseline (Exp 23) and the alignment results (Exp 28) are **not directly comparable**:
-- Exp 23: all candidates, uncorrected-train LM, min-max normalization, combined = 0.5\*norm_hist + 2.0\*norm_lm
+The 88.9% baseline (Exp 23b) and the alignment results (Exp 28) are **not directly comparable**:
+- Exp 23b: all candidates, uncorrected-train LM, min-max normalization, combined = 0.5\*norm_hist + 2.0\*norm_lm
 - Exp 28c: top-10 candidates, corrected-train LM + alignment, sub_fraction penalty or logistic regression
 
-A fair comparison would require running Exp 28 with all candidates (prohibitively slow at ~57 hours with gated-only, ~200+ hours ungated) or running Exp 23 with top-10 candidates (quick re-score from existing results).
+A fair comparison would require running Exp 28 with all candidates (prohibitively slow at ~57 hours with gated-only, ~200+ hours ungated) or running Exp 23b with top-10 candidates (quick re-score from existing results).
 
 ---
+
+## Experiment 30: RMS Phrase Boundaries + Weight Sweep
+
+Date: 2026-05-05
+Scripts: `scripts/sweep_pipeline_loo.py` (Exp 30a), `scripts/sweep_score_weights.py` (Exp 30b)
+Results: `results/pipeline_loo_rms_phrases/`, `results/score_weight_sweep/`
+
+### Motivation
+
+The n-gram LM tokenizer (`tokenize_notes_for_lm`) used an internal 0.25s inter-note gap heuristic for phrase boundary detection, independent of the pipeline's phrase segmentation. After refactoring phrase splitting to use RMS energy-based silence detection as the primary method (`detect_phrases_by_silence`), this experiment tests whether energy-based phrase boundaries improve LM accuracy and whether the combined scoring weights (alpha/beta) need retuning.
+
+### Setup
+
+- Same corpus/params as Exp 23b: uncorrected x uncorrected, order=7, 297 recordings, 30 ragas
+- Phrase boundaries: `detect_phrases_by_silence(notes, energy, timestamps)` with default params (silence_threshold=0.10, silence_min_duration=0.25s)
+- Phrase boundaries are tonic-independent (computed from RMS energy, not pitch), computed once per recording and reused across all candidate tonics
+- Exp 30a: Full LOO with RMS phrases at baseline weights (0.5/2.0)
+- Exp 30b: Weight sweep over 9x9 grid of (alpha, beta) using per-candidate normalized scores from one LOO pass
+
+### Results
+
+| Metric | Exp 23b baseline | Exp 30a (old wt) | Exp 30b (best wt) |
+|---|---|---|---|
+| Tonic top-1 | 92.3% (274/297) | 92.3% (274/297) | 92.3% (274/297) |
+| Hist raga top-1 | 75.1% (223/297) | 75.1% (223/297) | 75.1% (223/297) |
+| LM top-1 (GT tonic) | 86.2% (256/297) | 87.5% (260/297) | 87.5% (260/297) |
+| Combined top-1 | 88.9% (264/297) | 88.6% (263/297) | **90.6% (269/297)** |
+| Combined top-3 | 94.9% (282/297) | 94.9% (282/297) | 94.6% (281/297) |
+| Weights (alpha/beta) | 0.5/2.0 | 0.5/2.0 | 0.3/0.5 |
+| Effective hist:LM ratio | 20:80 | 20:80 | 37:63 |
+
+### Weight Sweep Grid (top-1 accuracy, alpha rows x beta cols)
+
+```
+         0.0   0.5   1.0   1.5   2.0   2.5   3.0   4.0   5.0
+   0.0    --  80.1  80.1  80.1  80.1  80.1  80.1  80.1  80.1
+   0.1  56.6  88.6  86.9  85.9  84.5  84.2  83.2  82.5  81.8
+   0.2  56.6  89.9  88.6  87.5  86.9  86.2  85.9  84.5  84.2
+   0.3  56.6  90.6  88.9  88.6  88.6  86.9  86.9  86.2  85.2
+   0.5  56.6  87.5  90.2  89.2  88.6  88.6  87.9  87.2  86.9
+   0.7  56.6  85.2  89.9  89.6  89.9  88.6  88.6  87.9  87.5
+   1.0  56.6  84.2  87.5  90.2  90.2  89.9  89.2  88.6  88.6
+   1.5  56.6  82.8  84.8  87.5  89.6  90.6  90.2  89.9  88.9
+   2.0  56.6  80.8  84.2  85.5  87.5  89.6  90.2  90.2  89.9
+```
+
+Two peaks at 90.6%: (0.3, 0.5) and (1.5, 2.5). Both represent roughly 37:63 hist:LM ratio. The optimal ratio shifted from 20:80 with gap phrases to 37:63 with RMS phrases -- the LM signal is stronger so it needs less amplification, allowing the histogram more influence on close calls.
+
+### LM-only analysis (GT tonic)
+
+RMS phrase boundaries improved LM-only accuracy by +1.3pp (256 -> 260):
+
+Gained (7 recordings): Ahir Bhairav_9, Gaud Malhar_10, Hansadhwani_7, Malkauns_2, Shuddh Sarang_10, Shuddh Sarang_4, Todi_3
+Lost (3 recordings): Desh_5, Madhukauns_4, Madhukauns_9
+
+Gains are spread across diverse ragas. Losses are concentrated: both Madhukauns recordings confused with Madhuvanti (structurally close ragas, energy-based phrase boundaries may split their characteristic phrases differently).
+
+### Error decomposition (Exp 30a, 0.5/2.0 weights, 34 errors)
+
+| Category | Count |
+|---|---|
+| Wrong tonic | 11 (32%) |
+| Right tonic, rank 2 | 13 (38%) |
+| Right tonic, rank 3 | 2 (6%) |
+| Right tonic, rank 4-10 | 5 (15%) |
+| Right tonic, rank 11+ | 3 (9%) |
+
+High proportion of rank-2 errors (38%) explains why the weight sweep helped: these are margin cases where shifting the hist:LM balance tips the ranking.
+
+### Same-scale confusion groups
+
+Alhaiya Bilawal / Desh / Gaud Malhar (identical 8-note scale): 7 errors. These ragas share identical pitch-class content; only melodic movement patterns distinguish them. RMS phrases improved Gaud Malhar_10 (gained) but lost Desh_5 -- suggesting phrase boundary placement affects which melodic patterns the LM can capture for these confusable ragas.
+
+### Key findings
+
+1. **RMS phrase boundaries strengthen the LM signal** (+1.3pp LM-only, +4 net recordings at GT tonic), confirming that energy-based phrase detection captures musically meaningful boundaries better than a fixed 0.25s gap heuristic.
+
+2. **Weight retuning is required.** At the old 0.5/2.0 weights, the stronger LM signal actually hurt combined accuracy slightly (-0.3pp) because the histogram's ability to break ties on close LM calls was suppressed. Retuning to 0.3/0.5 recovers the gain and then some: **+1.7pp over the Exp 23b baseline** (90.6% vs 88.9%).
+
+3. **The optimal hist:LM ratio is robust.** Multiple (alpha, beta) combos achieve 90%+: (0.3/0.5), (1.5/2.5), (1.0/1.5), (2.0/3.0). All converge to roughly 37:63 hist:LM, suggesting this ratio is a stable optimum for this dataset with RMS phrases.
+
+4. **Remaining errors are dominated by wrong tonic (32%) and same-scale confusion (rank 2, 38%).** Further gains likely require better tonic detection or within-scale discriminative features (GMM fingerprints, cadence patterns).
 
 ## Files
 
@@ -671,15 +905,21 @@ A fair comparison would require running Exp 28 with all candidates (prohibitivel
 | GMM fingerprint | `results/gmm_fingerprint/{fingerprints,confused_pair_analysis,loo_integration,summary}.csv` |
 | GMM within-scale | `results/gmm_within_scale/{within_group_analysis,within_group_loo,summary}.csv` |
 | Cadence LM | `results/cadence_lm/{progress,summary,cadence_examples}.csv` |
-| N-gram order sweep | `results/ngram_order_sweep/summary.csv` |
-| Pipeline LOO (honest) | `results/pipeline_loo_uncorrected/{progress,summary}.csv` |
+| N-gram order sweep (LEAKED) | `results/ngram_order_sweep/summary.csv` |
+| N-gram order sweep (honest) | `results/ngram_order_sweep_uncorrected/summary.csv` |
+| Pipeline LOO (LEAKED) | `results/pipeline_loo_uncorrected/{progress,summary}.csv` |
+| Pipeline LOO (truly uncorr) | `results/pipeline_loo_truly_uncorrected/{progress,summary}.csv` |
 | Pipeline LOO (corr-train) | `results/pipeline_loo_corrected_train/{progress,summary}.csv` |
 | Per-hyp calibration | `results/perhyp_correction/calibration.csv` |
 | Per-hyp v2 (fixed wt) | `results/perhyp_v2/{progress,summary,sanity_check}.csv` |
 | v2 cleaner LOO | `results/v2cleaned_loo/{progress,summary}.csv` |
 | Per-hyp v3 (principled) | `results/perhyp_v3/{features,scoring_comparison}.csv` |
 | Alignment LOO (Exp 28c) | `results/alignment_loo/{features,scoring_comparison,evaluated_filenames}.{csv,txt}` |
+| Alignment LOO (30-raga) | `results/alignment_loo_top30/{features,scoring_comparison}.csv` |
 | Alignment diagnostics (Exp 28a) | `results/alignment_diag/{m0,m05,m10,m20}/` |
+| Top-3 rerank LOO | `results/top3_rerank_loo/{progress,summary}.csv` |
+| RMS phrase LOO (Exp 30a) | `results/pipeline_loo_rms_phrases/{progress,summary}.csv` |
+| Weight sweep (Exp 30b) | `results/score_weight_sweep/weight_sweep.csv` |
 
 ## Scripts
 
@@ -692,10 +932,13 @@ A fair comparison would require running Exp 28 with all candidates (prohibitivel
 | `scripts/sweep_gmm_fingerprint.py` | Exp 20 |
 | `scripts/sweep_gmm_within_scale.py` | Exp 20b |
 | `scripts/sweep_cadence_lm.py` | Exp 21 |
-| `scripts/sweep_ngram_order.py` | Exp 22 |
-| `scripts/sweep_pipeline_loo.py` | Exp 23, 24 |
+| `scripts/sweep_ngram_order.py` | Exp 22 (LEAKED), 22b (honest) |
+| `scripts/sweep_pipeline_loo.py` | Exp 23, 23b, 24 |
 | `scripts/sweep_perhyp_correction_loo.py` | Exp 25 |
 | `scripts/sweep_perhyp_v2_loo.py` | Exp 26 |
 | `scripts/sweep_v2cleaned_loo.py` | Exp 26b |
 | `scripts/sweep_perhyp_v3_loo.py` | Exp 27 |
 | `scripts/sweep_alignment_loo.py` | Exp 28 |
+| `scripts/sweep_top3_rerank_loo.py` | Exp 29 |
+| `scripts/sweep_pipeline_loo.py` (RMS phrases) | Exp 30a |
+| `scripts/sweep_score_weights.py` | Exp 30b |

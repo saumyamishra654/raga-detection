@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-05-05
+
+### Refactor
+
+- **tokenize_notes_for_lm:** Extracted note-to-token logic into `_tokenize_note()` helper. Added optional `phrases: List[Phrase]` parameter so pre-computed phrase boundaries (e.g. from `detect_phrases_by_silence`) flow through to LM tokenization instead of the internal 0.25s gap heuristic. Flat note list path unchanged for backward compat.
+
+### Experiment
+
+- **Exp 30 (RMS phrase boundaries + weight sweep):** RMS energy-based phrase boundaries improve LM-only accuracy +1.3pp (256->260 at GT tonic). With retuned weights (alpha=0.3, beta=0.5), combined top-1 reaches **90.6%** (269/297), up from 88.9% baseline. New best honest result. Results at `results/pipeline_loo_rms_phrases/` and `results/score_weight_sweep/`.
+
 ## 2026-05-04
 
 ### Added

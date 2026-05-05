@@ -6544,6 +6544,7 @@ def _build_detection_report_metadata(
             "top_tonic_name": top_tonic_name,
             "selected_raga": str(results.detected_raga) if results.detected_raga else None,
             "selected_tonic": int(results.detected_tonic) if results.detected_tonic is not None else None,
+            "gmm_bias_cents": round(results.gmm_bias_cents, 2) if results.gmm_bias_cents is not None else None,
         },
     }
     return _to_json_compatible(metadata)

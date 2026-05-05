@@ -315,6 +315,7 @@ def process_directory(
     skip_report: bool = False,
     pitch_only: bool = False,
     transcription_only: bool = False,
+    skip_raga_correction: bool = False,
 ) -> None:
     """Walk an input directory and run the pipeline on each audio file."""
     normalized_mode = str(mode or "").strip().lower()
@@ -399,6 +400,8 @@ def process_directory(
             ]
             if transcription_only:
                 cmd.append("--transcription-only")
+            if skip_raga_correction:
+                cmd.append("--skip-raga-correction")
 
         if gt_info:
             _append_metadata_args(cmd, gt_info)
@@ -471,6 +474,7 @@ if __name__ == "__main__":
     parser.add_argument("--skip-report", action="store_true", help="Skip HTML report generation for faster batch runs")
     parser.add_argument("--pitch-only", action="store_true", help="Detect: exit after stem separation + pitch extraction (steps 1-2 only). Use when only analyze/motif mining is needed downstream")
     parser.add_argument("--transcription-only", action="store_true", help="Analyze: produce only transcribed_notes.csv. Skips plots, GMM, and report. Use for motif mining batch runs")
+    parser.add_argument("--skip-raga-correction", action="store_true", help="Analyze: skip raga correction step (preserve uncorrected transcriptions)")
     parser.add_argument("--init-csv", action="store_true", help="Initialize a blank ground truth CSV for files in input_dir")
     
     args = parser.parse_args()
@@ -489,7 +493,7 @@ if __name__ == "__main__":
         init_ground_truth_csv(args.input_dir, target_csv)
     else:
         try:
-            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent, args.skip_report, args.pitch_only, args.transcription_only)
+            process_directory(args.input_dir, args.ground_truth, args.output, args.mode, args.silent, args.skip_report, args.pitch_only, args.transcription_only, getattr(args, 'skip_raga_correction', False))
         except ValueError as exc:
             print(f"Error: {exc}")
             sys.exit(1)

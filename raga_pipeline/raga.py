@@ -721,7 +721,7 @@ def score_candidates_full(
                 sapapair_norm = (tonic_sal + pa_sal) / (max_acc + EPS)
                 fit_norm += params.SAPAPAIR_WEIGHT * sapapair_norm
             
-            fit_norm = max(-1.0, min(1.0, fit_norm))
+            fit_norm = max(-2.0, min(2.0, fit_norm))
             fit_score = float(fit_norm * params.SCALE)
 
             # --- Melody distribution (tonic-rotated, normalized) ---
@@ -838,8 +838,9 @@ def get_raga_notes(raga_db: RagaDatabase, raga_name: str, tonic: Union[int, str]
     if mask_abs is None:
         print(f"[WARN] Raga '{raga_name}' (or sub-names) not found in DB. Allowing all notes.")
         return list(range(12))
-    
-    print(f"  [INFO] Found raga match: '{matched_name}'")
+
+    if os.environ.get("RAGA_LOG_RAGA_MATCHES", "0") == "1":
+        print(f"  [INFO] Found raga match: '{matched_name}'")
     
     tonic_pc = _parse_tonic(tonic) if isinstance(tonic, str) else int(tonic)
     
